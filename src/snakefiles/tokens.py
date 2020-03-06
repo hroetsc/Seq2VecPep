@@ -13,8 +13,8 @@ rule rPCP_calculation:
     #    "docker pull quay.io/biocontainers/bioconductor-biomart"
     log:
         "results/logs/rPCP_calculation.txt"
-    #conda:
-    #    "R_dependencies.yml"
+    conda:
+        "R_dependencies.yml"
     params:
         n=config["max_cores"],
         mem=config["mem_mb"]
