@@ -1,0 +1,13 @@
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.7.2
+  - numpy=1.16.4
+  - pandas=0.24.2
+  - keras=2.2.4
+  - scikit-learn=0.22.1
+  - tensorflow=1.15.0
+  - progress=1.5

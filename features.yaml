@@ -1,0 +1,30 @@
+# files used in pipeline
+peptidome:
+    PEAKS_results: data/peptidome/PEAKS_proteins_01_2020.csv
+    ref_proteins: data/peptidome/expr_prot_incl_deep_nodup.fasta
+    GENCODE_annot: data/peptidome/gencode_vM24_TrEMBL_annot.txt
+    BiomaRt_annot: data/peptidome/biomaRt_annot.csv
+    gene_tr_prot: data/peptidome/gene_tr_prot.csv
+    rPCP: data/peptidome/rPCP_03_2020.csv
+    UniProt_unfiltered: data/peptidome/UniProt_mouse_canonicalAndIsoforms.fasta
+    UniProt_filtered: data/peptidome/SwissProt_mouse_canonicalAndIsoforms.fasta
+    formatted_proteome: data/peptidome/formatted_proteome.csv
+
+encoded_proteome:
+    BPE_model: results/encoded_proteome/BPE_model.bpe
+    model_vocab: results/encoded_proteome/model_vocab.csv
+    encoded_proteome: results/encoded_proteome/encoded_proteome.csv
+    words: results/encoded_proteome/words.csv
+    TF_IDF: results/encoded_proteome/TF_IDF.csv
+
+embedded_proteome:
+    target: results/embedded_proteome/target.txt
+    context: results/embedded_proteome/context.txt
+    label: results/embedded_proteome/label.txt
+    subword_weights: results/embedded_proteome/seq2vec_weights.csv
+    subword_ids: results/embedded_proteome/seq2vec_ids.csv
+    model_metrics: results/embedded_proteome/model_metrics.txt
+    proteome_weights: results/embedded_proteome/proteome_and_weights.csv
+    proteome_representation: results/embedded_proteome/proteome_repres.csv
+    proteome_properties: results/embedded_proteome/single_protein_repres_props.csv
+...
