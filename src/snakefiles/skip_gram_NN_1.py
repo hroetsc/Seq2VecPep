@@ -57,7 +57,7 @@ words = pd.read_csv(snakemake.input['words'], header = 0)
 print("TEXT PREPROCESSING")
 # https://www.kdnuggets.com/2018/04/implementing-deep-learning-methods-feature-engineering-text-data-skip-gram.html
 # functions needed to generate tokens
-tokenizer = Tokenizer()
+tokenizer = text.Tokenizer()
 tokenizer.fit_on_texts(words['tokens'])
 word2id = tokenizer.word_index
 id2word = {v:k for k, v in word2id.items()}

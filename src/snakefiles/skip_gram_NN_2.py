@@ -71,12 +71,12 @@ print("vocabulary size (number of target word IDs): {}".format(vocab_size-1))
 print("MODEL GENERATION")
 # model - https://adventuresinmachinelearning.com/word2vec-keras-tutorial/
 # https://adventuresinmachinelearning.com/word2vec-tutorial-tensorflow/
-input_target = Input(shape=(None,), dtype='int32', name='target_word')
-input_context = Input(shape=(None,), dtype='int32', name='context_word')
+input_target = Input(shape=(1,), dtype='int32', name='target_word')
+input_context = Input(shape=(1,), dtype='int32', name='context_word')
 
 # embed input layers
 # https://github.com/keras-team/keras/issues/3110
-embedding = Embedding(input_dim = vocab_size+1,
+embedding = Embedding(input_dim = vocab_size,
                         output_dim = embeddingDim,
                         input_length=1,
                         name='embedding')
@@ -88,11 +88,9 @@ target = Reshape((embeddingDim,1), name='target_embedding')(target) # every indi
 context = embedding(input_context)
 context = Reshape((embeddingDim,1), name='context_embedding')(context)
 
-# cosine similarity
-similarity = dot([target, context], axes=1, normalize=True, name= 'cosine_similarity')
-# dot product similarity
-dot_product = dot([target, context], axes=1, normalize=False, name = 'dot_product')
-dot_product = Reshape((1,))(dot_product)
+# dot product similarity - normaliye to get value between 0 and 1!!!!!!!!!!
+dot_product = dot([target, context], axes=1, normalize=True, name = 'dot_product')
+#dot_product = Reshape((1,))(dot_product)
 
 # add the sigmoid dense layer
 output = Dense(1, activation='sigmoid', name='1st_sigmoid')(dot_product)
@@ -100,12 +98,10 @@ output = Dense(1, activation='sigmoid', name='2nd_sigmoid')(output)
 output = Dense(1, activation='softmax', name='3rd_layer')(output)
 
 # create the primary training model
-model = Model(inputs=[input_target, input_context], outputs=output)
+model = Model(inputs=[target, context], outputs=output)
 model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy']) # binary for binary decisions, categorical for classifications
 
-# create validation model
-validation_model = Model(inputs=[input_target, input_context], outputs=similarity)
-# view model summary - from keras documentation
+# view model summary
 print(model.summary())
 
 # TRAINING
@@ -122,7 +118,7 @@ def batch_generator(target, context, Y, batch_size):
     n_batches = int(np.ceil(target.shape[0]/int(batch_size))) # divide input length by batch size
     counter = 0
     #threading.Lock()
-    while True:
+    while 1:
         target_batch = np.array(target[batch_size*counter:batch_size*(counter+1)], dtype='int32')
         context_batch = np.array(context[batch_size*counter:batch_size*(counter+1)], dtype='int32')
         Y_batch = np.array(Y[batch_size*counter:batch_size*(counter+1)], dtype='int32')
@@ -144,8 +140,8 @@ test_generator = batch_generator(target_test, context_test, Y_test, batchSize)
 
 # fit model
 print("fit the model")
-steps = np.ceil((vocab_size/batchSize)*0.01)
-val_steps = np.ceil(valSplit*batchSize*0.01)
+steps = np.ceil((vocab_size/batchSize)*0.1)
+val_steps = np.ceil(valSplit*batchSize*0.1)
 
 fit = model.fit_generator(generator=train_generator,
                     validation_data=test_generator,
