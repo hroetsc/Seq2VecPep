@@ -59,17 +59,24 @@ valSplit = 0.20
 
 # INPUT
 print("LOAD DATA")
-print("target vector")
+print("target word vector")
 target_word = np.array(pd.read_csv(snakemake.input['target'], delimiter = '\t', names = ['target_word']), dtype='int32')
-print("context vector")
+target_word = target_word.reshape(target_word.shape[0],)
+print(target_word)
+print("context word vector")
 context_word = np.array(pd.read_csv(snakemake.input['context'], delimiter = '\t', names = ['context_word']), dtype='int32')
-print("label")
+context_word = context_word.reshape(context_word.shape[0],)
+print(context_word)
+print("label vector")
 Y = np.array(pd.read_csv(snakemake.input['label'], delimiter = '\t', names = ['label']), dtype='int32')
+Y = Y.reshape(Y.shape[0],)
+print(Y)
+
 print("word ID table")
 ids = pd.read_csv(snakemake.input['ids'], header = 0)
 
 vocab_size = len(ids.index)+1
-print("vocabulary size (number of target word IDs): {}".format(vocab_size-1))
+print("vocabulary size (number of target word IDs +1): {}".format(vocab_size))
 
 # MODEL CREATION
 print("MODEL GENERATION")
@@ -82,8 +89,9 @@ input_context = Input(shape=(1,), dtype='int32', name='context_word')
 # https://github.com/keras-team/keras/issues/3110
 embedding = Embedding(input_dim = vocab_size,
                         output_dim = embeddingDim,
-                        input_length=1,
-                        name='embedding')
+                        input_length = 1,
+                        embeddings_initializer = 'glorot_uniform',
+                        name = 'embedding')
 # later create lookup table with weights so that one could initialize the embedding layer with pretrained weights
 
 # apply embedding
@@ -94,15 +102,14 @@ context = Reshape((embeddingDim,1), name='context_embedding')(context)
 
 # dot product similarity - normaliye to get value between 0 and 1!!!!!!!!!!
 dot_product = dot([target, context], axes=1, normalize=True, name = 'dot_product')
-#dot_product = Reshape((1,))(dot_product)
+dot_product = Reshape((1,))(dot_product)
 
 # add the sigmoid dense layer
-output = Dense(1, activation='sigmoid', name='1st_sigmoid')(dot_product)
-output = Dense(1, activation='sigmoid', name='2nd_sigmoid')(output)
-output = Dense(1, activation='softmax', name='3rd_layer')(output)
+output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='1st_sigmoid')(dot_product)
+output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='2nd_sigmoid')(output)
 
 # create the primary training model
-model = Model(inputs=[target, context], outputs=output)
+model = Model(inputs=[input_target, input_context], outputs=output)
 model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy']) # binary for binary decisions, categorical for classifications
 
 # view model summary
@@ -110,6 +117,27 @@ print(model.summary())
 
 # TRAINING
 print("MODEL TRAINING")
+print(model.metrics_names)
+# try another approach
+target = np.zeros((1,))
+context = np.zeros((1,))
+Y_label = np.zeros((1,))
+
+for r in range(epochs):
+    idx = np.random.randint(0, len(Y)-1)
+    target[0,] = target_word[idx]
+    context[0,] = context_word[idx]
+    Y_label[0,] = Y[idx]
+
+    fit = model.train_on_batch([target, context], Y_label,
+                                reset_metrics = False)
+    print('epoch: {} - loss: {} - accuracy: {}'.format(cnt, fit.history['loss'], fit.history['acc']))
+
+    gc.collect()
+
+K.clear_session()
+tf.reset_default_graph()
+
 # train on batch - make batch generator threadsafe (with small number of steps and multiprocessing otherwise duplicated batches occur)
 # https://stackoverflow.com/questions/56441216/on-fit-generator-and-thread-safety
 
@@ -128,7 +156,7 @@ def batch_generator(target, context, Y, batch_size):
         Y_batch = np.array(Y[batch_size*counter:batch_size*(counter+1)], dtype='int32')
 
         counter += 1
-        yield([target_batch, context_batch], Y_batch)
+        yield([[target_batch, context_batch], Y_batch])
 
         if counter >= n_batches: # clean for next epoch
             counter = 0
@@ -144,8 +172,8 @@ test_generator = batch_generator(target_test, context_test, Y_test, batchSize)
 
 # fit model
 print("fit the model")
-steps = np.ceil((vocab_size/batchSize)*0.1)
-val_steps = np.ceil(valSplit*batchSize*0.1)
+steps = np.ceil(target_train.shape[0]/batchSize)
+val_steps = np.ceil(target_test.shape[0]/batchSize)
 
 fit = model.fit_generator(generator=train_generator,
                     validation_data=test_generator,

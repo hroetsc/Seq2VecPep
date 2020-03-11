@@ -23,7 +23,7 @@ batchSize = 256
 valSplit = 0.20
 
 # INPUT
-os.chdir('/home/hroetsc/Documents/ProtTransEmbedding/Snakemake/results/encoded_proteome')
+os.chdir('/home/hroetsc/Documents/ProtTransEmbedding/Snakemake/')
 tokens = open('words_as_text.txt', 'r')
 tokens = tokens.read()
 # for testing
@@ -189,8 +189,8 @@ model.fit_generator(generator=train_generator,
 #model.save(snakemake.output['model'])
 
 # for testing
-for l in range(len(model.layers)):
-    print(l)
-    print(model.layers[l])
-    print(model.layers[l].name)
-    print(model.layers[l].get_output_at(0))
+#for l in range(len(model.layers)):
+#    print(l)
+#    print(model.layers[l])
+#    print(model.layers[l].name)
+#    print(model.layers[l].get_output_at(0))
