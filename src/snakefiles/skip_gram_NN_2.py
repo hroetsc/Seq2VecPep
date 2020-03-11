@@ -59,9 +59,13 @@ valSplit = 0.20
 
 # INPUT
 print("LOAD DATA")
-target_word = np.loadtxt(snakemake.input['target'], dtype='int32')
-context_word = np.loadtxt(snakemake.input['context'], dtype='int32')
-Y = np.loadtxt(snakemake.input['label'], dtype='int32')
+print("target vector")
+target_word = np.array(pd.read_csv(snakemake.input['target'], delimiter = '\t', names = ['target_word']), dtype='int32')
+print("context vector")
+context_word = np.array(pd.read_csv(snakemake.input['context'], delimiter = '\t', names = ['context_word']), dtype='int32')
+print("label")
+Y = np.array(pd.read_csv(snakemake.input['label'], delimiter = '\t', names = ['label']), dtype='int32')
+print("word ID table")
 ids = pd.read_csv(snakemake.input['ids'], header = 0)
 
 vocab_size = len(ids.index)+1
