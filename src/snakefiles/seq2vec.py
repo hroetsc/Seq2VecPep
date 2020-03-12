@@ -52,7 +52,8 @@ rule proteome_repres:
         weights = features["embedded_proteome"]["subword_weights"],
         ids=features["embedded_proteome"]["subword_ids"],
         formatted_proteome = features["peptidome"]["formatted_proteome"],
-        TF_IDF = features["encoded_proteome"]["TF_IDF"]
+        TF_IDF = features["encoded_proteome"]["TF_IDF"],
+        words = features["encoded_proteome"]["words"]
     output:
         proteome_repres = features["embedded_proteome"]["proteome_representation"]
     log:

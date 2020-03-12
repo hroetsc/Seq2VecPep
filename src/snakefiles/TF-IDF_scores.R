@@ -7,7 +7,7 @@
 
 print("### CALCULATE TF-IDF SCORES FOR EVERY TOKEN IN ENCODED PROTEOME ###")
 
-#tmp!!!
+# #tmp!!!
 # setwd("Documents/ProtTransEmbedding/Snakemake/")
 # words = read.csv(file = "results/encoded_proteome/words.csv", stringsAsFactors = F, header = T)
 # # # for testing!!
@@ -31,7 +31,7 @@ progressBar = txtProgressBar(min = 0, max = nrow(vocab), style = 3)
 for (i in 1:nrow(vocab)) { # iterate tokens in model vocabulary
   setTxtProgressBar(progressBar, i)
   
-  len = 1
+  len = 0
   for (j in 1:nrow(words)) { # count how often this token occurs in the proteome
     if (grepl(vocab$vocab[i], words$tokens[j], fixed = T)) {
       len = len + 1
@@ -40,8 +40,8 @@ for (i in 1:nrow(vocab)) { # iterate tokens in model vocabulary
   
   vocab[i,"frequency"] = len
 }
-#vocab = as.data.frame(vocab)
-vocab = na.omit(vocab, cols=seq_along(vocab), invert=F)
+
+vocab[is.na(frequency), frequency := .(list(NULL))]
 
 print("CALCULATE TERM FREQUENCY FOR EVERY TOKEN IN EVERY PROTEIN")
 progressBar = txtProgressBar(min = 0, max = nrow(words), style = 3)
@@ -61,9 +61,9 @@ for (i in 1:nrow(words)) {
     } else {
       cnt_tokens[j, "doc_freq"] = NaN
     }
-    
   }
   
+  cnt_tokens[is.na(term_freq), "term_freq"] = 0
   cnt_tokens[, "tf_idf"] = as.numeric(cnt_tokens$term_freq) * log(nrow(words) / as.numeric(cnt_tokens$doc_freq))
   words[i, "TF_IDF_score"] = paste(as.character(cnt_tokens$tf_idf), sep = "", collapse = " ")
 }

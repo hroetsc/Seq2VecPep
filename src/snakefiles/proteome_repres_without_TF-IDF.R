@@ -8,11 +8,11 @@
 
 #tmp !!!
 # setwd("Documents/ProtTransEmbedding/Snakemake/")
-# weight_matrix = read.csv(file = "results/embedded_proteome/seq2vec_weights.csv", stringsAsFactors = F, header = F)
-# indices = read.csv(file = "results/embedded_proteome/seq2vec_ids.csv", stringsAsFactors = F, header = F)
-# proteome = read.csv(file = "data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
-# tokens = read.csv(file = "results/encoded_proteome/TF_IDF.csv", stringsAsFactors = F, header = T)
-# words = read.csv(file = "results/encoded_proteome/words.csv", stringsAsFactors = F, header = T)
+weight_matrix = read.csv(file = "results/embedded_proteome/seq2vec_weights.csv", stringsAsFactors = F, header = F)
+indices = read.csv(file = "results/embedded_proteome/seq2vec_ids.csv", stringsAsFactors = F, header = F)
+proteome = read.csv(file = "data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
+tokens = read.csv(file = "results/encoded_proteome/TF_IDF.csv", stringsAsFactors = F, header = T)
+words = read.csv(file = "results/encoded_proteome/words.csv", stringsAsFactors = F, header = T)
 
 print("### RETRIEVE PROTEIN REPRESENATION ###")
 
@@ -80,7 +80,7 @@ find_tokens = function(token = ""){
 }
 
 protein.repres = as.data.frame(matrix(ncol = ncol(proteins.master)+ncol(weights)-2,
-                              nrow = nrow(proteins.master))) # contains vector representation for every protein
+                                      nrow = nrow(proteins.master))) # contains vector representation for every protein
 colnames(protein.repres) = c(colnames(proteins.master), seq(1,ncol(weights)-2,1))
 dim_range = c(ncol(proteins.master)+1, ncol(protein.repres))
 protein.repres[,c(1:(dim_range[1]-1))] = proteins.master
