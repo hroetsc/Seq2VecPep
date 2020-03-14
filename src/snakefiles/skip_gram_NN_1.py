@@ -11,7 +11,6 @@ import re
 import gc
 import numpy as np
 import pandas as pd
-#from progress.bar import Bar
 
 import threading
 from joblib import Parallel, delayed
@@ -44,21 +43,31 @@ import skip_gram_NN_helper
 
 gc.enable()
 
-# HYPERPARAMETERS
-workers = 12
+# =============================================================================
+# # HYPERPARAMETERS
+# =============================================================================
+workers = 16
 windowSize = 10
 
 # INPUT
 words = pd.read_csv(snakemake.input['words'], header = 0)
+
 # for testing
 #words = words.loc[92999:,]
 
-# TEXT PREPROCESSING
+# =============================================================================
+# # TEXT PREPROCESSING
+# =============================================================================
 print("TEXT PREPROCESSING")
+# extract tokens
+tokens = list(words['tokens'])
+tokens = ' '.join(tokens)
+tokens = tokens.split(' ')
+
 # https://www.kdnuggets.com/2018/04/implementing-deep-learning-methods-feature-engineering-text-data-skip-gram.html
 # functions needed to generate tokens
-tokenizer = text.Tokenizer()
-tokenizer.fit_on_texts(words['tokens'])
+tokenizer = text.Tokenizer(num_words = len(tokens))
+tokenizer.fit_on_texts(tokens)
 word2id = tokenizer.word_index
 id2word = {v:k for k, v in word2id.items()}
 
@@ -68,6 +77,8 @@ print('CONVERT WORDS TO IDs')
 wids = [[word2id[w] for w in text.text_to_word_sequence(token)] for token in words['tokens']]
 no_of_proteins = len(wids)
 print("number of proteins / batches: {}".format(no_of_proteins))
+vocab_size = len(word2id.keys())
+print("vocabulary size: {}".format(vocab_size))
 
 print('GENERATE SKIP-GRAMS')
 n_batches = no_of_proteins
@@ -78,15 +89,17 @@ pool = multiprocessing.Pool(workers)
 
 if __name__ == "__main__":
     pool.starmap( skip_gram_NN_helper.parallel_processing,
-                ([[n, wids[n], windowSize, n_batches, snakemake.output['target'], snakemake.output['context'], snakemake.output['label']] for n in range(n_batches)]) )
+                ([[n, wids[n], windowSize, vocab_size, n_batches, snakemake.output['target'], snakemake.output['context'], snakemake.output['label']] for n in range(n_batches)]) )
 print('done with generating skip-grams')
 
-# OUTPUT
+# =============================================================================
+# # OUTPUT
+# =============================================================================
 print("SAVE OUTPUT")
 
 # save corresponding IDs
 ids = pd.DataFrame(word2id.items())
 pd.DataFrame.to_csv(ids, snakemake.output['ids'], header=False)
 
-#pool.close() # to save memory
-#pool.join()
+pool.close() # to save memory
+pool.join()

@@ -22,7 +22,7 @@ rule seq2vec_model_training:
         target = features["embedded_proteome"]["target"],
         context = features["embedded_proteome"]["context"],
         label = features["embedded_proteome"]["label"],
-        ids = features["embedded_proteome"]["subword_ids"]
+        ids=features["embedded_proteome"]["subword_ids"]
     output:
         weights = features["embedded_proteome"]["subword_weights"],
         model = "results/embedded_proteome/model.h5",

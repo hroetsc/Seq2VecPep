@@ -8,11 +8,11 @@
 
 #tmp !!!
 # setwd("Documents/ProtTransEmbedding/Snakemake/")
-weight_matrix = read.csv(file = "results/embedded_proteome/seq2vec_weights.csv", stringsAsFactors = F, header = F)
-indices = read.csv(file = "results/embedded_proteome/seq2vec_ids.csv", stringsAsFactors = F, header = F)
-proteome = read.csv(file = "data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
-tokens = read.csv(file = "results/encoded_proteome/TF_IDF.csv", stringsAsFactors = F, header = T)
-words = read.csv(file = "results/encoded_proteome/words.csv", stringsAsFactors = F, header = T)
+# weight_matrix = read.csv(file = "results/embedded_proteome/seq2vec_weights.csv", stringsAsFactors = F, header = F)
+# indices = read.csv(file = "results/embedded_proteome/seq2vec_ids.csv", stringsAsFactors = F, header = F)
+# proteome = read.csv(file = "data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
+# tokens = read.csv(file = "results/encoded_proteome/TF_IDF.csv", stringsAsFactors = F, header = T)
+# words = read.csv(file = "results/encoded_proteome/words.csv", stringsAsFactors = F, header = T)
 
 print("### RETRIEVE PROTEIN REPRESENATION ###")
 
@@ -30,7 +30,7 @@ library(ggplot2)
 library(ggthemes)
 library(ggpubr)
 library(uwot)
-library(reshape2)
+library(reshape)
 
 #library(parallel)
 library(foreach)
@@ -64,7 +64,7 @@ weights = unique(weights)
 
 ### MAIN PART ###
 # combine proteome table with tokens file
-proteins.master = left_join(proteome, tokens)
+proteins.master = left_join(proteome, words)
 proteins.master = na.omit(proteins.master)
 
 # add embeddings to master table and calculate protein representation
