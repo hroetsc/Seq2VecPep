@@ -22,9 +22,9 @@ from skopt import gbrt_minimize, gp_minimize
 from skopt.utils import use_named_args
 from skopt.space import Real, Categorical, Integer
 
-def generate_skipgrams(wid, windowSize):
+def generate_skipgrams(wid, windowSize, vocab_size):
     skip_grams = skipgrams(sequence = wid,
-                                vocabulary_size = len(wid)+1,
+                                vocabulary_size = vocab_size + 1,
                                 window_size = windowSize,
                                 categorical = False,
                                 shuffle = False,
@@ -33,10 +33,10 @@ def generate_skipgrams(wid, windowSize):
     return skip_grams
 
 
-def parallel_processing(n, wid, windowSize, n_batches, tars, cons, labs):
+def parallel_processing(n, wid, windowSize, vocab_size, n_batches, tars, cons, labs):
     #print("generating batch {} of {}".format(n+1, n_batches))
 
-    skip_grams = generate_skipgrams(wid, windowSize)
+    skip_grams = generate_skipgrams(wid, windowSize, vocab_size)
     pairs, labels = skip_grams
 
     # save everything
