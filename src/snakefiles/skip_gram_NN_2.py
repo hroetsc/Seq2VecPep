@@ -45,7 +45,7 @@ workers = 16
 
 # window of a word: [i - window_size, i + window_size+1]
 embeddingDim = 100
-epochs = 200
+epochs = 50
 
 batchSize = 32
 valSplit = 0.20
@@ -71,7 +71,7 @@ Y = Y.reshape(Y.shape[0])
 print(Y)
 
 ids = pd.read_csv(snakemake.input['ids'], header = 0)
-vocab_size = len(ids.index)+1
+vocab_size = len(ids.index)+2
 print("vocabulary size (number of target word IDs +1): {}".format(vocab_size))
 
 # =============================================================================
@@ -142,16 +142,16 @@ def batch_generator(target, context, Y, batch_size):
         target_batch = target[batch_size*counter:batch_size*(counter+1)]
         context_batch = context[batch_size*counter:batch_size*(counter+1)]
         Y_batch = Y[batch_size*counter:batch_size*(counter+1)]
-        
+
         #print([target_batch, context_batch], Y_batch)
-        
+
         counter += 1
-        
+
         yield([target_batch, context_batch], Y_batch)
-        
+
         if counter >= n_batches: # clean for next epoch
             counter = 0
-        
+
         gc.collect()
 
 # use random integers
@@ -164,9 +164,9 @@ def batch_generator2(target, context, Y, batch_size):
         target_batch = target[idx]
         context_batch = context[idx]
         Y_batch = Y[idx]
-        
+
         counter += 1
-        
+
         #print([target_batch, context_batch], Y_batch)
         yield ([target_batch, context_batch], Y_batch)
 
@@ -184,9 +184,6 @@ print("fit the model")
 
 steps = np.ceil(target_train.shape[0]/batchSize)
 val_steps = np.ceil(target_test.shape[0]/batchSize)
-
-steps = np.ceil(vocab_size/batchSize)
-val_steps = np.ceil(vocab_size/batchSize)
 
 fit = model.fit_generator(generator=train_generator,
                     validation_data=test_generator,
@@ -219,7 +216,7 @@ model.save(snakemake.output['model'])
 
 # save accuracy and loss
 m = open(snakemake.output['metrics'], 'w')
-m.write("accuracy \t {} \n val_accuracy \t {} \n loss \t {} \n val_loss \t {}".format(fit.history['acc'], fit.history['val_acc'], fit.history['loss'], fit.history['val_loss']))
+m.write("accuracy \t {} \n val_accuracy \t {} \n loss \t {} \n val_loss \t {}".format(fit.history['accuracy'], fit.history['val_accuracy'], fit.history['loss'], fit.history['val_loss']))
 m.close()
 
 K.clear_session()

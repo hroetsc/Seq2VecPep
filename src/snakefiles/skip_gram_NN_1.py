@@ -52,7 +52,6 @@ windowSize = 10
 # INPUT
 words = pd.read_csv(snakemake.input['words'], header = 0)
 
-# for testing
 #words = words.loc[92999:,]
 
 # =============================================================================

@@ -17,7 +17,7 @@ from keras.preprocessing.text import *
 
 def generate_skipgrams(wid, windowSize, vocab_size):
     skip_grams = skipgrams(sequence = wid,
-                                vocabulary_size = vocab_size,
+                                vocabulary_size = vocab_size + 1,
                                 window_size = windowSize,
                                 categorical = False,
                                 shuffle = True,
