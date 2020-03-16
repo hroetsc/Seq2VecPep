@@ -55,11 +55,11 @@ gc.enable()
 # =============================================================================
 # # HYPERPARAMETERS
 # =============================================================================
-workers = 16
+workers = 12
 windowSize = 10
 
 # INPUT
-os.chdir('/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/Snakemake')
+os.chdir('/home/hroetsc/Documents/ProtTransEmbedding/Snakemake/')
 words = pd.read_csv('results/encoded_proteome/words.csv', header = 0)
 # for testing
 #words = words.loc[92999:,]

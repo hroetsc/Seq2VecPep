@@ -36,6 +36,8 @@ import tensorflow as tf
 from tensorflow.keras import layers
 from keras import backend as K
 
+from keras.utils import Sequence
+
 from sklearn.model_selection import train_test_split
 
 # import scripts for hyperparameter optimization
@@ -54,13 +56,13 @@ gc.enable()
 #config.gpu_options.per_process_gpu_memory_fraction = 0.5 # only allow half of the memory to be allocated
 #K.tensorflow_backend.set_session(tf.Session(config=config)) # create session
 
-os.chdir('/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/Snakemake')
+os.chdir('/home/hroetsc/Documents/ProtTransEmbedding/Snakemake')
 
 # HYPERPARAMETERS
-workers = 16
+workers = 12
 
 # window of a word: [i - window_size, i + window_size+1]
-embeddingDim = 5 # used as maximum by Mikolov et al. 2013 for NLP word embedding
+embeddingDim = 100 # used as maximum by Mikolov et al. 2013 for NLP word embedding
 epochs = 5 #100 #200
 
 batchSize = 64
@@ -165,6 +167,27 @@ def batch_generator2(target, context, Y, batch_size):
 
         gc.collect()
 
+class BatchGenerator(keras.utils.Sequence):
+
+     def __init__(self, target, context, Y, batch_size):
+         self.target, self.context, self.Y = target, context, Y
+         self.batch_size = batch_size
+
+
+     def __len__(self):
+         return int(np.ceil(len(self.target) / float(self.batch_size)))
+
+     def __getitem__(self, idx):
+         batch_target = self.target[idx*self.batch_size : (idx + 1)*self.batch_size]
+         batch_context = self.context[idx*self.batch_size : (idx + 1)*self.batch_size]
+         batch_Y = self.Y[idx*self.batch_size : (idx + 1)*self.batch_size]
+
+         return [np.array(batch_target, dtype = 'int32'), np.array(batch_context, dtype = 'int32')], np.array(batch_Y, dtype = 'int32')
+
+    #def on_epoch_end(self):
+    #    pass
+
+
 # split data into training and testing (validation) data sets
 target_train, target_test, context_train, context_test, Y_train, Y_test = train_test_split(target_word, context_word, Y, test_size=valSplit)
 
@@ -214,8 +237,8 @@ def fitness(learning_rate, embedding_size, activation_function, batch_size, num_
                             batch_size = batch_size)
 
     # apply batch generator
-    train_generator = batch_generator(target_train, context_train, Y_train, batch_size)
-    test_generator = batch_generator(target_test, context_test, Y_test, batch_size)
+    train_generator = BatchGenerator(target_train, context_train, Y_train, batch_size)
+    test_generator = BatchGenerator(target_test, context_test, Y_test, batch_size)
 
     steps = np.ceil((target_train.shape[0]/batchSize)*0.1)
     val_steps = np.ceil((target_test.shape[0]/batchSize)*0.1)
@@ -232,7 +255,7 @@ def fitness(learning_rate, embedding_size, activation_function, batch_size, num_
                         shuffle=True)
 
     #return the validation accuracy for the last epoch.
-    accuracy = blackbox.history['val_accuracy'][-1]
+    accuracy = blackbox.history['val_acc'][-1]
 
     # Print the classification accuracy.
     print()

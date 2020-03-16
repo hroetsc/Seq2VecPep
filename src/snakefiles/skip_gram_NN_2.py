@@ -27,6 +27,8 @@ import tensorflow as tf
 from tensorflow.keras import layers
 from keras import backend as K
 
+from keras.utils import Sequence
+
 from sklearn.model_selection import train_test_split
 
 gc.enable()
@@ -41,7 +43,7 @@ gc.enable()
 # =============================================================================
 # # HYPERPARAMETERS
 # =============================================================================
-workers = 16
+workers = 12
 
 # window of a word: [i - window_size, i + window_size+1]
 embeddingDim = 100
@@ -52,6 +54,16 @@ valSplit = 0.20
 
 # =============================================================================
 # # INPUT
+# =============================================================================
+
+# =============================================================================
+# # tmp!!
+# os.chdir('/home/hroetsc/Documents/ProtTransEmbedding/Snakemake')
+# target_word = np.array(pd.read_csv('results/embedded_proteome/target.txt', delimiter = '\t', names = ['target_word']), dtype='int32')
+# context_word = np.array(pd.read_csv('results/embedded_proteome/context.txt', delimiter = '\t', names = ['context_word']), dtype='int32')
+# Y = np.array(pd.read_csv('results/embedded_proteome/target.txt', delimiter = '\t', names = ['label']), dtype='int32')
+# ids = pd.read_csv('results/embedded_proteome/seq2vec_ids.csv', header = 0)
+#
 # =============================================================================
 print("LOAD DATA")
 
@@ -72,7 +84,7 @@ print(Y)
 
 ids = pd.read_csv(snakemake.input['ids'], header = 0)
 vocab_size = len(ids.index)+2
-print("vocabulary size (number of target word IDs +1): {}".format(vocab_size))
+print("vocabulary size (number of target word IDs +2): {}".format(vocab_size))
 
 # =============================================================================
 # # MODEL CREATION
@@ -132,63 +144,90 @@ print('metrics: {}'.format(model.metrics_names))
 print("split word pairs into training and validation data sets")
 target_train, target_test, context_train, context_test, Y_train, Y_test = train_test_split(target_word, context_word, Y, test_size=valSplit)
 
+# =============================================================================
+# # OLD BATCH GENERATOR APPROACHES
+# # iterate systematically
+# def batch_generator(target, context, Y, batch_size):
+#     n_batches = int(np.ceil(target.shape[0]/int(batch_size))) # divide input length by batch size
+#     counter = 0
+#     #threading.Lock()
+#     while 1:
+#         target_batch = target[batch_size*counter:batch_size*(counter+1)]
+#         context_batch = context[batch_size*counter:batch_size*(counter+1)]
+#         Y_batch = Y[batch_size*counter:batch_size*(counter+1)]
+#
+#         #print([target_batch, context_batch], Y_batch)
+#
+#         counter += 1
+#
+#         yield([target_batch, context_batch], Y_batch)
+#
+#         if counter >= n_batches: # clean for next epoch
+#             counter = 0
+#
+#         gc.collect()
+#
+# # use random integers
+# # does not work properly at the moment bc random integers are always the same
+# def batch_generator2(target, context, Y, batch_size):
+#     counter = 0
+#     while True:
+#         idx = np.array(np.random.randint(0, (target.shape[0])-1, size = batch_size), dtype = 'int32')
+#
+#         target_batch = target[idx]
+#         context_batch = context[idx]
+#         Y_batch = Y[idx]
+#
+#         counter += 1
+#
+#         #print([target_batch, context_batch], Y_batch)
+#         yield ([target_batch, context_batch], Y_batch)
+#
+#         gc.collect()
+#
+# =============================================================================
 
-# iterate systematically
-def batch_generator(target, context, Y, batch_size):
-    n_batches = int(np.ceil(target.shape[0]/int(batch_size))) # divide input length by batch size
-    counter = 0
-    #threading.Lock()
-    while 1:
-        target_batch = target[batch_size*counter:batch_size*(counter+1)]
-        context_batch = context[batch_size*counter:batch_size*(counter+1)]
-        Y_batch = Y[batch_size*counter:batch_size*(counter+1)]
+# make batch generator suitable for multiprocessing - use keras.utils.Sequence class
+# https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
+# https://www.tensorflow.org/api_docs/python/tf/keras/utils/Sequence
 
-        #print([target_batch, context_batch], Y_batch)
+class BatchGenerator(keras.utils.Sequence):
 
-        counter += 1
+     def __init__(self, target, context, Y, batch_size):
+         self.target, self.context, self.Y = target, context, Y
+         self.batch_size = batch_size
 
-        yield([target_batch, context_batch], Y_batch)
+     def __len__(self):
+         return int(np.ceil(len(self.target) / float(self.batch_size)))
 
-        if counter >= n_batches: # clean for next epoch
-            counter = 0
+     def __getitem__(self, idx):
+         batch_target = self.target[idx*self.batch_size : (idx + 1)*self.batch_size]
+         batch_context = self.context[idx*self.batch_size : (idx + 1)*self.batch_size]
+         batch_Y = self.Y[idx*self.batch_size : (idx + 1)*self.batch_size]
 
-        gc.collect()
+         return [np.array(batch_target, dtype = 'int32'), np.array(batch_context, dtype = 'int32')], np.array(batch_Y, dtype = 'int32')
 
-# use random integers
-# does not work properly at the moment bc random integers are always the same
-def batch_generator2(target, context, Y, batch_size):
-    counter = 0
-    while True:
-        idx = np.array(np.random.randint(0, (target.shape[0])-1, size = batch_size), dtype = 'int32')
-
-        target_batch = target[idx]
-        context_batch = context[idx]
-        Y_batch = Y[idx]
-
-        counter += 1
-
-        #print([target_batch, context_batch], Y_batch)
-        yield ([target_batch, context_batch], Y_batch)
-
-        gc.collect()
+    #def on_epoch_end(self):
+        #pass
 
 
 # apply batch generator
 print("generating batches for model training")
-train_generator = batch_generator(target_train, context_train, Y_train, batchSize)
-test_generator = batch_generator(target_test, context_test, Y_test, batchSize)
+train_generator = BatchGenerator(target_train, context_train, Y_train, batchSize)
+test_generator = BatchGenerator(target_test, context_test, Y_test, batchSize)
 
 
 # fit model
 print("fit the model")
 
-steps = np.ceil(target_train.shape[0]/batchSize)
-val_steps = np.ceil(target_test.shape[0]/batchSize)
+# can be ignored in case batch generator uses keras.utils.Sequence() class
+#steps = np.ceil(target_train.shape[0]/batchSize)
+#val_steps = np.ceil(target_test.shape[0]/batchSize)
 
 fit = model.fit_generator(generator=train_generator,
                     validation_data=test_generator,
-                    steps_per_epoch = steps,
-                    validation_steps = val_steps,
+                    #steps_per_epoch = steps,
+                    #validation_steps = val_steps,
                     epochs = epochs,
                     initial_epoch=0,
                     verbose=2,
