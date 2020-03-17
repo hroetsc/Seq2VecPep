@@ -240,14 +240,14 @@ def fitness(learning_rate, embedding_size, activation_function, batch_size, num_
     train_generator = BatchGenerator(target_train, context_train, Y_train, batch_size)
     test_generator = BatchGenerator(target_test, context_test, Y_test, batch_size)
 
-    steps = np.ceil((target_train.shape[0]/batchSize)*0.1)
-    val_steps = np.ceil((target_test.shape[0]/batchSize)*0.1)
+    #steps = np.ceil((target_train.shape[0]/batchSize)*0.1)
+    #val_steps = np.ceil((target_test.shape[0]/batchSize)*0.1)
 
     #named blackbox becuase it represents the structure
     blackbox = model.fit_generator(generator=train_generator,
                         validation_data=test_generator,
-                        steps_per_epoch = steps,
-                        validation_steps = val_steps,
+                        #steps_per_epoch = steps,
+                        #validation_steps = val_steps,
                         epochs=num_epochs,
                         verbose=2,
                         workers=workers,

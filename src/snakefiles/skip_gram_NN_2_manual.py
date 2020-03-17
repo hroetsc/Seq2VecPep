@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Mar 17 13:55:50 2020
+
+@author: hroetsc
+"""
+
+
 ### HEADER ###
 # PROTEIN/TRANSCRIPT EMBEDDING FOR ML/DEEP LEARNING
 # description:  convert tokens to numerical vectors using a skip-gram neural network
@@ -48,7 +57,7 @@ workers = 12
 
 # window of a word: [i - window_size, i + window_size+1]
 embeddingDim = 112
-epochs = 1000
+epochs = 200
 
 batchSize = 32
 valSplit = 0.20
@@ -62,31 +71,31 @@ adam_decay = 0.005200110247661778
 
 # =============================================================================
 # # tmp!!
-#os.chdir('/home/hroetsc/Documents/ProtTransEmbedding/Snakemake')
-#target_word = np.array(pd.read_csv('results/embedded_proteome/opt_target_10000.txt', delimiter = '\t', names = ['target_word']), dtype='int32')
-#context_word = np.array(pd.read_csv('results/embedded_proteome/opt_context_10000.txt', delimiter = '\t', names = ['context_word']), dtype='int32')
-#Y = np.array(pd.read_csv('results/embedded_proteome/opt_label_10000.txt', delimiter = '\t', names = ['label']), dtype='int32')
-#ids = pd.read_csv('results/embedded_proteome/opt_seq2vec_ids_10000.csv', header = 0)
+os.chdir('/home/hroetsc/Documents/ProtTransEmbedding/Snakemake')
+target_word = np.array(pd.read_csv('results/embedded_proteome/opt_target_10000.txt', delimiter = '\t', names = ['target_word']), dtype='int32')
+context_word = np.array(pd.read_csv('results/embedded_proteome/opt_context_10000.txt', delimiter = '\t', names = ['context_word']), dtype='int32')
+Y = np.array(pd.read_csv('results/embedded_proteome/opt_label_10000.txt', delimiter = '\t', names = ['label']), dtype='int32')
+ids = pd.read_csv('results/embedded_proteome/opt_seq2vec_ids_10000.csv', header = 0)
 #
 # =============================================================================
 print("LOAD DATA")
 
 print('target word vector')
-target_word = np.array(pd.read_csv(snakemake.input['target'], delimiter = '\t', names = ['target_word']), dtype='int32')
+#target_word = np.array(pd.read_csv(snakemake.input['target'], delimiter = '\t', names = ['target_word']), dtype='int32')
 target_word = target_word.reshape(target_word.shape[0])
 print(target_word)
 
 print('context word vector')
-context_word = np.array(pd.read_csv(snakemake.input['context'], delimiter = '\t', names = ['context_word']), dtype='int32')
+#context_word = np.array(pd.read_csv(snakemake.input['context'], delimiter = '\t', names = ['context_word']), dtype='int32')
 context_word = context_word.reshape(context_word.shape[0])
 print(context_word)
 
 print('label vector')
-Y = np.array(pd.read_csv(snakemake.input['label'], delimiter = '\t', names = ['label']), dtype='int32')
+#Y = np.array(pd.read_csv(snakemake.input['label'], delimiter = '\t', names = ['label']), dtype='int32')
 Y = Y.reshape(Y.shape[0])
 print(Y)
 
-ids = pd.read_csv(snakemake.input['ids'], header = 0)
+#ids = pd.read_csv(snakemake.input['ids'], header = 0)
 vocab_size = len(ids.index)+2
 print("vocabulary size (number of target word IDs +2): {}".format(vocab_size))
 
@@ -227,8 +236,8 @@ test_generator = BatchGenerator(target_test, context_test, Y_test, batchSize)
 print("fit the model")
 
 # can be ignored in case batch generator uses keras.utils.Sequence() class
-steps = np.ceil((target_train.shape[0]/batchSize)*0.01)
-val_steps = np.ceil((target_test.shape[0]/batchSize)*0.01)
+steps = np.ceil((target_train.shape[0]/batchSize)*0.1)
+val_steps = np.ceil((target_test.shape[0]/batchSize)*0.1)
 
 fit = model.fit_generator(generator=train_generator,
                     validation_data=test_generator,
@@ -253,15 +262,15 @@ weights = model.layers[2].get_weights()[0] # weights of the embedding layer of t
 
 # save weights of embedding matrix
 df = pd.DataFrame(weights)
-pd.DataFrame.to_csv(df, snakemake.output['weights'], header=False)
+pd.DataFrame.to_csv(df, 'results/embedded_proteome/opt_seq2vec_weights_10000.csv', header=False)
 df.head()
 
 # save model
-model.save(snakemake.output['model'])
+model.save('results/embedded_proteome/opt_model_10000.csv')
 
 # save accuracy and loss
-m = open(snakemake.output['metrics'], 'w')
-m.write("accuracy \t {} \n val_accuracy \t {} \n loss \t {} \n val_loss \t {}".format(fit.history['accuracy'], fit.history['val_accuracy'], fit.history['loss'], fit.history['val_loss']))
+m = open('results/embedded_proteome/opt_model_metrics_1000.txt', 'w')
+m.write("accuracy \t {} \n val_accuracy \t {} \n loss \t {} \n val_loss \t {}".format(fit.history['acc'], fit.history['val_acc'], fit.history['loss'], fit.history['val_loss']))
 m.close()
 
 K.clear_session()

@@ -1,4 +1,4 @@
-setwd("optimization/results/")
+setwd("results/")
 
 library(stringr)
 

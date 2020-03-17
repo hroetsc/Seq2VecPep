@@ -52,7 +52,15 @@ windowSize = 10
 # INPUT
 words = pd.read_csv(snakemake.input['words'], header = 0)
 
-#words = words.loc[92999:,]
+# =============================================================================
+# # tmp!!!
+# os.chdir('/home/hroetsc/Documents/ProtTransEmbedding/Snakemake')
+# words = pd.read_csv('results/encoded_proteome/words.csv', header = 0)
+# idx = np.random.randint(0, len(pd.DataFrame.count(words, 1)), size = 10000)
+# words = words.iloc[list(idx),]
+# 
+# =============================================================================
+
 
 # =============================================================================
 # # TEXT PREPROCESSING
