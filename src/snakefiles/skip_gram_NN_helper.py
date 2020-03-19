@@ -20,8 +20,8 @@ def generate_skipgrams(wid, windowSize, vocab_size):
                                 vocabulary_size = vocab_size + 1,
                                 window_size = windowSize,
                                 categorical = False,
-                                shuffle = True,
-                                negative_samples = 0.5)
+                                shuffle = False,
+                                negative_samples = 1)
     gc.collect()
     return skip_grams
 

@@ -14,14 +14,32 @@ rule seq2vec_skip_grams:
         "results/benchmarks/seq2vec_1.txt"
     conda:
         "python_dependencies.yml"
+    params:
+        n=config["max_cores"],
+        mem=config["mem_mb"]
     script:
         "skip_gram_NN_1.py"
 
-rule seq2vec_model_training:
+rule reduce_skipgrams:
     input:
         target = features["embedded_proteome"]["target"],
         context = features["embedded_proteome"]["context"],
-        label = features["embedded_proteome"]["label"],
+        label = features["embedded_proteome"]["label"]
+    output:
+        skip_grams = features["embedded_proteome"]["skip_grams"]
+    log:
+        "results/logs/reduce_skipgrams.txt"
+    conda:
+        "R_dependencies.yml"
+    params:
+        n=config["max_cores"],
+        mem=config["mem_mb"]
+    script:
+        "reduce_skipgrams.R"
+
+rule seq2vec_model_training:
+    input:
+        skip_grams = features["embedded_proteome"]["skip_grams"],
         ids=features["embedded_proteome"]["subword_ids"]
     output:
         weights = features["embedded_proteome"]["subword_weights"],
@@ -33,6 +51,9 @@ rule seq2vec_model_training:
         "results/benchmarks/seq2vec_2.txt"
     conda:
         "python_dependencies.yml"
+    params:
+        n=config["max_cores"],
+        mem=config["mem_mb"]
     script:
         "skip_gram_NN_2.py"
 
@@ -44,6 +65,9 @@ rule plot_model_metrics:
         loss = "results/plots/model_loss.png"
     conda:
         "R_dependencies.yml"
+    params:
+        n=config["max_cores"],
+        mem=config["mem_mb"]
     script:
         "plot_model.R"
 
@@ -56,6 +80,7 @@ rule proteome_repres:
         words = features["encoded_proteome"]["words"]
     output:
         proteome_repres = features["embedded_proteome"]["proteome_representation"]
+        proteome_repres_random = features["embedded_proteome"]["proteome_representation_random"]
     log:
         "results/logs/proteome_repres.txt"
     conda:

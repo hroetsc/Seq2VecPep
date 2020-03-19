@@ -17,6 +17,7 @@ Created on Tue Mar 17 13:55:50 2020
 print("### PROTEOME EMBEDDING USING SKIP-GRAM NEURAL NETWORK - 2 ###")
 
 import os
+import sys
 import gc
 import numpy as np
 import pandas as pd
@@ -68,30 +69,29 @@ adam_decay = 0.005200110247661778
 # =============================================================================
 # # INPUT
 # =============================================================================
+print("LOAD DATA")
 
 # =============================================================================
 # # tmp!!
-os.chdir('/home/hroetsc/Documents/ProtTransEmbedding/Snakemake')
-target_word = np.array(pd.read_csv('results/embedded_proteome/opt_target_10000.txt', delimiter = '\t', names = ['target_word']), dtype='int32')
-context_word = np.array(pd.read_csv('results/embedded_proteome/opt_context_10000.txt', delimiter = '\t', names = ['context_word']), dtype='int32')
-Y = np.array(pd.read_csv('results/embedded_proteome/opt_label_10000.txt', delimiter = '\t', names = ['label']), dtype='int32')
+os.chdir('/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/Snakemake')
+skip_grams = pd.DataFrame(pd.read_csv("results/embedded_proteome/opt_skipgrams_reduced_10000.csv", header = 0))
 ids = pd.read_csv('results/embedded_proteome/opt_seq2vec_ids_10000.csv', header = 0)
 #
 # =============================================================================
-print("LOAD DATA")
+# split skip-grams into target, context and label np.array()
+target_word = np.array(skip_grams.iloc[:,0], dtype = 'int32')
+context_word = np.array(skip_grams.iloc[:,1], dtype = 'int32')
+Y = np.array(skip_grams.iloc[:,2], dtype = 'int32')
 
 print('target word vector')
-#target_word = np.array(pd.read_csv(snakemake.input['target'], delimiter = '\t', names = ['target_word']), dtype='int32')
 target_word = target_word.reshape(target_word.shape[0])
 print(target_word)
 
 print('context word vector')
-#context_word = np.array(pd.read_csv(snakemake.input['context'], delimiter = '\t', names = ['context_word']), dtype='int32')
 context_word = context_word.reshape(context_word.shape[0])
 print(context_word)
 
 print('label vector')
-#Y = np.array(pd.read_csv(snakemake.input['label'], delimiter = '\t', names = ['label']), dtype='int32')
 Y = Y.reshape(Y.shape[0])
 print(Y)
 
@@ -145,6 +145,10 @@ print(model.summary())
 # # TRAINING
 # =============================================================================
 print("MODEL TRAINING")
+# split data into training and validation
+print("split word pairs into training and validation data sets")
+target_train, target_test, context_train, context_test, Y_train, Y_test = train_test_split(target_word, context_word, Y, test_size=valSplit)
+
 print('metrics: {}'.format(model.metrics_names))
 
 # USE FIT_GENERATOR
@@ -154,10 +158,6 @@ print('metrics: {}'.format(model.metrics_names))
 # train on batch - generate batches
 # https://stackoverflow.com/questions/46493419/use-a-generator-for-keras-model-fit-generator
 # https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
-
-# split data into training and validation
-print("split word pairs into training and validation data sets")
-target_train, target_test, context_train, context_test, Y_train, Y_test = train_test_split(target_word, context_word, Y, test_size=valSplit)
 
 # =============================================================================
 # # OLD BATCH GENERATOR APPROACHES
@@ -222,22 +222,18 @@ class BatchGenerator(keras.utils.Sequence):
 
          return [np.array(batch_target, dtype = 'int32'), np.array(batch_context, dtype = 'int32')], np.array(batch_Y, dtype = 'int32')
 
-    #def on_epoch_end(self):
-        #pass
-
 
 # apply batch generator
 print("generating batches for model training")
 train_generator = BatchGenerator(target_train, context_train, Y_train, batchSize)
 test_generator = BatchGenerator(target_test, context_test, Y_test, batchSize)
 
-
 # fit model
 print("fit the model")
 
-# can be ignored in case batch generator uses keras.utils.Sequence() class
-steps = np.ceil((target_train.shape[0]/batchSize)*0.1)
-val_steps = np.ceil((target_test.shape[0]/batchSize)*0.1)
+# can be ignored in case batch generator uses keras.utils.Sequence() class (?)
+steps = np.ceil((target_train.shape[0]/batchSize))
+val_steps = np.ceil((target_test.shape[0]/batchSize))
 
 fit = model.fit_generator(generator=train_generator,
                     validation_data=test_generator,
@@ -266,7 +262,7 @@ pd.DataFrame.to_csv(df, 'results/embedded_proteome/opt_seq2vec_weights_10000.csv
 df.head()
 
 # save model
-model.save('results/embedded_proteome/opt_model_10000.csv')
+model.save('results/embedded_proteome/opt_model_10000.h5')
 
 # save accuracy and loss
 m = open('results/embedded_proteome/opt_model_metrics_1000.txt', 'w')

@@ -53,36 +53,30 @@ epochs = 1000
 batchSize = 32
 valSplit = 0.20
 
+# best result obtained from hyperparameter optimization
 learning_rate = 0.01
 adam_decay = 0.005200110247661778
 
 # =============================================================================
 # # INPUT
 # =============================================================================
-
-# =============================================================================
-# # tmp!!
-#os.chdir('/home/hroetsc/Documents/ProtTransEmbedding/Snakemake')
-#target_word = np.array(pd.read_csv('results/embedded_proteome/opt_target_10000.txt', delimiter = '\t', names = ['target_word']), dtype='int32')
-#context_word = np.array(pd.read_csv('results/embedded_proteome/opt_context_10000.txt', delimiter = '\t', names = ['context_word']), dtype='int32')
-#Y = np.array(pd.read_csv('results/embedded_proteome/opt_label_10000.txt', delimiter = '\t', names = ['label']), dtype='int32')
-#ids = pd.read_csv('results/embedded_proteome/opt_seq2vec_ids_10000.csv', header = 0)
-#
-# =============================================================================
 print("LOAD DATA")
+pd.read_csv(snakemake.input['skip_grams'], header = 0)
+
+# split skip-grams into target, context and label np.array()
+target_word = np.array(skip_grams.iloc[:,0], dtype = 'int32')
+context_word = np.array(skip_grams.iloc[:,1], dtype = 'int32')
+Y = np.array(skip_grams.iloc[:,2], dtype = 'int32')
 
 print('target word vector')
-target_word = np.array(pd.read_csv(snakemake.input['target'], delimiter = '\t', names = ['target_word']), dtype='int32')
 target_word = target_word.reshape(target_word.shape[0])
 print(target_word)
 
 print('context word vector')
-context_word = np.array(pd.read_csv(snakemake.input['context'], delimiter = '\t', names = ['context_word']), dtype='int32')
 context_word = context_word.reshape(context_word.shape[0])
 print(context_word)
 
 print('label vector')
-Y = np.array(pd.read_csv(snakemake.input['label'], delimiter = '\t', names = ['label']), dtype='int32')
 Y = Y.reshape(Y.shape[0])
 print(Y)
 
@@ -136,62 +130,16 @@ print(model.summary())
 # # TRAINING
 # =============================================================================
 print("MODEL TRAINING")
-print('metrics: {}'.format(model.metrics_names))
-
-# USE FIT_GENERATOR
-# train on batch - make batch generator threadsafe (with small number of steps and multiprocessing otherwise duplicated batches occur)
-# https://stackoverflow.com/questions/56441216/on-fit-generator-and-thread-safety
-
-# train on batch - generate batches
-# https://stackoverflow.com/questions/46493419/use-a-generator-for-keras-model-fit-generator
-# https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
 
 # split data into training and validation
 print("split word pairs into training and validation data sets")
 target_train, target_test, context_train, context_test, Y_train, Y_test = train_test_split(target_word, context_word, Y, test_size=valSplit)
 
-# =============================================================================
-# # OLD BATCH GENERATOR APPROACHES
-# # iterate systematically
-# def batch_generator(target, context, Y, batch_size):
-#     n_batches = int(np.ceil(target.shape[0]/int(batch_size))) # divide input length by batch size
-#     counter = 0
-#     #threading.Lock()
-#     while 1:
-#         target_batch = target[batch_size*counter:batch_size*(counter+1)]
-#         context_batch = context[batch_size*counter:batch_size*(counter+1)]
-#         Y_batch = Y[batch_size*counter:batch_size*(counter+1)]
-#
-#         #print([target_batch, context_batch], Y_batch)
-#
-#         counter += 1
-#
-#         yield([target_batch, context_batch], Y_batch)
-#
-#         if counter >= n_batches: # clean for next epoch
-#             counter = 0
-#
-#         gc.collect()
-#
-# # use random integers
-# # does not work properly at the moment bc random integers are always the same
-# def batch_generator2(target, context, Y, batch_size):
-#     counter = 0
-#     while True:
-#         idx = np.array(np.random.randint(0, (target.shape[0])-1, size = batch_size), dtype = 'int32')
-#
-#         target_batch = target[idx]
-#         context_batch = context[idx]
-#         Y_batch = Y[idx]
-#
-#         counter += 1
-#
-#         #print([target_batch, context_batch], Y_batch)
-#         yield ([target_batch, context_batch], Y_batch)
-#
-#         gc.collect()
-#
-# =============================================================================
+print('metrics: {}'.format(model.metrics_names))
+
+# train on batch - generate batches
+# https://stackoverflow.com/questions/46493419/use-a-generator-for-keras-model-fit-generator
+# https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
 
 # make batch generator suitable for multiprocessing - use keras.utils.Sequence class
 # https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
@@ -213,22 +161,17 @@ class BatchGenerator(keras.utils.Sequence):
 
          return [np.array(batch_target, dtype = 'int32'), np.array(batch_context, dtype = 'int32')], np.array(batch_Y, dtype = 'int32')
 
-    #def on_epoch_end(self):
-        #pass
-
-
 # apply batch generator
 print("generating batches for model training")
 train_generator = BatchGenerator(target_train, context_train, Y_train, batchSize)
 test_generator = BatchGenerator(target_test, context_test, Y_test, batchSize)
 
-
 # fit model
 print("fit the model")
 
-# can be ignored in case batch generator uses keras.utils.Sequence() class
-steps = np.ceil((target_train.shape[0]/batchSize)*0.01)
-val_steps = np.ceil((target_test.shape[0]/batchSize)*0.01)
+# can be ignored in case batch generator uses keras.utils.Sequence() class (?)
+steps = np.ceil((target_train.shape[0]/batchSize))
+val_steps = np.ceil((target_test.shape[0]/batchSize))
 
 fit = model.fit_generator(generator=train_generator,
                     validation_data=test_generator,
