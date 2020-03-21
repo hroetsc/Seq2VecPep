@@ -58,7 +58,7 @@ words = pd.read_csv(snakemake.input['words'], header = 0)
 # words = pd.read_csv('results/encoded_proteome/words.csv', header = 0)
 # idx = np.random.randint(0, len(pd.DataFrame.count(words, 1)), size = 10000)
 # words = words.iloc[list(idx),]
-# 
+#
 # =============================================================================
 
 
@@ -96,7 +96,7 @@ pool = multiprocessing.Pool(workers)
 
 if __name__ == "__main__":
     pool.starmap( skip_gram_NN_helper.parallel_processing,
-                ([[n, wids[n], windowSize, vocab_size, n_batches, snakemake.output['target'], snakemake.output['context'], snakemake.output['label']] for n in range(n_batches)]) )
+                ([[n, wids[n], windowSize, vocab_size, n_batches, snakemake.output['skip_grams']] for n in range(n_batches)]) )
 print('done with generating skip-grams')
 
 # =============================================================================

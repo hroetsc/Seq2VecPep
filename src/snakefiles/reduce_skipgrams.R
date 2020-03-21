@@ -7,24 +7,23 @@
 
 print("IMPROVE MODEL EFFICIENCY BY REDUCING THE NUMBER OF SKIP-GRAMS")
 
+library(readr)
 library(data.table)
 library(plyr)
 library(dplyr)
 
 # tmp!!!
-setwd("/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/Snakemake/")
-target = read.table("./results/embedded_proteome/target.txt", stringsAsFactors = F, header = F)
-context = read.table("./results/embedded_proteome/context.txt", stringsAsFactors = F, header = F)
-label = read.table("./results/embedded_proteome/label.txt", stringsAsFactors = F, header = F)
+#setwd("/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/Snakemake/")
+#target = read.table("./results/embedded_proteome/target.txt", stringsAsFactors = F, header = F)
+#context = read.table("./results/embedded_proteome/context.txt", stringsAsFactors = F, header = F)
+#label = read.table("./results/embedded_proteome/label.txt", stringsAsFactors = F, header = F)
 
 ### INPUT ###
 # Snakemake stuff
-target = read.table(snakemake@input[["target"]], stringsAsFactors = F, header = F)
-context = read.table(snakemake@input[["context"]], stringsAsFactors = F, header = F)
-label = read.table(snakemake@input[["label"]], stringsAsFactors = F, header = F)
+skip_grams = read.table(snakemake@input[["skip_grams"]], stringsAsFactors = F, header = F)
 
 ### MAIN PART ###
-skip_grams = data.table(target, context, label)
+skip_grams = data.table(skip_grams)
 colnames(skip_grams) = c("target", "context", "label")
 head(skip_grams)
 
@@ -41,7 +40,7 @@ counter = 0
 
 for (i in 1:nrow(skip_grams)) {
   setTxtProgressBar(progressBar, i)
-  
+
   # counter is the length of the current target word block
   if (!skip_grams$target[i] == skip_grams$target[i+1]){
     # as long as the target word is the same, increase counter
@@ -49,7 +48,7 @@ for (i in 1:nrow(skip_grams)) {
     keep_idx[c((counter_prev+1):(counter_prev + ceiling(counter*keep)))] = sample(c((counter_prev+1):i), ceiling(counter*keep))
     counter_prev = i
   }
-  
+
 }
 print("this error is fine, since it is reaching the last line of the data frame")
 
@@ -62,7 +61,7 @@ skip_grams = skip_grams[sample(c(keep_idx)), ]
 
 ### OUTPUT ###
 # Snakemake stuff
-write.csv(skip_grams, file = unlist(snakemake@output[["skip_grams"]]), row.names = F)
+write.csv(skip_grams, file = unlist(snakemake@output[["skip_grams_reduced"]]), row.names = F)
 
 # tmp!!!
-write.csv(skip_grams, "./results/embedded_proteome/skipgrams_reduced.csv", row.names = F)
+#write.csv(skip_grams, "./results/embedded_proteome/skipgrams_reduced.csv", row.names = F)

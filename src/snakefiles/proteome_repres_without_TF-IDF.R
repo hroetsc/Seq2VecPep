@@ -41,7 +41,7 @@ library(doParallel)
 print("LOAD DATA")
 # proteome information
 proteome = read.csv(file = snakemake@input[["formatted_proteome"]], stringsAsFactors = F, header = T)
-tokens = read.csv(file = snakemake@input[["TF_IDF"]], stringsAsFactors = F, header = T)
+# tokens = read.csv(file = snakemake@input[["TF_IDF"]], stringsAsFactors = F, header = T)
 words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header = T)
 
 # weight matrix
@@ -93,17 +93,17 @@ protein.repres[,c(1:(dim_range[1]-1))] = proteins.master
 progressBar = txtProgressBar(min = 0, max = nrow(proteins.master), style = 3)
 for (i in 1:nrow(proteins.master)) {
   setTxtProgressBar(progressBar, i)
-  
+
   # build temporary table that contains all tokens and weights for the current proteins
   current_tokens = t(str_split(proteins.master$tokens[i], pattern = " ", simplify = T))
   tmp = as.data.frame(matrix(ncol = ncol(weights)-2, nrow = nrow(current_tokens)))
   tmp[, "token"] = current_tokens
-  
+
   # find embeddings for every token in tmp
   for (r in 1:nrow(tmp)) {
     tmp[r,c(1:(ncol(weights)-2))] = find_tokens(paste(tmp[r, ncol(tmp)]))
   }
-  
+
   # only proceed if embeddings for every token are found, otherwise discard protein
   if (!is.na(tmp)) {
     # calculate mean of every token dimension to get protein dimension
@@ -111,7 +111,7 @@ for (i in 1:nrow(proteins.master)) {
       tmp[,c] = as.numeric(as.character(tmp[,c]))
     }
     protein.repres[i, c(dim_range[1]:dim_range[2])] = colSums(tmp[,c(1:(ncol(weights)-2))]) / nrow(tmp)
-    
+
   } else {
     protein.repres[i, c(dim_range[1]:dim_range[2])] = rep(NA, length(c(dim_range[1]:dim_range[2])))
   }

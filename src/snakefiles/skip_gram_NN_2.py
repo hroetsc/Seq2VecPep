@@ -44,16 +44,15 @@ K.tensorflow_backend.set_session(tf.Session(config=config)) # create session
 # =============================================================================
 # # HYPERPARAMETERS
 # =============================================================================
-workers = 12
+workers = 16
 
 # window of a word: [i - window_size, i + window_size+1]
-embeddingDim = 112
-epochs = 1000
+embeddingDim = 100
+epochs = 50
 
 batchSize = 32
 valSplit = 0.20
 
-# best result obtained from hyperparameter optimization
 learning_rate = 0.01
 adam_decay = 0.005200110247661778
 
@@ -61,7 +60,7 @@ adam_decay = 0.005200110247661778
 # # INPUT
 # =============================================================================
 print("LOAD DATA")
-pd.read_csv(snakemake.input['skip_grams'], header = 0)
+pd.read_csv(snakemake.input['skip_grams_reduced'], header = 0)
 
 # split skip-grams into target, context and label np.array()
 target_word = np.array(skip_grams.iloc[:,0], dtype = 'int32')
@@ -69,18 +68,17 @@ context_word = np.array(skip_grams.iloc[:,1], dtype = 'int32')
 Y = np.array(skip_grams.iloc[:,2], dtype = 'int32')
 
 print('target word vector')
-target_word = target_word.reshape(target_word.shape[0])
+target_word = target_word.reshape(target_word.shape[0],1)
 print(target_word)
 
 print('context word vector')
-context_word = context_word.reshape(context_word.shape[0])
+context_word = context_word.reshape(context_word.shape[0],1)
 print(context_word)
 
 print('label vector')
-Y = Y.reshape(Y.shape[0])
+Y = Y.reshape(Y.shape[0],1)
 print(Y)
 
-ids = pd.read_csv(snakemake.input['ids'], header = 0)
 vocab_size = len(ids.index)+2
 print("vocabulary size (number of target word IDs +2): {}".format(vocab_size))
 
@@ -114,14 +112,19 @@ dot_product = dot([target, context], axes = 1, normalize = True, name = 'dot_pro
 dot_product = Reshape((1,))(dot_product)
 
 # add the sigmoid dense layer
-output = Dense(1, activation='softmax', kernel_initializer = 'glorot_uniform', name='1st_softmax')(dot_product)
-output = Dense(1, activation='softmax', kernel_initializer = 'glorot_uniform', name='2nd_softmax')(output)
+output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='1st_sigmoid')(dot_product)
+output = Dropout(0.5)(output)
+output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='2nd_sigmoid')(output)
 
 # create the primary training model
 model = Model(inputs=[input_target, input_context], outputs=output)
 
-adam = Adam(lr=learning_rate, decay=adam_decay)
-model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy']) # binary for binary decisions, categorical for classifications
+#adam = Adam(lr=learning_rate, decay=adam_decay)
+#model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy']) # binary for binary decisions, categorical for classifications
+
+# binary classification loss functions
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+#model.compile(loss='squared_hinge', optimizer='adam', metrics=['accuracy'])
 
 # view model summary
 print(model.summary())
@@ -130,12 +133,15 @@ print(model.summary())
 # # TRAINING
 # =============================================================================
 print("MODEL TRAINING")
-
 # split data into training and validation
 print("split word pairs into training and validation data sets")
 target_train, target_test, context_train, context_test, Y_train, Y_test = train_test_split(target_word, context_word, Y, test_size=valSplit)
 
 print('metrics: {}'.format(model.metrics_names))
+
+# USE FIT_GENERATOR
+# train on batch - make batch generator threadsafe (with small number of steps and multiprocessing otherwise duplicated batches occur)
+# https://stackoverflow.com/questions/56441216/on-fit-generator-and-thread-safety
 
 # train on batch - generate batches
 # https://stackoverflow.com/questions/46493419/use-a-generator-for-keras-model-fit-generator
@@ -155,11 +161,15 @@ class BatchGenerator(keras.utils.Sequence):
          return int(np.ceil(len(self.target) / float(self.batch_size)))
 
      def __getitem__(self, idx):
-         batch_target = self.target[idx*self.batch_size : (idx + 1)*self.batch_size]
-         batch_context = self.context[idx*self.batch_size : (idx + 1)*self.batch_size]
-         batch_Y = self.Y[idx*self.batch_size : (idx + 1)*self.batch_size]
+         batch_target = np.array(self.target[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,1)
+         batch_context = np.array(self.context[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,1)
+         batch_Y = np.array(self.Y[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,1)
 
-         return [np.array(batch_target, dtype = 'int32'), np.array(batch_context, dtype = 'int32')], np.array(batch_Y, dtype = 'int32')
+         return [batch_target, batch_context], batch_Y
+
+     #def on_epoch_end(self):
+     #    pass
+
 
 # apply batch generator
 print("generating batches for model training")
@@ -170,20 +180,20 @@ test_generator = BatchGenerator(target_test, context_test, Y_test, batchSize)
 print("fit the model")
 
 # can be ignored in case batch generator uses keras.utils.Sequence() class (?)
-steps = np.ceil((target_train.shape[0]/batchSize))
-val_steps = np.ceil((target_test.shape[0]/batchSize))
+steps = np.ceil(target_train.shape[0]/batchSize)
+val_steps = np.ceil(target_test.shape[0]/batchSize)
 
 fit = model.fit_generator(generator=train_generator,
                     validation_data=test_generator,
                     steps_per_epoch = steps,
                     validation_steps = val_steps,
                     epochs = epochs,
-                    initial_epoch=0,
+                    initial_epoch = 0,
                     verbose=2,
                     workers=workers,
                     use_multiprocessing=True,
-                    shuffle=True)
-
+                    shuffle=False)
+# shuffle has to be false bc BatchBenerator can't cope with shuffled data!
 
 # =============================================================================
 # ### OUTPUT ###

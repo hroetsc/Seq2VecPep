@@ -4,9 +4,7 @@ rule seq2vec_skip_grams:
     input:
         words = features["encoded_proteome"]["words"]
     output:
-        target = features["embedded_proteome"]["target"],
-        context = features["embedded_proteome"]["context"],
-        label = features["embedded_proteome"]["label"],
+        skip_grams = features["embedded_proteome"]["skip_grams"],
         ids = features["embedded_proteome"]["subword_ids"]
     log:
         "results/logs/seq2vec_1.txt"
@@ -22,11 +20,9 @@ rule seq2vec_skip_grams:
 
 rule reduce_skipgrams:
     input:
-        target = features["embedded_proteome"]["target"],
-        context = features["embedded_proteome"]["context"],
-        label = features["embedded_proteome"]["label"]
-    output:
         skip_grams = features["embedded_proteome"]["skip_grams"]
+    output:
+        skip_grams_reduced = features["embedded_proteome"]["skip_grams_reduced"]
     log:
         "results/logs/reduce_skipgrams.txt"
     conda:
@@ -39,7 +35,7 @@ rule reduce_skipgrams:
 
 rule seq2vec_model_training:
     input:
-        skip_grams = features["embedded_proteome"]["skip_grams"],
+        skip_grams_reduced = features["embedded_proteome"]["skip_grams_reduced"],
         ids=features["embedded_proteome"]["subword_ids"]
     output:
         weights = features["embedded_proteome"]["subword_weights"],
@@ -76,7 +72,7 @@ rule proteome_repres:
         weights = features["embedded_proteome"]["subword_weights"],
         ids=features["embedded_proteome"]["subword_ids"],
         formatted_proteome = features["peptidome"]["formatted_proteome"],
-        TF_IDF = features["encoded_proteome"]["TF_IDF"],
+        #TF_IDF = features["encoded_proteome"]["TF_IDF"],
         words = features["encoded_proteome"]["words"]
     output:
         proteome_repres = features["embedded_proteome"]["proteome_representation"],
@@ -91,29 +87,29 @@ rule proteome_repres:
     script:
         "proteome_repres_without_TF-IDF.R"
 
-rule plotting:
-    input:
-        proteome_repres = features["embedded_proteome"]["proteome_representation"],
-        proteome_repres_random = features["embedded_proteome"]["proteome_representation_random"]
-    output:
-        proteome_props = features["embedded_proteome"]["proteome_properties"],
-        proteome_props_random = features["embedded_proteome"]["proteome_properties_random"],
-        p_rPCP = "results/plots/rPCP.png",
-        p_rPCP_dens = "results/plots/rPCP_dens.png",
-        p_F6 = "results/plots/F6.png",
-        p_Z3 = "results/plots/Z3.png",
-        p_BLOSUM1 = "results/plots/BLOSUM1.png",
-        p_charge = "results/plots/charge.png",
-        p_pI = "results/plots/pI.png",
-        p_hydrophobicity = "results/plots/Hydrophobicity.png",
-        p_H_bonding = "results/plots/H_bonding.png",
-        p_Polarity = "results/plots/Polarity.png"
-    log:
-        "results/logs/plotting.txt"
-    conda:
-        "R_dependencies.yml"
-    params:
-        n=config["max_cores"],
-        mem=config["mem_mb"]
-    script:
-        "plotting.R"
+#rule plotting:
+#    input:
+#        proteome_repres = features["embedded_proteome"]["proteome_representation"],
+#        proteome_repres_random = features["embedded_proteome"]["proteome_representation_random"]
+#    output:
+#        proteome_props = features["embedded_proteome"]["proteome_properties"],
+#        proteome_props_random = features["embedded_proteome"]["proteome_properties_random"],
+#        p_rPCP = "results/plots/rPCP.png",
+#        p_rPCP_dens = "results/plots/rPCP_dens.png",
+#        p_F6 = "results/plots/F6.png",
+#        p_Z3 = "results/plots/Z3.png",
+#        p_BLOSUM1 = "results/plots/BLOSUM1.png",
+#        p_charge = "results/plots/charge.png",
+#        p_pI = "results/plots/pI.png",
+#        p_hydrophobicity = "results/plots/Hydrophobicity.png",
+#        p_H_bonding = "results/plots/H_bonding.png",
+#        p_Polarity = "results/plots/Polarity.png"
+#    log:
+#        "results/logs/plotting.txt"
+#    conda:
+#        "R_dependencies.yml"
+#    params:
+#        n=config["max_cores"],
+#        mem=config["mem_mb"]
+#    script:
+#        "plotting.R"
