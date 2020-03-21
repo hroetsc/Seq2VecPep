@@ -56,116 +56,68 @@ gc.enable()
 #config.gpu_options.per_process_gpu_memory_fraction = 0.5 # only allow half of the memory to be allocated
 #K.tensorflow_backend.set_session(tf.Session(config=config)) # create session
 
-os.chdir('/home/hroetsc/Documents/ProtTransEmbedding/Snakemake')
-
 # HYPERPARAMETERS
-workers = 12
+workers = 10
 
 # window of a word: [i - window_size, i + window_size+1]
-embeddingDim = 100 # used as maximum by Mikolov et al. 2013 for NLP word embedding
-epochs = 5 #100 #200
+#embeddingDim = 100 # used as maximum by Mikolov et al. 2013 for NLP word embedding
+epochs = 50 #100 #200
 
-batchSize = 64
 valSplit = 0.20
 
 # INPUT
-size = sys.argv[1]
-print("current vocabulary size: {}".format(size))
-
 print("LOAD DATA")
 
+os.chdir('/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/Snakemake')
+skip_grams = pd.DataFrame(pd.read_csv("results/embedded_proteome/opt_skipgrams_reduced_10000.csv", header = 0))
+ids = pd.read_csv('results/embedded_proteome/opt_seq2vec_ids_10000.csv', header = 0)
+
+# split skip-grams into target, context and label np.array()
+target_word = np.array(skip_grams.iloc[:,0], dtype = 'int32')
+context_word = np.array(skip_grams.iloc[:,1], dtype = 'int32')
+Y = np.array(skip_grams.iloc[:,2], dtype = 'int32')
+
 print('target word vector')
-target_word = np.array(pd.read_csv('results/embedded_proteome/opt_target_{}.txt'.format(size), delimiter = '\t', names = ['target_word']), dtype='int32')
 target_word = target_word.reshape(target_word.shape[0])
 print(target_word)
 
 print('context word vector')
-context_word = np.array(pd.read_csv('results/embedded_proteome/opt_context_{}.txt'.format(size), delimiter = '\t', names = ['context_word']), dtype='int32')
 context_word = context_word.reshape(context_word.shape[0])
 print(context_word)
 
 print('label vector')
-Y = np.array(pd.read_csv('results/embedded_proteome/opt_label_{}.txt'.format(size), delimiter = '\t', names = ['label']), dtype='int32')
 Y = Y.reshape(Y.shape[0])
 print(Y)
 
-ids = pd.read_csv('results/embedded_proteome/opt_seq2vec_ids_{}.csv'.format(size), header = 0)
 vocab_size = len(ids.index)+2
-print("vocabulary size (number of target word IDs +1): {}".format(vocab_size))
-
-#no_skip_grams = int(target_word.shape[0])*0.1
-# for the sake of speed, pick random 10 % of original skip-gram size
-ind = np.array(np.random.randint(0, int(target_word.shape[0]), size = 1000000), dtype = 'int32')
-target_word = target_word[ind]
-context_word = context_word[ind]
-Y = Y[ind]
+print("vocabulary size (number of target word IDs +2): {}".format(vocab_size))
 
 # SEARCH PARAMETERS FOR HYPERPARAMETER OPTIMIZATION
 # https://medium.com/@crawftv/parameter-hyperparameter-tuning-with-bayesian-optimization-7acf42d348e1
 print("INITIALIZE HYPERPARAMETER OPTIMIZATION")
 dim_learning_rate = Real(low=1e-4, high=1e-2, prior='log-uniform',
                          name='learning_rate')
-dim_embedding_size = Integer(low=100, high=200, name='embedding_size')
+dim_embedding_size = Integer(low=5, high=500, name='embedding_size')
 #dim_num_dense_layers = Integer(low=1, high=5, name='num_dense_layers')
-dim_activation = Categorical(categories=['sigmoid', 'softmax'],
-                             name='activation_function')
+#dim_activation = Categorical(categories=['sigmoid', 'softmax'],
+#                             name='activation_function')
 dim_batch_size = Integer(low=32, high=256, name='batch_size')
-dim_epochs = Integer(low=5, high=100, name='num_epochs')
+#dim_epochs = Integer(low=5, high=200, name='num_epochs')
 dim_adam_decay = Real(low=1e-6,high=1e-2,name="adam_decay")
 
 dimensions = [dim_learning_rate,
                 dim_embedding_size,
                 #dim_num_dense_layers,
-                dim_activation,
+                #dim_activation,
                 dim_batch_size,
-                dim_epochs,
+                #dim_epochs,
                 dim_adam_decay]
 
 # define default parameters
-default_parameters = [1e-3, 100, 'sigmoid', 64, 5, 1e-3]
+default_parameters = [1e-3, 100, 64, 1e-3]
 
 # MODEL CREATION
 print("MODEL GENERATION")
-
-# batch generator
-# iterate systematically
-def batch_generator(target, context, Y, batch_size):
-    n_batches = int(np.ceil(target.shape[0]/int(batch_size))) # divide input length by batch size
-    counter = 0
-    #threading.Lock()
-    while 1:
-        target_batch = target[batch_size*counter:batch_size*(counter+1)]
-        context_batch = context[batch_size*counter:batch_size*(counter+1)]
-        Y_batch = Y[batch_size*counter:batch_size*(counter+1)]
-
-        #print([target_batch, context_batch], Y_batch)
-
-        counter += 1
-
-        yield([target_batch, context_batch], Y_batch)
-
-        if counter >= n_batches: # clean for next epoch
-            counter = 0
-
-        gc.collect()
-
-# use random integers
-# does not work properly at the moment bc random integers are always the same
-def batch_generator2(target, context, Y, batch_size):
-    counter = 0
-    while True:
-        idx = np.array(np.random.randint(0, target.shape[0], size = batch_size), dtype = 'int32')
-
-        target_batch = target[idx]
-        context_batch = context[idx]
-        Y_batch = Y[idx]
-
-        counter += 1
-
-        #print([target_batch, context_batch], Y_batch)
-        yield ([target_batch, context_batch], Y_batch)
-
-        gc.collect()
 
 class BatchGenerator(keras.utils.Sequence):
 
@@ -173,25 +125,21 @@ class BatchGenerator(keras.utils.Sequence):
          self.target, self.context, self.Y = target, context, Y
          self.batch_size = batch_size
 
-
      def __len__(self):
          return int(np.ceil(len(self.target) / float(self.batch_size)))
 
      def __getitem__(self, idx):
-         batch_target = self.target[idx*self.batch_size : (idx + 1)*self.batch_size]
-         batch_context = self.context[idx*self.batch_size : (idx + 1)*self.batch_size]
-         batch_Y = self.Y[idx*self.batch_size : (idx + 1)*self.batch_size]
+         batch_target = np.array(self.target[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32')
+         batch_context = np.array(self.context[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32')
+         batch_Y = np.array(self.Y[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32')
 
-         return [np.array(batch_target, dtype = 'int32'), np.array(batch_context, dtype = 'int32')], np.array(batch_Y, dtype = 'int32')
-
-    #def on_epoch_end(self):
-    #    pass
+         return [batch_target, batch_context], batch_Y
 
 
 # split data into training and testing (validation) data sets
 target_train, target_test, context_train, context_test, Y_train, Y_test = train_test_split(target_word, context_word, Y, test_size=valSplit)
 
-def create_model (learning_rate, embedding_size, activation_function, adam_decay, batch_size):
+def create_model (learning_rate, embedding_size, adam_decay, batch_size):
     input_target = keras.layers.Input(((1,)), name='target_word')
     input_context = keras.layers.Input(((1,)), name='context_word')
 
@@ -215,8 +163,7 @@ def create_model (learning_rate, embedding_size, activation_function, adam_decay
     dot_product = Reshape((1,))(dot_product)
 
     # add the sigmoid dense layer
-    output = Dense(1, activation = activation_function, kernel_initializer = 'glorot_uniform', name='1st_layer')(dot_product)
-    output = Dense(1, activation = activation_function, kernel_initializer = 'glorot_uniform', name='2nd_layer')(output)
+    output = Dense(1, activation = 'sigmoid', kernel_initializer = 'glorot_uniform', name='1st_sigmoid')(dot_product)
 
     # create the primary training model
     model = Model(inputs=[input_target, input_context], outputs=output)
@@ -228,11 +175,10 @@ def create_model (learning_rate, embedding_size, activation_function, adam_decay
     return model
 
 @use_named_args(dimensions=dimensions)
-def fitness(learning_rate, embedding_size, activation_function, batch_size, num_epochs, adam_decay):
+def fitness(learning_rate, embedding_size, batch_size, adam_decay):
 
     model = create_model(learning_rate = learning_rate,
                             embedding_size = embedding_size,
-                            activation_function = activation_function,
                             adam_decay = adam_decay,
                             batch_size = batch_size)
 
@@ -240,22 +186,22 @@ def fitness(learning_rate, embedding_size, activation_function, batch_size, num_
     train_generator = BatchGenerator(target_train, context_train, Y_train, batch_size)
     test_generator = BatchGenerator(target_test, context_test, Y_test, batch_size)
 
-    #steps = np.ceil((target_train.shape[0]/batchSize)*0.1)
-    #val_steps = np.ceil((target_test.shape[0]/batchSize)*0.1)
+    steps = np.ceil((target_train.shape[0]/batch_size)*0.01)
+    val_steps = np.ceil((target_test.shape[0]/batch_size)*0.01)
 
     #named blackbox becuase it represents the structure
     blackbox = model.fit_generator(generator=train_generator,
                         validation_data=test_generator,
-                        #steps_per_epoch = steps,
-                        #validation_steps = val_steps,
-                        epochs=num_epochs,
+                        steps_per_epoch = steps,
+                        validation_steps = val_steps,
+                        epochs=epochs,
                         verbose=2,
                         workers=workers,
                         use_multiprocessing=True,
-                        shuffle=True)
+                        shuffle=False)
 
     #return the validation accuracy for the last epoch.
-    accuracy = blackbox.history['val_acc'][-1]
+    accuracy = blackbox.history['val_accuracy'][-1]
 
     # Print the classification accuracy.
     print()
@@ -302,12 +248,12 @@ print(gp)
 #print(gbrt)
 
 gp_file = pd.DataFrame(gp)
-pd.DataFrame.to_csv(gp_file, 'optimization/results/gp_new_{}.csv'.format(size), header=False)
+pd.DataFrame.to_csv(gp_file, 'optimization/results/gp_new_10000.csv', header=False)
 
 #gbrt_file = pd.DataFrame(gbrt)
 #pd.DataFrame.to_csv(gbrt_file, 'optimization/results/gbrt_new_{}.csv'.format(size), header=False)
 
 # save weights of embedding matrix
 df = pd.DataFrame(weights)
-pd.DataFrame.to_csv(df, 'results/embedded_proteome/weights_{}.csv'.format(size), header=False)
+pd.DataFrame.to_csv(df, 'results/embedded_proteome/weights_10000.csv', header=False)
 df.head()

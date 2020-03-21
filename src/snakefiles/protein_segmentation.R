@@ -79,6 +79,10 @@ if (length(which(sort <= 1)) > 0) {
   words = words[-which(sort <= 1),]
 }
 
+print("randomize protein order")
+# randomly shuffle proteins to make downstream model training more robust
+words = words[sample(nrow(words)), ]
+
 ### OUTPUT ###
 # save model vocabulary
 write.csv(ModelVocab, file = unlist(snakemake@output[["model_vocab"]]), row.names = F)

@@ -63,7 +63,7 @@ workers = 16
 
 # window of a word: [i - window_size, i + window_size+1]
 embeddingDim = 100
-epochs = 10
+epochs = 50
 
 batchSize = 32
 valSplit = 0.20
@@ -104,10 +104,10 @@ vocab_size = len(ids.index)+2
 print("vocabulary size (number of target word IDs +2): {}".format(vocab_size))
 
 ### remove!!! ### just for speed testing
-#ind = np.array(np.random.randint(0, target_word.shape[0], size = 200000), dtype = 'int32')
-#target_word = target_word[ind]
-#context_word = context_word[ind]
-#Y = Y[ind]
+ind = np.array(np.random.randint(0, target_word.shape[0], size = 200000), dtype = 'int32')
+target_word = target_word[ind]
+context_word = context_word[ind]
+Y = Y[ind]
 
 # =============================================================================
 # # MODEL CREATION
@@ -140,8 +140,15 @@ dot_product = Reshape((1,))(dot_product)
 
 # add the sigmoid dense layer
 output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='1st_sigmoid')(dot_product)
-output = Dropout(0.5)(output)
 output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='2nd_sigmoid')(output)
+output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='3rd_sigmoid')(output)
+output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='4th_sigmoid')(output)
+output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='5th_sigmoid')(output)
+output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='6th_sigmoid')(output)
+output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='7th_sigmoid')(output)
+output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='8th_sigmoid')(output)
+output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='9th_sigmoid')(output)
+output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='10th_sigmoid')(output)
 
 # create the primary training model
 model = Model(inputs=[input_target, input_context], outputs=output)
@@ -149,10 +156,7 @@ model = Model(inputs=[input_target, input_context], outputs=output)
 #adam = Adam(lr=learning_rate, decay=adam_decay)
 #model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy']) # binary for binary decisions, categorical for classifications
 
-# binary classification loss functions
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-#model.compile(loss='squared_hinge', optimizer='adam', metrics=['accuracy'])
-
+model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy']) # binary for binary decisions, categorical for classifications
 # view model summary
 print(model.summary())
 
@@ -173,6 +177,44 @@ print('metrics: {}'.format(model.metrics_names))
 # train on batch - generate batches
 # https://stackoverflow.com/questions/46493419/use-a-generator-for-keras-model-fit-generator
 # https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
+
+# # OLD BATCH GENERATOR APPROACHES
+# # iterate systematically
+def batch_generator(target, context, Y, batch_size):
+    n_batches = int(np.ceil(target.shape[0]/int(batch_size))) # divide input length by batch size
+    counter = 0
+    #threading.Lock()
+    while 1:
+        target_batch = target[batch_size*counter:batch_size*(counter+1)]
+        context_batch = context[batch_size*counter:batch_size*(counter+1)]
+        Y_batch = Y[batch_size*counter:batch_size*(counter+1)]
+
+        #print([target_batch, context_batch], Y_batch)
+
+        counter += 1
+        yield([target_batch, context_batch], Y_batch)
+
+        if counter >= n_batches: # clean for next epoch
+            counter = 0
+
+        gc.collect()
+
+# # use random integers
+def batch_generator2(target, context, Y, batch_size):
+    counter = 0
+    while True:
+        idx = np.array(np.random.randint(0, (target.shape[0])-1, size = batch_size), dtype = 'int32')
+
+        target_batch = target[idx]
+        context_batch = context[idx]
+        Y_batch = Y[idx]
+
+        counter += 1
+
+        #print([target_batch, context_batch], Y_batch)
+        yield ([target_batch, context_batch], Y_batch)
+
+        gc.collect()
 
 # make batch generator suitable for multiprocessing - use keras.utils.Sequence class
 # https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
@@ -215,7 +257,7 @@ fit = model.fit_generator(generator=train_generator,
                     steps_per_epoch = steps,
                     validation_steps = val_steps,
                     epochs = epochs,
-                    initial_epoch = 0,
+                    initial_epoch = 1,
                     verbose=2,
                     workers=workers,
                     use_multiprocessing=True,

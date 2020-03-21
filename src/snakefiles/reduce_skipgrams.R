@@ -13,9 +13,9 @@ library(dplyr)
 
 # tmp!!!
 setwd("/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/Snakemake/")
-target = read.table("./results/embedded_proteome/opt_target_10000.txt", stringsAsFactors = F, header = F)
-context = read.table("./results/embedded_proteome/opt_context_10000.txt", stringsAsFactors = F, header = F)
-label = read.table("./results/embedded_proteome/opt_label_10000.txt", stringsAsFactors = F, header = F)
+target = read.table("./results/embedded_proteome/target.txt", stringsAsFactors = F, header = F)
+context = read.table("./results/embedded_proteome/context.txt", stringsAsFactors = F, header = F)
+label = read.table("./results/embedded_proteome/label.txt", stringsAsFactors = F, header = F)
 
 ### INPUT ###
 # Snakemake stuff
@@ -56,11 +56,13 @@ print("this error is fine, since it is reaching the last line of the data frame"
 keep_idx = na.omit(keep_idx)
 # take into account that it could not be assessed whether the last target word is different from the ones before
 keep_idx[length(keep_idx)+1] = nrow(skip_grams)
-skip_grams = skip_grams[c(keep_idx), ]
+
+# shuffle skip-grams to make model training more robust
+skip_grams = skip_grams[sample(c(keep_idx)), ]
 
 ### OUTPUT ###
 # Snakemake stuff
 write.csv(skip_grams, file = unlist(snakemake@output[["skip_grams"]]), row.names = F)
 
 # tmp!!!
-write.csv(skip_grams, "./results/embedded_proteome/opt_skipgrams_reduced_10000.csv", row.names = F)
+write.csv(skip_grams, "./results/embedded_proteome/skipgrams_reduced.csv", row.names = F)

@@ -79,7 +79,7 @@ rule proteome_repres:
         TF_IDF = features["encoded_proteome"]["TF_IDF"],
         words = features["encoded_proteome"]["words"]
     output:
-        proteome_repres = features["embedded_proteome"]["proteome_representation"]
+        proteome_repres = features["embedded_proteome"]["proteome_representation"],
         proteome_repres_random = features["embedded_proteome"]["proteome_representation_random"]
     log:
         "results/logs/proteome_repres.txt"
@@ -89,13 +89,15 @@ rule proteome_repres:
         n=config["max_cores"],
         mem=config["mem_mb"]
     script:
-        "proteome_repres.R"
+        "proteome_repres_without_TF-IDF.R"
 
 rule plotting:
     input:
-        proteome_repres = features["embedded_proteome"]["proteome_representation"]
+        proteome_repres = features["embedded_proteome"]["proteome_representation"],
+        proteome_repres_random = features["embedded_proteome"]["proteome_representation_random"]
     output:
         proteome_props = features["embedded_proteome"]["proteome_properties"],
+        proteome_props_random = features["embedded_proteome"]["proteome_properties_random"],
         p_rPCP = "results/plots/rPCP.png",
         p_rPCP_dens = "results/plots/rPCP_dens.png",
         p_F6 = "results/plots/F6.png",

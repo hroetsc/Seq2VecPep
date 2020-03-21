@@ -6,8 +6,9 @@
 # author:       HR, PepSummary function from YH
 
 # tmp!!!
-protein.repres = read.csv(file = "results/embedded_proteome/proteome_repres.csv", stringsAsFactors = F, header = T)
-
+protein.repres = read.csv(file = "results/embedded_proteome/opt_proteome_repres_10000.csv", stringsAsFactors = F, header = T)
+protein.repres.random = read.csv(file = "results/embedded_proteome/opt_proteome_repres_random_10000.csv", stringsAsFactors = F, header = T)
+  
 print("### DIMENSION REDUCTION / PLOTTING ###")
 
 library(seqinr)
@@ -16,32 +17,42 @@ library(Peptides)
 library(plyr)
 library(dplyr)
 library(stringr)
-#library(tidyr)
 library(readr)
-library(ggplot2)
-library(ggthemes)
-library(ggpubr)
+#library(ggplot2)
+#library(ggthemes)
+#library(ggpubr)
 library(uwot)
-library(reshape2)
+#library(reshape2)
+# added
+library(grDevices)
+library(RColorBrewer)
 
 ### INPUT ###
 protein.repres = read.csv(file = snakemake@input[["proteome_repres"]], stringsAsFactors = F, header = T)
-dim_range = c(which(colnames(protein.repres)=="TF_IDF_score")+1, ncol(protein.repres))
-print(dim_range)
+
+# define range in which the embedding dimensions are
+if ("TF_IDF_score" %in% colnames(protein.repres)) {
+  dim_range = c(which(colnames(protein.repres)=="TF_IDF_score")+1, ncol(protein.repres))
+} else {
+  dim_range = c(which(colnames(protein.repres)=="tokens")+1, ncol(protein.repres))
+}
 colnames(protein.repres)[c(dim_range[1]:dim_range[2])] = seq(1, (dim_range[2]-dim_range[1]+1))
+colnames(protein.repres.random)[c(dim_range[1]:dim_range[2])] = seq(1, (dim_range[2]-dim_range[1]+1))
 
 ### MAIN PART ###
 print("APPLY UMAP TO EMBEDDINGS")
 set.seed(42)
+
+print('trained weights')
 dims_UMAP = umap(protein.repres[,c(dim_range[1]:ncol(protein.repres))],
-                 n_neighbors = 10,
+                 n_neighbors = 3,
                  min_dist = 0.01,
-                 #spread = 2,
-                 #n_trees = 50,
+                 spread = 2,
+                 n_trees = 50,
                  verbose = T,
                  approx_pow = T,
                  ret_model = T,
-                 metric = "cosine",
+                 metric = "euclidean",
                  scale = "none",
                  n_epochs = 500,
                  n_threads = 11)
@@ -49,31 +60,22 @@ dims_UMAP = umap(protein.repres[,c(dim_range[1]:ncol(protein.repres))],
 umap_coords <- data.frame("X1"=dims_UMAP$embedding[,1],"X2"=dims_UMAP$embedding[,2])
 proteinsUMAP <- cbind(umap_coords, protein.repres)
 
-proteinsUMAP$shared_rPCP = as.numeric(as.character(proteinsUMAP$shared_rPCP))
-UMAP_rPCP <- ggplot(proteinsUMAP, aes(x = X1, y = X2)) +
-  geom_point(aes(fill = class, size = shared_rPCP, color = shared_rPCP),
-             alpha = 0.85, pch=21, stroke = 1) +
-  theme_few() +
-  theme(text=element_text(family="sans", face="plain", color="#000000",
-                          size=15, hjust=0.5, vjust=0.5))+
-  scale_color_gradient2(aesthetics = "color",
-                        low="blue", high="red", mid = "yellow",
-                        name = "shared_rPCP") +
-  scale_fill_manual(aesthetics = "fill", values = c("black", "white"), name = "class")+
-  scale_radius(range = c(1,10), name = "shared_rPCP")+
-  xlab("UMAP 1") +
-  ylab("UMAP 2") +
-  ggtitle("embedded proteins")
-UMAP_rPCP
+print('random weights')
+dims_UMAP.random = umap(protein.repres.random[,c(dim_range[1]:ncol(protein.repres.random))],
+                 n_neighbors = 3,
+                 min_dist = 0.01,
+                 spread = 2,
+                 n_trees = 50,
+                 verbose = T,
+                 approx_pow = T,
+                 ret_model = T,
+                 metric = "euclidean",
+                 scale = "none",
+                 n_epochs = 500,
+                 n_threads = 11)
 
-# density plot
-UMAP_rPCP_dens <- ggplot(proteinsUMAP, aes(x = X1, y = X2)) +
-  geom_bin2d(bins=200) +
-  scale_fill_continuous(type = "viridis") +
-  theme_bw() +
-  xlab("UMAP 1") +
-  ylab("UMAP 2") +
-  ggtitle("embedded proteins - density plot")
+umap_coords.random <- data.frame("X1"=dims_UMAP.random$embedding[,1],"X2"=dims_UMAP.random$embedding[,2])
+proteinsUMAP.random <- cbind(umap_coords.random, protein.repres.random)
 
 ### BIOPHYSICAL PROPERTIES ###
 print("CALCULATE BIOCHEMICAL PROPERTIES OF PROTEOME")
@@ -286,154 +288,61 @@ PepSummary <- function(Peptides.input) {
 proteinsUMAP$seqs = as.character(proteinsUMAP$seqs)
 a <- sapply(toupper(proteinsUMAP$seqs), protcheck)
 names(a) <- NULL
-proteinsUMAP = proteinsUMAP[which(a==T),]
+print(paste0("found ",length(which(a==F)) , " proteins that are failing the protcheck() and is removing them"))
+
+# clean data sets
+proteinsUMAP = proteinsUMAP[which(a==T), ]
+proteinsUMAP.random = proteinsUMAP.random[which(a==T), ]
+
+# actually calculate
 PropMatrix = PepSummary(proteinsUMAP$seqs)
+
+# concatenate dataframes
 proteinsUMAP.Props = as.data.frame(cbind(proteinsUMAP, PropMatrix))
 proteinsUMAP.Props = na.omit(proteinsUMAP.Props)
+proteinsUMAP.Props.random = as.data.frame(cbind(proteinsUMAP.random, PropMatrix))
+proteinsUMAP.Props.random = na.omit(proteinsUMAP.Props.random)
 
-# does not work at the moment
-# prop_plots = function(proteinsUMAP.Props = "", props = ""){
-#   plots = list()
-#   for (i in 1:10) {
-#     p = ggplot(proteinsUMAP.Props, aes(x = proteinsUMAP.Props[,"X1"], y = proteinsUMAP.Props[,"X2"])) +
-#       geom_point(aes(fill = proteinsUMAP.Props[,props[i]], size = proteinsUMAP.Props[,"shared_rPCP"], color = class), alpha = 0.85, pch=21, stroke = 1) +
-#       theme_few() +
-#       theme(text=element_text(family="sans", face="plain", color="#000000", size=15, hjust=0.5, vjust=0.5))+
-#       scale_fill_gradient2(aesthetics = "fill",
-#                            low="blue", high="red", mid = "yellow",
-#                            name = as.character(props[i])) +
-#       scale_radius(range = c(1,4), name = "shared_rPCP")+
-#       xlab("UMAP 1") +
-#       ylab("UMAP 2") +
-#       ggtitle(paste0("embedded proteins, by ", as.character(props[i])))
-#     p
-#     png(paste0("./results/plots/", as.character(gsub("[.]", "_", props[i])), ".png"))
-#     print(p)
-#     dev.off()
-#     
-#     plots[[i]] = p
-#   }
-#   return(plots)
-# }
-
+### PLOTTING ###
 print("GENERATE PLOTS")
-# plot some particular properties
-F6 = ggplot(proteinsUMAP.Props, aes(x = proteinsUMAP.Props[,"X1"], y = proteinsUMAP.Props[,"X2"])) +
-  geom_point(aes(color = proteinsUMAP.Props[,"F6"], size = proteinsUMAP.Props[,"shared_rPCP"],
-                 fill = class), alpha = 0.85, pch=21, stroke = 1) +
-  theme_few() +
-  theme(text=element_text(family="sans", face="plain", color="#000000",
-                          size=15, hjust=0.5, vjust=0.5))+
-  scale_fill_gradient2(aesthetics = "color",
-                       low="blue", high="red", mid = "yellow",
-                       name = "F6") +
-  scale_fill_manual(aesthetics = "fill", values = c("black", "white"), name = "class")+
-  scale_radius(range = c(1,5), name = "shared_rPCP")+
-  xlab("UMAP 1") +
-  ylab("UMAP 2") +
-  ggtitle(paste0("embedded proteins, by F6"))
+# use base R because ggplot is not recalculating the color code
+# colour gradient
+spectral <- RColorBrewer::brewer.pal(10, "Spectral")
+color.gradient <- function(x, colsteps=1000) {
+  return( colorRampPalette(spectral) (colsteps) [ findInterval(x, seq(min(x),max(x), length.out=colsteps)) ] )
+}
+# size gradient
+size.gradient = function(x, r_min = min(x), r_max = max(x), t_min = 0.1, t_max = 1.5) {
+  return((((x-r_min)/(r_max - r_min)) * (t_max - t_min)) + t_min)
+}
 
-Z3 = ggplot(proteinsUMAP.Props, aes(x = proteinsUMAP.Props[,"X1"], y = proteinsUMAP.Props[,"X2"])) +
-  geom_point(aes(fill = class, size = proteinsUMAP.Props[,"shared_rPCP"],
-                 color = proteinsUMAP.Props[,"Z3"]), alpha = 0.85, pch=21, stroke = 1) +
-  theme_few() +
-  theme(text=element_text(family="sans", face="plain", color="#000000", size=15, hjust=0.5, vjust=0.5))+
-  scale_fill_gradient2(aesthetics = "color",
-                       low="blue", high="red", mid = "yellow",
-                       name = "Z3") +
-  scale_fill_manual(aesthetics = "fill", values = c("black", "white"), name = "class")+
-  scale_radius(range = c(1,10), name = "shared_rPCP")+
-  xlab("UMAP 1") +
-  ylab("UMAP 2") +
-  ggtitle(paste0("embedded proteins, by Z3"))
+# plotting function
+plotting = function(prop = "", data = "", random = ""){
+  if (random == T) {
+    title = paste0("random embeddings, by ", as.character(prop))
+    label = "_random"
+  } else {
+    title = paste0("embedded proteome, by ", as.character(prop))
+    label = ""
+  }
+  
+  png(filename = paste0("./results/plots/", str_replace(as.character(prop), coll("."), coll("_")), label,".png"))
+  print(plot(data$X2 ~ data$X1,
+              col = color.gradient(data[, prop]),
+              cex = size.gradient(data[, prop]),
+              xlab = "UMAP 1", ylab = "UMAP 2",
+              main = title,
+              sub = "red: low, blue: high",
+              cex.sub = 0.8,
+              pch = 1))
+  dev.off()
+}
 
-BLOSUM1 = ggplot(proteinsUMAP.Props, aes(x = proteinsUMAP.Props[,"X1"], y = proteinsUMAP.Props[,"X2"])) +
-  geom_point(aes(fill = class, size = proteinsUMAP.Props[,"shared_rPCP"],
-                 color = proteinsUMAP.Props[,"BLOSUM1"]), alpha = 0.85, pch=21, stroke = 1) +
-  theme_few() +
-  theme(text=element_text(family="sans", face="plain", color="#000000", size=15, hjust=0.5, vjust=0.5))+
-  scale_fill_gradient2(aesthetics = "color",
-                       low="blue", high="red", mid = "yellow",
-                       name = "BLOSUM1") +
-  scale_fill_manual(aesthetics = "fill", values = c("black", "white"), name = "class")+
-  scale_radius(range = c(1,10), name = "shared_rPCP")+
-  xlab("UMAP 1") +
-  ylab("UMAP 2") +
-  ggtitle(paste0("embedded proteins, by BLOSUM1"))
-
-charge = ggplot(proteinsUMAP.Props, aes(x = proteinsUMAP.Props[,"X1"], y = proteinsUMAP.Props[,"X2"])) +
-  geom_point(aes(fill = class, size = proteinsUMAP.Props[,"shared_rPCP"],
-                 color = proteinsUMAP.Props[,"charge"]), alpha = 0.85, pch=21, stroke = 1) +
-  theme_few() +
-  theme(text=element_text(family="sans", face="plain", color="#000000", size=15, hjust=0.5, vjust=0.5))+
-  scale_fill_gradient2(aesthetics = "color",
-                       low="blue", high="red", mid = "yellow",
-                       name = "charge") +
-  scale_fill_manual(aesthetics = "fill", values = c("black", "white"), name = "class")+
-  scale_radius(range = c(1,10), name = "shared_rPCP")+
-  xlab("UMAP 1") +
-  ylab("UMAP 2") +
-  ggtitle(paste0("embedded proteins, by charge"))
-
-pI = ggplot(proteinsUMAP.Props, aes(x = proteinsUMAP.Props[,"X1"], y = proteinsUMAP.Props[,"X2"])) +
-  geom_point(aes(fill = class, size = proteinsUMAP.Props[,"shared_rPCP"],
-                 color = proteinsUMAP.Props[,"pI"]), alpha = 0.85, pch=21, stroke = 1) +
-  theme_few() +
-  theme(text=element_text(family="sans", face="plain", color="#000000", size=15, hjust=0.5, vjust=0.5))+
-  scale_fill_gradient2(aesthetics = "color",
-                       low="blue", high="red", mid = "yellow",
-                       name = "pI") +
-  scale_fill_manual(aesthetics = "fill", values = c("black", "white"), name = "class")+
-  scale_radius(range = c(1,10), name = "shared_rPCP")+
-  xlab("UMAP 1") +
-  ylab("UMAP 2") +
-  ggtitle(paste0("embedded proteins, by pI"))
-
-Hydrophobicity = ggplot(proteinsUMAP.Props, aes(x = proteinsUMAP.Props[,"X1"], y = proteinsUMAP.Props[,"X2"])) +
-  geom_point(aes(fill = class, size = proteinsUMAP.Props[,"shared_rPCP"],
-                 color = proteinsUMAP.Props[,"Hydrophobicity"]), alpha = 0.85, pch=21, stroke = 1) +
-  theme_few() +
-  theme(text=element_text(family="sans", face="plain", color="#000000", size=15, hjust=0.5, vjust=0.5))+
-  scale_fill_gradient2(aesthetics = "color",
-                       low="blue", high="red", mid = "yellow",
-                       name = "Hydrophobicity") +
-  scale_fill_manual(aesthetics = "fill", values = c("black", "white"), name = "class")+
-  scale_radius(range = c(1,10), name = "shared_rPCP")+
-  xlab("UMAP 1") +
-  ylab("UMAP 2") +
-  ggtitle(paste0("embedded proteins, by Hydrophobicity"))
-
-H_bonding = ggplot(proteinsUMAP.Props, aes(x = proteinsUMAP.Props[,"X1"], y = proteinsUMAP.Props[,"X2"])) +
-  geom_point(aes(fill = class, size = proteinsUMAP.Props[,"shared_rPCP"],
-                 color = proteinsUMAP.Props[,"H-bonding"]), alpha = 0.85, pch=21, stroke = 1) +
-  theme_few() +
-  theme(text=element_text(family="sans", face="plain", color="#000000", size=15, hjust=0.5, vjust=0.5))+
-  scale_fill_gradient2(aesthetics = "color",
-                       low="blue", high="red", mid = "yellow",
-                       name = "H-bonding") +
-  scale_fill_manual(aesthetics = "fill", values = c("black", "white"), name = "class")+
-  scale_radius(range = c(1,10), name = "shared_rPCP")+
-  xlab("UMAP 1") +
-  ylab("UMAP 2") +
-  ggtitle(paste0("embedded proteins, by H-bonding"))
-
-Polarity = ggplot(proteinsUMAP.Props, aes(x = proteinsUMAP.Props[,"X1"], y = proteinsUMAP.Props[,"X2"])) +
-  geom_point(aes(fill = class, size = proteinsUMAP.Props[,"shared_rPCP"],
-                 color = proteinsUMAP.Props[,"Polarity"]), alpha = 0.85, pch=21, stroke = 1) +
-  theme_few() +
-  theme(text=element_text(family="sans", face="plain", color="#000000", size=15, hjust=0.5, vjust=0.5))+
-  scale_fill_gradient2(aesthetics = "color",
-                       low="blue", high="red", mid = "yellow",
-                       name = "Polarity") +
-  scale_fill_manual(aesthetics = "fill", values = c("black", "white"), name = "class")+
-  scale_radius(range = c(1,10), name = "shared_rPCP")+
-  xlab("UMAP 1") +
-  ylab("UMAP 2") +
-  ggtitle(paste0("embedded proteins, by Polarity"))
 
 ### OUTPUT ###
 # proteins with biophysical properties
 write.csv(proteinsUMAP.Props, file = unlist(snakemake@output[["proteome_props"]]))
+write.csv(proteinsUMAP.Props.random, file = unlist(snakemake@output[["proteome_props_random"]]))
 # plots
 ggsave(filename = unlist(snakemake@output[["p_rPCP"]]), plot = UMAP_rPCP, device = "png", dpi = "retina")
 ggsave(filename = unlist(snakemake@output[["p_rPCP_dens"]]), plot = UMAP_rPCP_dens, device = "png", dpi = "retina")

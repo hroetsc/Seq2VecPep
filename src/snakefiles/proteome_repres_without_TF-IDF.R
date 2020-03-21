@@ -7,11 +7,11 @@
 
 
 #tmp !!!
-setwd("Documents/QuantSysBios/ProtTransEmbedding/Snakemake/")
-weight_matrix = read.csv(file = "results/embedded_proteome/opt_seq2vec_weights_10000.csv", stringsAsFactors = F, header = F)
-indices = read.csv(file = "results/embedded_proteome/opt_seq2vec_ids_1000.csv", stringsAsFactors = F, header = F)
-proteome = read.csv(file = "data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
-words = read.csv(file = "results/encoded_proteome/opt_words_10000.csv", stringsAsFactors = F, header = T)
+# setwd("Documents/QuantSysBios/ProtTransEmbedding/Snakemake/")
+# weight_matrix = read.csv(file = "results/embedded_proteome/opt_seq2vec_weights_10000.csv", stringsAsFactors = F, header = F)
+# indices = read.csv(file = "results/embedded_proteome/opt_seq2vec_ids_10000.csv", stringsAsFactors = F, header = F)
+# proteome = read.csv(file = "data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
+# words = read.csv(file = "results/encoded_proteome/opt_words_10000.csv", stringsAsFactors = F, header = T)
 
 print("### RETRIEVE PROTEIN REPRESENATION ###")
 
@@ -141,29 +141,51 @@ random_protein = function(limit = "", no_tokens = "") {
 
 # apply to generate random protein embeddings
 protein.repres.random = protein.repres
-protein.repres.random[, "no_tokens"] = ncol(str_split(protein.repres$tokens, pattern = " ", simplify = T))
+progressBar = txtProgressBar(min = 0, max = nrow(protein.repres.random), style = 3)
 for (i in 1:nrow(protein.repres.random)) {
+  setTxtProgressBar(progressBar, i)
+  protein.repres.random[i, "no_tokens"] = ncol(str_split(protein.repres$tokens[i], pattern = " ", simplify = T))
   protein.repres.random[i, c(dim_range[1]:dim_range[2])] = random_protein(limit = limit,
                                                                           no_tokens = protein.repres.random[i, "no_tokens"])
 }
+protein.repres.random$no_tokens = NULL
 
-# get statistics summary
-# for (c in 1:nrow(protein.repres)) {
-#   ln = as.numeric(protein.repres[c, c(dim_range[1]:ncol(protein.repres))])
-#   print(summary(ln))
-#   dens = density(ln)
-#   plot(dens, main = paste0("protein: ", protein.repres[c,"UniProtID"]))
-# }
 
 for (p in dim_range[1]:ncol(protein.repres)){
   protein.repres[,p] = as.numeric(as.character(protein.repres[,p]))
   protein.repres.random[,p] = as.numeric(as.character(protein.repres.random[,p]))
 }
 
+# compare distributions of embeddings using Kolmogorov-Smirnov test
+print("compare distributions of embeddings using Kolmogorov-Smirnov test")
+KS = as.data.frame(matrix(ncol = 2, nrow = nrow(protein.repres)))
+colnames(KS) = c("protein", "p_value")
+KS$protein = protein.repres$UniProtID
+
+for (i in 1:nrow(KS)){
+  KS[i, "p_value"] = ks.test(as.numeric(protein.repres[i, c(dim_range[1]:dim_range[2])]),
+                             as.numeric(protein.repres.random[i, c(dim_range[1]:dim_range[2])]))$p.value
+}
+
+sig = nrow(KS[which(KS$p_value <= 0.05), ])
+print(paste0("found ", sig, " proteins (", round((sig/nrow(KS))*100, 2)," %) where embedding is significantly different from random embedding"))
+
+# plot distributions for random 50 proteins
+for (c in sample(nrow(protein.repres), 50)) {
+  ln = as.numeric(protein.repres[c, c(dim_range[1]:ncol(protein.repres))])
+  ln.random = as.numeric(protein.repres.random[c, c(dim_range[1]:ncol(protein.repres.random))])
+  plot(density(ln), main = paste0("protein: ", protein.repres[c,"UniProtID"], "; p = ", round(KS$p_value[c], 4)),
+       xlim = c(-0.022, 0.022),
+       ylim = c(0, 1000))
+  lines(density(ln.random), col = 36)
+}
+
+
 ### OUTPUT ###
 # tmp!!
-write.csv(protein.repres, file = "results/embedded_proteome/opt_proteome_repres.csv", row.names = F)
-write.csv(protein.repres.random, file = "results/embedded_proteome/opt_proteome_repres_random.csv", row.names = F)
+# write.csv(protein.repres, file = "results/embedded_proteome/opt_proteome_repres_10000.csv", row.names = F)
+# write.csv(protein.repres.random, file = "results/embedded_proteome/opt_proteome_repres_random_10000.csv", row.names = F)
+# write.csv(KS, file = "results/embedded_proteome/opt_proteome_repres_KS-test_10000.csv", row.names = F)
 
 # vector representation of proteins
 write.csv(protein.repres, file = unlist(snakemake@output[["proteome_repres"]]), row.names = F)
