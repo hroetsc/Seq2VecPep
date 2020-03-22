@@ -89,15 +89,15 @@ context_word = np.array(skip_grams.iloc[:,1], dtype = 'int32')
 Y = np.array(skip_grams.iloc[:,2], dtype = 'int32')
 
 print('target word vector')
-target_word = target_word.reshape(target_word.shape[0],1)
+target_word = target_word.reshape(target_word.shape[0],)
 print(target_word)
 
 print('context word vector')
-context_word = context_word.reshape(context_word.shape[0],1)
+context_word = context_word.reshape(context_word.shape[0],)
 print(context_word)
 
 print('label vector')
-Y = Y.reshape(Y.shape[0],1)
+Y = Y.reshape(Y.shape[0],)
 print(Y)
 
 vocab_size = len(ids.index)+2
@@ -188,9 +188,9 @@ class BatchGenerator(keras.utils.Sequence):
          return int(np.ceil(len(self.target) / float(self.batch_size)))
 
      def __getitem__(self, idx):
-         batch_target = np.array(self.target[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,1)
-         batch_context = np.array(self.context[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,1)
-         batch_Y = np.array(self.Y[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,1)
+         batch_target = np.array(self.target[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,)
+         batch_context = np.array(self.context[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,)
+         batch_Y = np.array(self.Y[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,)
 
          return [batch_target, batch_context], batch_Y
 
@@ -240,7 +240,7 @@ df.head()
 model.save('results/embedded_proteome/opt_model_10000.h5')
 
 # save accuracy and loss
-m = open('results/embedded_proteome/opt_model_metrics_1000.txt', 'w')
+m = open('results/embedded_proteome/opt_model_metrics_10000.txt', 'w')
 m.write("accuracy \t {} \n val_accuracy \t {} \n loss \t {} \n val_loss \t {}".format(fit.history['accuracy'], fit.history['val_accuracy'], fit.history['loss'], fit.history['val_loss']))
 m.close()
 

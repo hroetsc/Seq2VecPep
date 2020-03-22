@@ -34,8 +34,7 @@ library(reshape)
 #library(parallel)
 library(foreach)
 library(doParallel)
-#cluster = parallel::makeCluster(12)
-#doParallel::registerDoParallel(cluster)
+
 
 ### INPUT ###
 print("LOAD DATA")
@@ -69,7 +68,6 @@ proteins.master = na.omit(proteins.master)
 # add embeddings to master table and calculate protein representation
 # find tokens for every unique protein (UniProtID) and sum up all dimensions of the tokens
 # to get the respective embedding dimension
-# thereby, normalize token embeddings by TF-IDF score
 
 print("CALCULATE NUMERIC REPRESENTATION OF EVERY PROTEIN")
 

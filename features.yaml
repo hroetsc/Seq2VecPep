@@ -18,13 +18,15 @@ encoded_proteome:
     TF_IDF: results/encoded_proteome/TF_IDF.csv
 
 embedded_proteome:
-    target: results/embedded_proteome/target.txt
-    context: results/embedded_proteome/context.txt
-    label: results/embedded_proteome/label.txt
+    skip_grams: results/embedded_proteome/skipgrams.txt
+    skip_grams_reduced: results/embedded_proteome/skipgrams_reduced.csv
     subword_weights: results/embedded_proteome/seq2vec_weights.csv
     subword_ids: results/embedded_proteome/seq2vec_ids.csv
     model_metrics: results/embedded_proteome/model_metrics.txt
     proteome_weights: results/embedded_proteome/proteome_and_weights.csv
     proteome_representation: results/embedded_proteome/proteome_repres.csv
-    proteome_properties: results/embedded_proteome/single_protein_repres_props.csv
+    proteome_representation_random: results/embedded_proteome/proteome_repres_random.csv
+    KS: results/embedded_proteome/proteome_repres_KS-test.csv
+    proteome_properties: results/embedded_proteome/protein_repres_props.csv
+    proteome_properties_random: results/embedded_proteome/protein_repres_props_random.csv
 ...

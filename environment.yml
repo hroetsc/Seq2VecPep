@@ -1,4 +1,4 @@
-name: seq2vec_project
+name: snakemake
 channels:
   - bioconda
   - conda-forge
@@ -76,7 +76,7 @@ dependencies:
   - libffi=3.2.1=he1b5a44_1006
   - libgcc=7.2.0=h69d50b8_2
   - libgcc-ng=9.2.0=h24d8f2e_2
-  - libgfortran-ng=7.3.0=hdf63c60_4
+  - libgfortran-ng=7.3.0=hdf63c60_5
   - libgomp=9.2.0=h24d8f2e_2
   - libiconv=1.15=h516909a_1005
   - liblapack=3.8.0=14_openblas
@@ -166,4 +166,5 @@ dependencies:
   - zipp=2.1.0=py_0
   - zlib=1.2.11=h516909a_1006
   - zstd=1.4.4=h3b9ef0a_1
-prefix: /home/hroetsc/anaconda3/envs/snakemake
+prefix: /home/hanna/miniconda3/envs/snakemake
+

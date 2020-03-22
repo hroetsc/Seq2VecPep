@@ -3,71 +3,49 @@
 # description:  calculate TF-IDF scores (Term Frequency - Document Inverse Frequency) of tokens
 # input:        word table generated in generate_tokens
 # output:       TF-IDF score for every token in every protein
-# author:       HR
+# author:       HR, adapted from https://www.tidytextmining.com/tfidf.html
 
 print("### CALCULATE TF-IDF SCORES FOR EVERY TOKEN IN ENCODED PROTEOME ###")
 
-# #tmp!!!
-# setwd("Documents/ProtTransEmbedding/Snakemake/")
+# tmp!!!
+# setwd("Documents/QuantSysBios/ProtTransEmbedding/Snakemake/")
 # words = read.csv(file = "results/encoded_proteome/words.csv", stringsAsFactors = F, header = T)
-# # # for testing!!
+# # for testing!!
 # words = words[c(1:100),]
 
 library(stringr)
 library(plyr)
 library(dplyr)
 library(data.table)
+# added
+library(tidytext)
 
 ### INPUT ###
 words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header = T)
+words = data.table(words)
 
 ### MAIN PART ###
-print("CALCULATE DOCUMENT FREQUENCY FOR TOKENS IN BPE VOCABULARY")
-# document frequency: for every token in subword count how many proteins contain it
-vocab = unique(as.character(t(str_split(paste(words$tokens, collapse = ""), coll(" "), simplify = T))))
-vocab = data.table(vocab) # bc model vocabulary does not contain all tokens that appear in encoded proteome
+print("using tidytext approach")
+print("calculating term frequency - number of occurences of each token in each protein")
+words = unnest_tokens(tbl = words, output = token, input = tokens) %>% # split data frame so that every token gets one row
+  count(UniProtID, token, sort = F) %>% # count how often every token occurs in the same protein (term frequency)
+  ungroup() # print it line by line
 
-progressBar = txtProgressBar(min = 0, max = nrow(vocab), style = 3)
-for (i in 1:nrow(vocab)) { # iterate tokens in model vocabulary
-  setTxtProgressBar(progressBar, i)
-  
-  len = 0
-  for (j in 1:nrow(words)) { # count how often this token occurs in the proteome
-    if (grepl(vocab$vocab[i], words$tokens[j], fixed = T)) {
-      len = len + 1
-    }
-  }
-  
-  vocab[i,"frequency"] = len
-}
+print("calculating document frequency - in how many proteins does each token occur?")
+doc_freq = words %>%
+  group_by(UniProtID) %>% # concatenate word table by UniProtID
+  summarize(total = sum(n)) # count how often every UniProtID occurs
 
-vocab[is.na(frequency), frequency := .(list(NULL))]
+words = left_join(words, doc_freq)
+# 'words' has the structure one-row-per-token-per-protein
+# n are protein token (document term) counts
 
-print("CALCULATE TERM FREQUENCY FOR EVERY TOKEN IN EVERY PROTEIN")
-progressBar = txtProgressBar(min = 0, max = nrow(words), style = 3)
+print("calculating term frequency - document inverse frequency")
+TF_IDF = words %>% bind_tf_idf(term = token, document = UniProtID, n)
 
-for (i in 1:nrow(words)) {
-  setTxtProgressBar(progressBar, i)
-  # split tokens
-  cnt_tokens = data.table(t(str_split(words$tokens[i], coll(" "), simplify = T)))
-  doc_freqs = data.table(table(cnt_tokens))
-  
-  for (j in 1:nrow(cnt_tokens)) {
-    # term frequency: how often does each token occur within the protein?
-    cnt_tokens[j, "term_freq"] = doc_freqs[cnt_tokens == as.character(cnt_tokens[j]), "N"]
-    
-    if (length(which(as.character(cnt_tokens[j,"V1"]) == vocab[,1])) > 0) {
-      cnt_tokens[j, "doc_freq"] = vocab[vocab == as.character(cnt_tokens[j,"V1"]), "frequency"]
-    } else {
-      cnt_tokens[j, "doc_freq"] = NaN
-    }
-  }
-  
-  cnt_tokens[is.na(term_freq), "term_freq"] = 0
-  cnt_tokens[, "tf_idf"] = as.numeric(cnt_tokens$term_freq) * log(nrow(words) / as.numeric(cnt_tokens$doc_freq))
-  words[i, "TF_IDF_score"] = paste(as.character(cnt_tokens$tf_idf), sep = "", collapse = " ")
-}
 
 ### OUTPUT ###
-write.csv(words, file = unlist(snakemake@output[["TF_IDF"]]), row.names = F)
+write.csv(TF_IDF, file = unlist(snakemake@output[["TF_IDF"]]), row.names = F)
 
+# tmp!
+# write.csv(TF_IDF, file = 'results/encoded_proteome/TF_IDF.csv', row.names = F)

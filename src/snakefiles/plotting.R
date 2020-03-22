@@ -18,17 +18,14 @@ library(plyr)
 library(dplyr)
 library(stringr)
 library(readr)
-#library(ggplot2)
-#library(ggthemes)
-#library(ggpubr)
 library(uwot)
-#library(reshape2)
 # added
 library(grDevices)
 library(RColorBrewer)
 
 ### INPUT ###
 protein.repres = read.csv(file = snakemake@input[["proteome_repres"]], stringsAsFactors = F, header = T)
+protein.repres.random = read.csv(file = snakemake@input[["proteome_repres_random"]], stringsAsFactors = F, header = T)
 
 # define range in which the embedding dimensions are
 if ("TF_IDF_score" %in% colnames(protein.repres)) {
@@ -45,14 +42,13 @@ set.seed(42)
 
 print('trained weights')
 dims_UMAP = umap(protein.repres[,c(dim_range[1]:ncol(protein.repres))],
-                 n_neighbors = 3,
-                 min_dist = 0.01,
-                 spread = 2,
-                 n_trees = 50,
+                 n_neighbors = 10,
+                 min_dist = 0.00,
+                 #n_trees = 50,
                  verbose = T,
                  approx_pow = T,
                  ret_model = T,
-                 metric = "euclidean",
+                 metric = "cosine",
                  scale = "none",
                  n_epochs = 500,
                  n_threads = 11)
@@ -62,14 +58,13 @@ proteinsUMAP <- cbind(umap_coords, protein.repres)
 
 print('random weights')
 dims_UMAP.random = umap(protein.repres.random[,c(dim_range[1]:ncol(protein.repres.random))],
-                 n_neighbors = 3,
-                 min_dist = 0.01,
-                 spread = 2,
-                 n_trees = 50,
+                 n_neighbors = 10,
+                 min_dist = 0.00,
+                 #n_trees = 50,
                  verbose = T,
                  approx_pow = T,
                  ret_model = T,
-                 metric = "euclidean",
+                 metric = "cosine",
                  scale = "none",
                  n_epochs = 500,
                  n_threads = 11)
@@ -308,7 +303,7 @@ print("GENERATE PLOTS")
 # use base R because ggplot is not recalculating the color code
 # colour gradient
 spectral <- RColorBrewer::brewer.pal(10, "Spectral")
-color.gradient <- function(x, colsteps=1000) {
+color.gradient = function(x, colsteps=1000) {
   return( colorRampPalette(spectral) (colsteps) [ findInterval(x, seq(min(x),max(x), length.out=colsteps)) ] )
 }
 # size gradient
@@ -338,19 +333,28 @@ plotting = function(prop = "", data = "", random = ""){
   dev.off()
 }
 
+for (i in (dim_range[2]+3):ncol(proteinsUMAP.Props)){
+  plotting(prop = colnames(proteinsUMAP.Props)[i], data = proteinsUMAP.Props, random = F)
+  plotting(prop = colnames(proteinsUMAP.Props.random)[i], data = proteinsUMAP.Props.random, random = T)
+}
 
 ### OUTPUT ###
 # proteins with biophysical properties
 write.csv(proteinsUMAP.Props, file = unlist(snakemake@output[["proteome_props"]]))
 write.csv(proteinsUMAP.Props.random, file = unlist(snakemake@output[["proteome_props_random"]]))
-# plots
-ggsave(filename = unlist(snakemake@output[["p_rPCP"]]), plot = UMAP_rPCP, device = "png", dpi = "retina")
-ggsave(filename = unlist(snakemake@output[["p_rPCP_dens"]]), plot = UMAP_rPCP_dens, device = "png", dpi = "retina")
-ggsave(filename = unlist(snakemake@output[["p_F6"]]), plot = F6, device = "png", dpi = "retina")
-ggsave(filename = unlist(snakemake@output[["p_Z3"]]), plot = Z3, device = "png", dpi = "retina")
-ggsave(filename = unlist(snakemake@output[["p_BLOSUM1"]]), plot = BLOSUM1, device = "png", dpi = "retina")
-ggsave(filename = unlist(snakemake@output[["p_charge"]]), plot = charge, device = "png", dpi = "retina")
-ggsave(filename = unlist(snakemake@output[["p_pI"]]), plot = pI, device = "png", dpi = "retina")
-ggsave(filename = unlist(snakemake@output[["p_hydrophobicity"]]), plot = Hydrophobicity, device = "png", dpi = "retina")
-ggsave(filename = unlist(snakemake@output[["p_H_bonding"]]), plot = H_bonding, device = "png", dpi = "retina")
-ggsave(filename = unlist(snakemake@output[["p_Polarity"]]), plot = Polarity, device = "png", dpi = "retina")
+
+# tmp!
+write.csv(proteinsUMAP.Props, file = "results/embedded_proteome/opt_protein_repres_props_10000.csv")
+write.csv(proteinsUMAP.Props.random, file = "results/embedded_proteome/opt_protein_repres_props_10000_random.csv")
+
+# # plots
+# ggsave(filename = unlist(snakemake@output[["p_rPCP"]]), plot = UMAP_rPCP, device = "png", dpi = "retina")
+# ggsave(filename = unlist(snakemake@output[["p_rPCP_dens"]]), plot = UMAP_rPCP_dens, device = "png", dpi = "retina")
+# ggsave(filename = unlist(snakemake@output[["p_F6"]]), plot = F6, device = "png", dpi = "retina")
+# ggsave(filename = unlist(snakemake@output[["p_Z3"]]), plot = Z3, device = "png", dpi = "retina")
+# ggsave(filename = unlist(snakemake@output[["p_BLOSUM1"]]), plot = BLOSUM1, device = "png", dpi = "retina")
+# ggsave(filename = unlist(snakemake@output[["p_charge"]]), plot = charge, device = "png", dpi = "retina")
+# ggsave(filename = unlist(snakemake@output[["p_pI"]]), plot = pI, device = "png", dpi = "retina")
+# ggsave(filename = unlist(snakemake@output[["p_hydrophobicity"]]), plot = Hydrophobicity, device = "png", dpi = "retina")
+# ggsave(filename = unlist(snakemake@output[["p_H_bonding"]]), plot = H_bonding, device = "png", dpi = "retina")
+# ggsave(filename = unlist(snakemake@output[["p_Polarity"]]), plot = Polarity, device = "png", dpi = "retina")

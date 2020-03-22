@@ -76,7 +76,8 @@ rule proteome_repres:
         words = features["encoded_proteome"]["words"]
     output:
         proteome_repres = features["embedded_proteome"]["proteome_representation"],
-        proteome_repres_random = features["embedded_proteome"]["proteome_representation_random"]
+        proteome_repres_random = features["embedded_proteome"]["proteome_representation_random"],
+        KS = features["embedded_proteome"]["KS"]
     log:
         "results/logs/proteome_repres.txt"
     conda:
