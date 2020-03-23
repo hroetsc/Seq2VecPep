@@ -2,19 +2,19 @@ singularity: "docker://bioconda/bioconda-utils-build-env"
 
 rule rPCP_calculation:
     input:
-        PEAKS_results = features["peptidome"]["PEAKS_results"],
+        PEAKS_prots = features["peptidome"]["PEAKS_prots"],
+        PEAKS_peps = features["peptidome"]["PEAKS_peps"],
         ref_proteins = features["peptidome"]["ref_proteins"],
-        gencode_annot = features["peptidome"]["GENCODE_annot"],
-        biomart_annot = features["peptidome"]["BiomaRt_annot"],
+        IP_info = features["peptidome"]["IP_info"],
+        gencode_annot = features["peptidome"]["gencode_annot"],
+        biomart_annot = features["peptidome"]["biomart_annot"],
         gene_tr_prot = features["peptidome"]["gene_tr_prot"]
     output:
         rPCP = features["peptidome"]["rPCP"]
-    #singularity:
-    #    "docker pull quay.io/biocontainers/bioconductor-biomart"
     log:
-        "results/logs/rPCP_calculation.txt"
-    conda:
-        "R_dependencies.yml"
+        "results/logs/rPCP_calculation.log"
+    #conda:
+    #    "R_dependencies.yml"
     params:
         n=config["max_cores"],
         mem=config["mem_mb"]
@@ -24,11 +24,13 @@ rule rPCP_calculation:
 rule proteome_formatting:
     input:
         rPCP = features["peptidome"]["rPCP"],
-        UniProt_unfiltered = features["peptidome"]["UniProt_unfiltered"]
+        UniProt_filtered = features["peptidome"]["UniProt_filtered"],
+        gencode_annot = features["peptidome"]["gencode_annot"],
+        biomart_annot = features["peptidome"]["biomart_annot"]
     output:
         formatted_proteome = features["peptidome"]["formatted_proteome"]
     log:
-        "results/logs/proteome_formatting.txt"
+        "results/logs/proteome_formatting.log"
     conda:
         "R_dependencies.yml"
     params:
@@ -43,7 +45,7 @@ rule BPE_training1:
     output:
         conc_UniProt = "data/peptidome/concatenated_UniProt.txt"
     log:
-        "results/logs/train_BPE.txt"
+        "results/logs/train_BPE.log"
     conda:
         "R_dependencies.yml"
     params:
@@ -58,7 +60,7 @@ rule BPE_training2:
     output:
         BPE_model = features["encoded_proteome"]["BPE_model"]
     log:
-        "results/logs/train_BPE2.txt"
+        "results/logs/train_BPE2.log"
     conda:
         "R_dependencies.yml"
     params:
@@ -75,7 +77,7 @@ rule generate_tokens:
         model_vocab = features["encoded_proteome"]["model_vocab"],
         words = features["encoded_proteome"]["words"]
     log:
-        "results/logs/generate_tokens.txt"
+        "results/logs/generate_tokens.log"
     conda:
         "R_dependencies.yml"
     params:
@@ -90,9 +92,9 @@ rule TF_IDF:
     output:
         TF_IDF = features["encoded_proteome"]["TF_IDF"]
     log:
-        "results/logs/TF_IDF.txt"
+        "results/logs/TF_IDF.log"
     conda:
-        "R_dependencies.yml"
+        "R_dependencies_TF-IDF.yml"
     params:
         n=config["max_cores"],
         mem=config["mem_mb"]
@@ -105,7 +107,7 @@ rule biophys_props:
     output:
         properties = features["peptidome"]["properties"]
     log:
-        "results/logs/biophys_props.txt"
+        "results/logs/biophys_props.log"
     conda:
         "R_dependencies.yml"
     params:

@@ -7,12 +7,12 @@
 
 
 #tmp !!!
-setwd("Documents/QuantSysBios/ProtTransEmbedding/Snakemake/")
-weight_matrix = read.csv(file = "results/embedded_proteome/opt_seq2vec_weights_10000.csv", stringsAsFactors = F, header = F)
-indices = read.csv(file = "results/embedded_proteome/opt_seq2vec_ids_10000.csv", stringsAsFactors = F, header = F)
-proteome = read.csv(file = "data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
-words = read.csv(file = "results/encoded_proteome/opt_words_10000.csv", stringsAsFactors = F, header = T)
-TF_IDF = read.csv(file = "results/encoded_proteome/TF_IDF.csv", stringsAsFactors = F, header = T)
+# setwd("Documents/QuantSysBios/ProtTransEmbedding/Snakemake/")
+# weight_matrix = read.csv(file = "results/embedded_proteome/opt_seq2vec_weights_10000.csv", stringsAsFactors = F, header = F)
+# indices = read.csv(file = "results/embedded_proteome/opt_seq2vec_ids_10000.csv", stringsAsFactors = F, header = F)
+# proteome = read.csv(file = "data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
+# words = read.csv(file = "results/encoded_proteome/opt_words_10000.csv", stringsAsFactors = F, header = T)
+# TF_IDF = read.csv(file = "results/encoded_proteome/TF_IDF.csv", stringsAsFactors = F, header = T)
 
 
 print("### RETRIEVE PROTEIN REPRESENATION ###")
@@ -31,7 +31,7 @@ library(ggplot2)
 library(ggthemes)
 library(ggpubr)
 library(uwot)
-library(reshape)
+library(reshape2)
 
 
 ### INPUT ###

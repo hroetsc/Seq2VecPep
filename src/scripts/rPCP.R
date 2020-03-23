@@ -1,47 +1,25 @@
 ### HEADER ###
-# PROTEIN/TRANSCRIPT EMBEDDING FOR ML/DEEP LEARNING
+# 
 # description:  calculate rate of antigen representation (rPCP)
-# input:        PEAKS search results, proteome, info about transcript-protein
-# output:       table with rPCP values for immunopeptides
-# author:       YH, adapted by HR
-
+# input:        PEAKS search results, proteome.fasta , IP group information
+# output:       rPCP per protein per condition
+# author:       YH & HR
 print("### rPCP CALCULATION ###")
 
 library(dplyr)
 library(stringr)
 library(seqinr)
-library(tidyr)
 library(Biostrings)
-
-# # tmp !!!
-# setwd("/home/hanna/Desktop/Snakemake/")
-# IP_info <- read.csv("data/peptidome/IP_info.csv", stringsAsFactors = F, header = T)
-# PEAKS.proteins = read.csv("data/peptidome/proteins.csv", stringsAsFactors = F, header = T)
-# PEAKS.peptides = read.csv("data/peptidome/protein-peptides.csv", stringsAsFactors = F, header = T)
-# ref.proteins = read.fasta("data/peptidome/expr_prot_incl_deep_nodup.fasta", seqtype = "AA", whole.header = F,
-#                           strip.desc = T)
-# ref.proteins = readDNAStringSet("data/peptidome/expr_prot_incl_deep_nodup.fasta")
-# 
-# gencode_annot = read.table("data/peptidome/gencode_vM24_TrEMBL_annot.txt", stringsAsFactors = F, header = F)
-# biomart_annot = read.csv(file = "data/peptidome/biomaRt_annot.csv", stringsAsFactors = F, header = T)
-# gene.tr.prot_info = read.csv(file = "data/peptidome/gene_tr_prot.csv", stringsAsFactors = F, header = T)
+library(tidyr)
+library(ggraptR)
 
 ### INPUT ###
-IP_info <- read.csv(file = snakemake@input[["IP_info"]], stringsAsFactors = F, header = T)
-PEAKS.proteins = read.csv(file = snakemake@input[["PEAKS_prots"]], stringsAsFactors = F, header = T)
-PEAKS.peptides = read.csv(file = snakemake@input[["PEAKS_peps"]], stringsAsFactors = F, header = T)
-ref.proteins = readDNAStringSet(file = snakemake@input[["ref_proteins"]])
-gencode_annot = read.table(file = snakemake@input[["gencode_annot"]], stringsAsFactors = F, header = F)
-biomart_annot = read.csv(file = snakemake@input[["biomart_annot"]], stringsAsFactors = F, header = T)
-gene.tr.prot_info = read.csv(file = snakemake@input[["gene_tr_prot"]], stringsAsFactors = F, header = T)
-gene.tr.prot_info$X = NULL
+IP_info <- read.csv("/home/yhorokh/data/Mouse_lymphoma/IP/IP_info.csv")
 
-if (nrow(gencode_annot[which(!gencode_annot$V2==gencode_annot$V3),]) == 0){
-  gencode_annot$V3 = NULL
-  colnames(gencode_annot) = c("ensembl_transcript", "UniProtID")
-} else {
-  colnames(gencode_annot) = c("ensembl_transcript", "UniProtID", "")
-}
+PEAKS.proteins = read.csv("/home/yhorokh/SNAKEMAKE_pipelines/Mouse_lymphoma_analysis/data/PEAKS/Mouse_lymphoma_IP_02_2020_GENCODE_M24_PEAKS_86_top/proteins.csv", stringsAsFactors = F, header = T)
+PEAKS.peptides = read.csv("/home/yhorokh/SNAKEMAKE_pipelines/Mouse_lymphoma_analysis/data/PEAKS/Mouse_lymphoma_IP_02_2020_GENCODE_M24_PEAKS_86_top/protein-peptides.csv", stringsAsFactors = F, header = T)
+ref.proteins = readDNAStringSet("/home/yhorokh/SNAKEMAKE_pipelines/Mouse_lymphoma_analysis/data/reference/expr_prot_incl_deep_nodup.fasta")
+# gene.tr.prot_info = read.csv("/home/yhorokh/SNAKEMAKE_pipelines/Mouse_lymphoma_analysis/data/gene_tr_prot.csv", stringsAsFactors = F, header = T)
 
 ### MAIN PART ###
 # rPCP = number of unique matches in PEAKS.proteins divided by protein length (ref.proteins)
@@ -74,9 +52,7 @@ print("FORMAT REFERENCE TABLE AND RETRIEVE PROTEIN LENGTH")
   prot.ref$protein <- x$V1
 }
 
-
-print("FILTER PEPTIDES")
-# Pre-filter PEAKS peptides for length
+# Pre-filter PEAKS peptides
 PEAKS.peptides <- PEAKS.peptides[PEAKS.peptides$Length %in% c(8:15),]
 PEAKS.peptides$Source.File <- str_replace(PEAKS.peptides$Source.File, pattern = ".raw", "")
 
@@ -189,40 +165,43 @@ rPCP.pep <- left_join(rPCP.pep, rPCP_u)
 }
 
 
-antigens = rPCP[which(!is.na(rPCP$rPCP)),]
-antigens = antigens[, c("Protein.Accession", "Group", "protein_length", "rPCP", "unique_rPCP", "length_factor")]
 
-print("ADD TRANSCRIPT AND GENE IDs")
-# add transcript IDs
-for (a in 1:nrow(antigens)) {
-  acc = antigens$Protein.Accession[a]
-  antigens[a, "ensembl_transcript"] = gene.tr.prot_info[which(acc == gene.tr.prot_info$protein |
-                                                    acc == gene.tr.prot_info$TXNAME),"TXNAME"]
-  antigens[a, "ensembl_gene"] = gene.tr.prot_info[which(acc == gene.tr.prot_info$protein |
-                                                                acc == gene.tr.prot_info$TXNAME),"GENEID"]
-}
+### PLOTS ###
 
-# convert ENSEMBL into UniPot IDs
-print("ADD UNIPROT IDS")
-antigens.gencode = left_join(antigens, gencode_annot)
+# rPCP by group vs protein length
+ggplot(rPCP, aes(y=protein_length, x=rPCP)) + 
+  geom_point(stat="identity", position="identity", alpha=0.7) + 
+  facet_grid(. ~ Group) + 
+  coord_flip() + 
+  theme_bw() + 
+  theme(text=element_text(family="sans", face="plain", color="#000000", size=15, hjust=0.5, vjust=0.5)) + 
+  xlab("rPCP") + 
+  ylab("protein_length")
 
-biomart_annot = biomart_annot[,c("ensembl_transcript", "uniprotsptrembl")]
-colnames(biomart_annot) = c("ensembl_transcript", "UniProtID")
-antigens.biomart = left_join(antigens, biomart_annot)
+# log10-rPCP by group vs protein length, color by n_pep, size by unique rPCP
+ggplot(rPCP, aes(y=log10_rPCP, x=protein_length)) + 
+  geom_point(aes(size=unique_rPCP, colour=as.factor(n_pep)), stat="identity", position="identity", alpha=0.7) + 
+  facet_grid(. ~ Group) + 
+  theme_bw() + 
+  theme(text=element_text(family="sans", face="plain", color="#000000", size=15, hjust=0.5, vjust=0.5)) + 
+  guides(colour=guide_legend(title="n_pep")) + 
+  ggtitle("Antigen presentation rates") + 
+  xlab("protein_length") + 
+  ylab("log10_rPCP")
 
-# format table
-print("FORMAT OUTPUT")
-master.table = rbind(antigens.gencode, antigens.biomart)
-master.table = master.table[-which(duplicated(master.table$Protein.Accession)),]
-colnames(master.table) = c("Accession", "Group", "protein_length", "rPCP", "unique_rPCP",
-                           "length_factor", "ENSEMBL_transcriptID", "ENSEMBL_geneID", "TrEMBLID")
-
-# where UniProtID does not exist, add ENSEMBL protein ID
-master.table[which(is.na(master.table$TrEMBLID)), "TrEMBLID"] = master.table[which(is.na(master.table$TrEMBLID)), "Accession"]
+# log10-rPCP by group vs log10 protein length, color by n_pep, size by unique rPCP
+ggplot(rPCP, aes(y=log10_rPCP, x=log10_protein_length)) + 
+  geom_point(aes(size=unique_rPCP, colour=as.factor(n_pep)), stat="identity", position="jitter", alpha=0.6) + 
+  facet_grid(. ~ Group) + 
+  theme_bw() + 
+  theme(text=element_text(family="sans", face="plain", color="#000000", size=15, hjust=0.5, vjust=0.5)) + 
+  guides(colour=guide_legend(title="n_pep")) + 
+  ggtitle("Antigen presentation rates") + 
+  xlab("log10_protein_length") + 
+  ylab("log10_rPCP")
 
 ### OUTPUT ###
-# table with rPCP values and protein/transcript names and sequences of protein and IP, ...
-write.csv(master.table, file = unlist(snakemake@output[["rPCP"]]), row.names = F)
+write.csv(rPCP, file = "/home/yhorokh/SNAKEMAKE_pipelines/Mouse_lymphoma_analysis/results/rPCP/rPCP.csv", row.names = F)
+write.csv(rPCP.pep, file = "/home/yhorokh/SNAKEMAKE_pipelines/Mouse_lymphoma_analysis/results/rPCP/rPCP_pep.psv", row.names = F)
+write.csv(rPCP.delta, file = "/home/yhorokh/SNAKEMAKE_pipelines/Mouse_lymphoma_analysis/results/rPCP/rPCP_delta.csv", row.names = F)
 
-# tmp!!
-# write.csv(master.table, file = "data/peptidome/rPCP_03_2020.csv", row.names = F)

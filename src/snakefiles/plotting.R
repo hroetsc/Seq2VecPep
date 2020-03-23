@@ -6,9 +6,9 @@
 # author:       HR
 
 # tmp!!!
-protein.repres = read.csv(file = "results/embedded_proteome/opt_proteome_repres_10000.csv", stringsAsFactors = F, header = T)
-protein.repres.random = read.csv(file = "results/embedded_proteome/opt_proteome_repres_random_10000.csv", stringsAsFactors = F, header = T)
-PropMatrix = read.csv(file = "data/peptidome/biophys_properties.csv", stringsAsFactors = F, header = T)
+# protein.repres = read.csv(file = "results/embedded_proteome/opt_proteome_repres_10000.csv", stringsAsFactors = F, header = T)
+# protein.repres.random = read.csv(file = "results/embedded_proteome/opt_proteome_repres_random_10000.csv", stringsAsFactors = F, header = T)
+# PropMatrix = read.csv(file = "data/peptidome/biophys_properties.csv", stringsAsFactors = F, header = T)
 
 print("### DIMENSION REDUCTION / PLOTTING ###")
 
@@ -20,7 +20,7 @@ library(dplyr)
 library(stringr)
 library(readr)
 library(uwot)
-# added
+library(ggplot2)
 library(grDevices)
 library(RColorBrewer)
 
@@ -44,13 +44,13 @@ set.seed(42)
 
 print('trained weights')
 dims_UMAP = umap(protein.repres[,c(dim_range[1]:ncol(protein.repres))],
-                 n_neighbors = 10,
-                 min_dist = 0.00,
-                 #n_trees = 50,
+                 n_neighbors = 5,
+                 min_dist = 0.01,
+                 n_trees = 50,
                  verbose = T,
                  approx_pow = T,
                  ret_model = T,
-                 metric = "cosine",
+                 metric = "euclidean",
                  scale = "none",
                  n_epochs = 500,
                  n_threads = 11)
@@ -60,13 +60,13 @@ proteinsUMAP <- cbind(umap_coords, protein.repres)
 
 print('random weights')
 dims_UMAP.random = umap(protein.repres.random[,c(dim_range[1]:ncol(protein.repres.random))],
-                 n_neighbors = 10,
-                 min_dist = 0.00,
-                 #n_trees = 50,
+                 n_neighbors = 5,
+                 min_dist = 0.01,
+                 n_trees = 50,
                  verbose = T,
                  approx_pow = T,
                  ret_model = T,
-                 metric = "cosine",
+                 metric = "euclidean",
                  scale = "none",
                  n_epochs = 500,
                  n_threads = 11)
@@ -103,7 +103,9 @@ plotting = function(prop = "", data = "", random = ""){
     label = ""
   }
   
-  png(filename = paste0("./results/plots/", str_replace(as.character(prop), coll("."), coll("_")), label,".png"))
+  png(filename = paste0("results/plots/",
+                        str_replace_all(as.character(prop), coll("."), coll("_")), label,".png"),
+      width = 1500, height = 1500, res = 300)
   print(plot(data$X2 ~ data$X1,
               col = color.gradient(data[, prop]),
               cex = size.gradient(data[, prop]),
@@ -115,10 +117,36 @@ plotting = function(prop = "", data = "", random = ""){
   dev.off()
 }
 
+# remove output directory
+# if (dir.exists(unlist(snakemake@output[["plot"]]))){
+#   unlink(unlist(snakemake@output[["plot"]]),
+#          recursive = T, force = T)
+# }
+
 for (i in (dim_range[2]+3):ncol(proteinsUMAP.Props)){
   plotting(prop = colnames(proteinsUMAP.Props)[i], data = proteinsUMAP.Props, random = F)
   plotting(prop = colnames(proteinsUMAP.Props.random)[i], data = proteinsUMAP.Props.random, random = T)
 }
+
+# check if all output files have been written to the directory
+# retrieve file names in output directory
+# files = list.files(path = unlist(snakemake@output[["plot"]]),
+#                    pattern = ".png", all.files = T, full.names = T)
+# file_list = rep(NA, length(files))
+# 
+# for (f in 1:length(files)) {
+#   file_list[f] = str_split(files[f], pattern = coll("/"), simplify = T)[3]
+#   file_list[f] = str_split(file_list[f], pattern = coll("."), simplify = T)[1]
+# }
+# 
+# # compare files in directory with properties
+# for (c in 2:ncol(PropMatrix)){
+#   if(! str_replace_all(colnames(PropMatrix)[c], coll("."), coll("_")) %in% file_list) {
+#     print(paste0("WARNING: no plot for property ",
+#                  str_replace_all(colnames(PropMatrix)[c], coll("."), coll("_")),
+#                  " found!"))
+#   }
+# }
 
 ### OUTPUT ###
 # proteins with biophysical properties
@@ -126,17 +154,5 @@ write.csv(proteinsUMAP.Props, file = unlist(snakemake@output[["proteome_props"]]
 write.csv(proteinsUMAP.Props.random, file = unlist(snakemake@output[["proteome_props_random"]]))
 
 # tmp!
-write.csv(proteinsUMAP.Props, file = "results/embedded_proteome/opt_protein_repres_props_10000.csv")
-write.csv(proteinsUMAP.Props.random, file = "results/embedded_proteome/opt_protein_repres_props_10000_random.csv")
-
-# # plots
-# ggsave(filename = unlist(snakemake@output[["p_rPCP"]]), plot = UMAP_rPCP, device = "png", dpi = "retina")
-# ggsave(filename = unlist(snakemake@output[["p_rPCP_dens"]]), plot = UMAP_rPCP_dens, device = "png", dpi = "retina")
-# ggsave(filename = unlist(snakemake@output[["p_F6"]]), plot = F6, device = "png", dpi = "retina")
-# ggsave(filename = unlist(snakemake@output[["p_Z3"]]), plot = Z3, device = "png", dpi = "retina")
-# ggsave(filename = unlist(snakemake@output[["p_BLOSUM1"]]), plot = BLOSUM1, device = "png", dpi = "retina")
-# ggsave(filename = unlist(snakemake@output[["p_charge"]]), plot = charge, device = "png", dpi = "retina")
-# ggsave(filename = unlist(snakemake@output[["p_pI"]]), plot = pI, device = "png", dpi = "retina")
-# ggsave(filename = unlist(snakemake@output[["p_hydrophobicity"]]), plot = Hydrophobicity, device = "png", dpi = "retina")
-# ggsave(filename = unlist(snakemake@output[["p_H_bonding"]]), plot = H_bonding, device = "png", dpi = "retina")
-# ggsave(filename = unlist(snakemake@output[["p_Polarity"]]), plot = Polarity, device = "png", dpi = "retina")
+# write.csv(proteinsUMAP.Props, file = "results/embedded_proteome/opt_protein_repres_props_10000.csv")
+# write.csv(proteinsUMAP.Props.random, file = "results/embedded_proteome/opt_protein_repres_props_10000_random.csv")

@@ -99,7 +99,7 @@ pool = multiprocessing.Pool(workers)
 
 if __name__ == "__main__":
     pool.starmap( skip_gram_NN_helper.parallel_processing,
-                ([[n, wids[n], windowSize, vocab_size, n_batches, 'results/embedded_proteome/skipgrams.txt'] for n in range(n_batches)]) )
+                ([[n, wids[n], windowSize, vocab_size, n_batches, 'results/embedded_proteome/skipgrams.txt', keep] for n in range(n_batches)]) )
 print('done with generating skip-grams')
 
 # =============================================================================

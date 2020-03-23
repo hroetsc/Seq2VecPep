@@ -18,9 +18,9 @@ library(tokenizers.bpe)
 
 #tmp !!!
 # setwd("Documents/ProtTransEmbedding/Snakemake/")
-# proteins = read.csv("data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
-# bpeModel = bpe_load_model("results/encoded_proteome/BPE_model.bpe",
-#                           threads = 14)
+proteins = read.csv("data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
+bpeModel = bpe_load_model("results/encoded_proteome/BPE_model.bpe",
+                          threads = 14)
 
 ### INPUT ###
 # load protein datasets
@@ -63,8 +63,8 @@ proteins.Encoded = na.omit(proteins.Encoded)
 proteins.Encoded.split = split.data.frame(proteins.Encoded, proteins.Encoded$UniProtID)
 words = matrix(ncol = 2, nrow = length(proteins.Encoded.split))
 for (i in 1:length(proteins.Encoded.split)) {
-  words[i, 1] = as.character(proteins.Encoded.split[[i]][1,3])
-  words[i, 2] = paste(proteins.Encoded.split[[i]][,9], sep = "", collapse = " ")
+  words[i, 1] = as.character(proteins.Encoded.split[[i]][1, "UniProtID"])
+  words[i, 2] = paste(proteins.Encoded.split[[i]][, "segmented_seq"], sep = "", collapse = " ")
 }
 colnames(words) = c("UniProtID", "tokens")
 words = as.data.frame(words)
@@ -82,6 +82,7 @@ if (length(which(sort <= 1)) > 0) {
 print("randomize protein order")
 # randomly shuffle proteins to make downstream model training more robust
 words = words[sample(nrow(words)), ]
+
 
 ### OUTPUT ###
 # save model vocabulary

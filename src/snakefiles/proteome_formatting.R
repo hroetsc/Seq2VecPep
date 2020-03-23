@@ -11,16 +11,28 @@ print("### PROTEOME FORMATTING ###")
 library(dplyr)
 library(seqinr)
 library(stringr)
+library(protr)
 
 # tmp !!!
-# proteome = read.fasta(file = "data/peptidome/UniProt_mouse_canonicalAndIsoforms.fasta",
+# proteome = read.fasta(file = "data/peptidome/SwissProt_mouse_canonicalAndIsoforms.fasta",
 #                       seqtype = "AA", strip.desc = T, whole.header = F)
-# rPCP = read.csv(file = "data/peptidome/rPCP_01_2020.csv", stringsAsFactors = F, header = T)
+# rPCP = read.csv(file = "data/peptidome/rPCP_03_2020.csv", stringsAsFactors = F, header = T)
+# gencode_annot = read.table("data/peptidome/gencode_vM24_TrEMBL_annot.txt", stringsAsFactors = F, header = F)
+# biomart_annot = read.csv(file = "data/peptidome/biomaRt_annot.csv", stringsAsFactors = F, header = T)
 
 ### INPUT ###
-proteome = read.fasta(file = snakemake@input[["UniProt_unfiltered"]],
+proteome = read.fasta(file = snakemake@input[["UniProt_filtered"]],
                                  seqtype = "AA", strip.desc = T, whole.header = F)
 rPCP = read.csv(file = snakemake@input[["rPCP"]], stringsAsFactors = F, header = T)
+gencode_annot = read.table(file = snakemake@input[["gencode_annot"]], stringsAsFactors = F, header = F)
+biomart_annot = read.csv(file = snakemake@input[["biomart_annot"]], stringsAsFactors = F, header = T)
+
+if (nrow(gencode_annot[which(!gencode_annot$V2==gencode_annot$V3),]) == 0){
+  gencode_annot$V3 = NULL
+  colnames(gencode_annot) = c("ensembl_transcript", "UniProtID")
+} else {
+  colnames(gencode_annot) = c("ensembl_transcript", "UniProtID", "")
+}
 
 ### MAIN PART ###
 # extract sequences and annotations from FASTA file
@@ -44,36 +56,54 @@ for (r in 1:nrow(ref.table)) {
 ref.table$origin = NULL
 ref.table[which(ref.table$source == "sp"), "source"] = "SwissProt"
 ref.table[which(ref.table$source == "tr"), "source"] = "TrEMBL"
-# contains protein versions!
 
-# assign rPCP to antigens
+# add ENSEMBL gene IDs
+annotation_master = left_join(biomart_annot, gencode_annot)
+annotation_master$uniprotsptrembl = NULL
+annotation_master[which(is.na(annotation_master$UniProtID)), "UniProtID"] = annotation_master[which(is.na(annotation_master$UniProtID)), "uniprotswissprot"]
+annotation_master$uniprotswissprot = NULL
+annotation_master[which(annotation_master$UniProtID == ""), "UniProtID"] = annotation_master[which(annotation_master$UniProtID == ""), "ensembl_peptide_id_version"]
+colnames(annotation_master) = c("gene_id", "transcript_id", "peptide_id", "UniProtID_reduced")
+
+for (r in 1:nrow(ref.table)) {
+  ref.table[r, "UniProtID_reduced"] = str_split(ref.table$UniProtID[r], coll("-"), simplify = T)[1]
+}
+ref.table = left_join(ref.table, annotation_master, by = "UniProtID_reduced")
+ref.table = ref.table[-which(duplicated(ref.table$seqs)), ]
+
+# iterate reference proteome to identify antigens
 print("ASSIGN rPCP TO REFERENCE TABLE")
 progressBar = txtProgressBar(min = 0, max = nrow(ref.table), style = 3)
 for (r in 1:nrow(ref.table)) {
   setTxtProgressBar(progressBar, r)
   # get rid of protein version
-  currentProt = str_split(ref.table$UniProtID[r], coll("-"), simplify = T)
-  currentProt = currentProt[,1]
-
+  currentProt_UniProt = str_split(ref.table$UniProtID[r], coll("-"), simplify = T)[1]
+  currentProt_ENSEMBL = ref.table$peptide_id[r]
+  
   # search for current protein in rPCP table
-  # ... if it is a reviewed protein (SwissProt)
-  tmp = rPCP[which(rPCP$TrEMBLID %in% currentProt), ]
+  tmp = rPCP[which(currentProt_UniProt %in% rPCP$TrEMBLID | currentProt_ENSEMBL %in% rPCP$Accession), ]
   if (nrow(tmp) == 0) { # if no search results the current protein is not an antigen
+    ref.table[r, "rPCP"] = 0
     ref.table[r, "unique_rPCP"] = 0
-    ref.table[r, "shared_rPCP"] = 0
-    ref.table[r, "total_rPCP"] = 0
     ref.table[r, "class"] = "protein"
     
-  } else { # if it is an antigen calculate rPCPs as follows:
-    shared_rPCP = mean(unique(tmp$rPCP))
-    ref.table[r, "unique_rPCP"] = paste(unique(tmp$rPCP), collapse = coll(" | "))
-    ref.table[r, "shared_rPCP"] = shared_rPCP
-    ref.table[r, "total_rPCP"] = paste(rep(shared_rPCP, length(unique(tmp$rPCP))) + unique(tmp$rPCP), collapse = coll(" | "))
+  } else if (nrow(tmp) == 1){ # if it is an antigen add rPCPs:
+    ref.table[r, "rPCP"] = tmp$rPCP[1]
+    ref.table[r, "unique_rPCP"] = tmp$unique_rPCP[1]
+    ref.table[r, "class"] = "antigen"
+    
+  } else {
+    print(paste0("WARNING: found ", nrow(tmp), " hits for protein ", currentProt_UniProt, " in antigen list"))
+    ref.table[r, "rPCP"] = tmp$rPCP[1]
+    ref.table[r, "unique_rPCP"] = tmp$unique_rPCP[1]
     ref.table[r, "class"] = "antigen"
   }
 }
 
 ref.table = unique(ref.table)
+ref.table$gene_id = NULL
+ref.table$transcript_id = NULL
+ref.table[which(is.na(ref.table$peptide_id)), "peptide_id"] = ""
 ref.table = na.omit(ref.table)
 
 # apply protcheck()
@@ -86,6 +116,8 @@ print(paste0("found ",length(which(a==F)) , " proteins that are failing the prot
 # clean data sets
 ref.table = ref.table[which(a==T), ]
 
-
 ### OUTPUT ###
 write.csv(ref.table, file = unlist(snakemake@output[["formatted_proteome"]]), row.names = F)
+
+# tmp!
+# write.csv(ref.table, file = "data/peptidome/formatted_proteome.csv", row.names = F)

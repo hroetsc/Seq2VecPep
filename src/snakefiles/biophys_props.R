@@ -8,7 +8,7 @@
 print("### CALCULATION OF BIOPHYSICAL PROPERTIES ###")
 
 # tmp !!!
-proteome = read.csv(file = "data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
+# proteome = read.csv(file = "data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
 
 library(seqinr)
 library(protr)
@@ -248,6 +248,6 @@ colnames(PropMatrix)[1] = "UniProtID"
 
 ### OUTPUT ###
 # tmp!!!
-write.csv(PropMatrix, file = 'data/peptidome/biophys_properties.csv', row.names = F)
+# write.csv(PropMatrix, file = 'data/peptidome/biophys_properties.csv', row.names = F)
 
 write.csv(PropMatrix, file = unlist(snakemake@output[["properties"]]), row.names = F)

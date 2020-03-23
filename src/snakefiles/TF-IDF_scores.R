@@ -13,16 +13,14 @@ print("### CALCULATE TF-IDF SCORES FOR EVERY TOKEN IN ENCODED PROTEOME ###")
 # # for testing!!
 # words = words[c(1:100),]
 
-library(stringr)
-library(plyr)
+#library(plyr)
 library(dplyr)
-library(data.table)
 # added
 library(tidytext)
 
 ### INPUT ###
 words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header = T)
-words = data.table(words)
+#words = data.table(words)
 
 ### MAIN PART ###
 print("using tidytext approach")

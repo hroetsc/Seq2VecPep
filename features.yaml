@@ -1,9 +1,11 @@
 # files used in pipeline
 peptidome:
-    PEAKS_results: data/peptidome/PEAKS_proteins_01_2020.csv
+    PEAKS_prots: data/peptidome/proteins.csv
+    PEAKS_peps: data/peptidome/protein-peptides.csv
     ref_proteins: data/peptidome/expr_prot_incl_deep_nodup.fasta
-    GENCODE_annot: data/peptidome/gencode_vM24_TrEMBL_annot.txt
-    BiomaRt_annot: data/peptidome/biomaRt_annot.csv
+    IP_info: data/peptidome/IP_info.csv
+    gencode_annot: data/peptidome/gencode_vM24_TrEMBL_annot.txt
+    biomart_annot: data/peptidome/biomaRt_annot.csv
     gene_tr_prot: data/peptidome/gene_tr_prot.csv
     rPCP: data/peptidome/rPCP_03_2020.csv
     UniProt_unfiltered: data/peptidome/UniProt_mouse_canonicalAndIsoforms.fasta
@@ -20,7 +22,6 @@ encoded_proteome:
 
 embedded_proteome:
     skip_grams: results/embedded_proteome/skipgrams.txt
-    skip_grams_reduced: results/embedded_proteome/skipgrams_reduced.csv
     subword_weights: results/embedded_proteome/seq2vec_weights.csv
     subword_ids: results/embedded_proteome/seq2vec_ids.csv
     model_metrics: results/embedded_proteome/model_metrics.txt

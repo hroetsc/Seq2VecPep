@@ -48,6 +48,7 @@ gc.enable()
 # =============================================================================
 workers = 12
 windowSize = 10
+keep = 0.3
 
 # INPUT
 words = pd.read_csv(snakemake.input['words'], header = 0)
@@ -96,7 +97,7 @@ pool = multiprocessing.Pool(workers)
 
 if __name__ == "__main__":
     pool.starmap( skip_gram_NN_helper.parallel_processing,
-                ([[n, wids[n], windowSize, vocab_size, n_batches, snakemake.output['skip_grams']] for n in range(n_batches)]) )
+                ([[n, wids[n], windowSize, vocab_size, n_batches, snakemake.output['skip_grams'], keep] for n in range(n_batches)]) )
 print('done with generating skip-grams')
 
 # =============================================================================
@@ -108,5 +109,5 @@ print("SAVE OUTPUT")
 ids = pd.DataFrame(word2id.items())
 pd.DataFrame.to_csv(ids, snakemake.output['ids'], header=False)
 
-pool.close() # to save memory
-pool.join()
+#pool.close() # to save memory
+#pool.join()

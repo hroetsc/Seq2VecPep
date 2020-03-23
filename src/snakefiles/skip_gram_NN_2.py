@@ -44,11 +44,11 @@ K.tensorflow_backend.set_session(tf.Session(config=config)) # create session
 # =============================================================================
 # # HYPERPARAMETERS
 # =============================================================================
-workers = 16
+workers = 12
 
 # window of a word: [i - window_size, i + window_size+1]
 embeddingDim = 100
-epochs = 50
+epochs = 10
 
 batchSize = 32
 valSplit = 0.20
@@ -60,7 +60,8 @@ adam_decay = 0.005200110247661778
 # # INPUT
 # =============================================================================
 print("LOAD DATA")
-pd.read_csv(snakemake.input['skip_grams_reduced'], header = 0)
+skip_grams = pd.read_csv(snakemake.input['skip_grams'], sep = " ", header = None)
+ids = pd.read_csv(snakemake.input['ids'], header = None)
 
 # split skip-grams into target, context and label np.array()
 target_word = np.array(skip_grams.iloc[:,0], dtype = 'int32')
@@ -68,15 +69,15 @@ context_word = np.array(skip_grams.iloc[:,1], dtype = 'int32')
 Y = np.array(skip_grams.iloc[:,2], dtype = 'int32')
 
 print('target word vector')
-target_word = target_word.reshape(target_word.shape[0],1)
+target_word = target_word.reshape(target_word.shape[0],)
 print(target_word)
 
 print('context word vector')
-context_word = context_word.reshape(context_word.shape[0],1)
+context_word = context_word.reshape(context_word.shape[0],)
 print(context_word)
 
 print('label vector')
-Y = Y.reshape(Y.shape[0],1)
+Y = Y.reshape(Y.shape[0],)
 print(Y)
 
 vocab_size = len(ids.index)+2
@@ -123,8 +124,8 @@ model = Model(inputs=[input_target, input_context], outputs=output)
 #model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy']) # binary for binary decisions, categorical for classifications
 
 # binary classification loss functions
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-#model.compile(loss='squared_hinge', optimizer='adam', metrics=['accuracy'])
+#model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.compile(loss='squared_hinge', optimizer='adam', metrics=['accuracy'])
 
 # view model summary
 print(model.summary())
@@ -161,9 +162,9 @@ class BatchGenerator(keras.utils.Sequence):
          return int(np.ceil(len(self.target) / float(self.batch_size)))
 
      def __getitem__(self, idx):
-         batch_target = np.array(self.target[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,1)
-         batch_context = np.array(self.context[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,1)
-         batch_Y = np.array(self.Y[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,1)
+         batch_target = np.array(self.target[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32')
+         batch_context = np.array(self.context[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32')
+         batch_Y = np.array(self.Y[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32')
 
          return [batch_target, batch_context], batch_Y
 
