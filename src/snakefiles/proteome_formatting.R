@@ -75,5 +75,17 @@ for (r in 1:nrow(ref.table)) {
 
 ref.table = unique(ref.table)
 ref.table = na.omit(ref.table)
+
+# apply protcheck()
+ref.table$seqs = as.character(ref.table$seqs)
+a <- sapply(toupper(ref.table$seqs), protcheck)
+names(a) <- NULL
+
+print(paste0("found ",length(which(a==F)) , " proteins that are failing the protcheck() and is removing them"))
+
+# clean data sets
+ref.table = ref.table[which(a==T), ]
+
+
 ### OUTPUT ###
 write.csv(ref.table, file = unlist(snakemake@output[["formatted_proteome"]]), row.names = F)

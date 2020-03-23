@@ -9,6 +9,7 @@ peptidome:
     UniProt_unfiltered: data/peptidome/UniProt_mouse_canonicalAndIsoforms.fasta
     UniProt_filtered: data/peptidome/SwissProt_mouse_canonicalAndIsoforms.fasta
     formatted_proteome: data/peptidome/formatted_proteome.csv
+    properties: data/peptidome/biophys_properties.csv
 
 encoded_proteome:
     BPE_model: results/encoded_proteome/BPE_model.bpe

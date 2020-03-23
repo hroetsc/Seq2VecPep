@@ -91,7 +91,8 @@ rule proteome_repres:
 #rule plotting:
 #    input:
 #        proteome_repres = features["embedded_proteome"]["proteome_representation"],
-#        proteome_repres_random = features["embedded_proteome"]["proteome_representation_random"]
+#        proteome_repres_random = features["embedded_proteome"]["proteome_representation_random"],
+#        properties = features["peptidome"]["properties"],
 #    output:
 #        proteome_props = features["embedded_proteome"]["proteome_properties"],
 #        proteome_props_random = features["embedded_proteome"]["proteome_properties_random"],

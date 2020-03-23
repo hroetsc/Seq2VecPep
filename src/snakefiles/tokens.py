@@ -98,3 +98,18 @@ rule TF_IDF:
         mem=config["mem_mb"]
     script:
         "TF-IDF_scores.R"
+
+rule biophys_props:
+    input:
+        formatted_proteome = features["peptidome"]["formatted_proteome"]
+    output:
+        properties = features["peptidome"]["properties"]
+    log:
+        "results/logs/biophys_props.txt"
+    conda:
+        "R_dependencies.yml"
+    params:
+        n=config["max_cores"],
+        mem=config["mem_mb"]
+    script:
+        "biophys_props.R"

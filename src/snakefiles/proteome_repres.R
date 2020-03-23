@@ -14,6 +14,7 @@ proteome = read.csv(file = "data/peptidome/formatted_proteome.csv", stringsAsFac
 words = read.csv(file = "results/encoded_proteome/opt_words_10000.csv", stringsAsFactors = F, header = T)
 TF_IDF = read.csv(file = "results/encoded_proteome/TF_IDF.csv", stringsAsFactors = F, header = T)
 
+
 print("### RETRIEVE PROTEIN REPRESENATION ###")
 
 library(seqinr)

@@ -63,7 +63,7 @@ workers = 16
 
 # window of a word: [i - window_size, i + window_size+1]
 embeddingDim = 100
-epochs = 10
+epochs = 5
 
 batchSize = 32
 valSplit = 0.20
@@ -188,9 +188,9 @@ class BatchGenerator(keras.utils.Sequence):
          return int(np.ceil(len(self.target) / float(self.batch_size)))
 
      def __getitem__(self, idx):
-         batch_target = np.array(self.target[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,)
-         batch_context = np.array(self.context[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,)
-         batch_Y = np.array(self.Y[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32').reshape(self.batch_size,)
+         batch_target = np.array(self.target[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32')
+         batch_context = np.array(self.context[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32')
+         batch_Y = np.array(self.Y[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32')
 
          return [batch_target, batch_context], batch_Y
 

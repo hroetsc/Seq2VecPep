@@ -23,7 +23,7 @@ rule all:
         acc = "results/plots/model_acc.png",
         loss = "results/plots/model_loss.png",
         proteome_repres = features["embedded_proteome"]["proteome_representation"],
-        proteome_props = features["embedded_proteome"]["proteome_properties"]
+#        proteome_props = features["embedded_proteome"]["proteome_properties"]
 #        p_rPCP = "results/plots/rPCP.png",
 #        p_F6 = "results/plots/F6.png",
 #        p_Z3 = "results/plots/Z3.png",
