@@ -1,0 +1,787 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 12
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	all
+	1	plot_model_metrics
+	1	plotting
+	1	proteome_repres
+	1	seq2vec_model_training
+	5
+
+[Tue Mar 24 17:22:17 2020]
+rule seq2vec_model_training:
+    input: results/embedded_proteome/skipgrams.txt, results/embedded_proteome/seq2vec_ids.csv
+    output: results/embedded_proteome/seq2vec_weights.csv, results/embedded_proteome/model.h5, results/embedded_proteome/model_metrics.txt
+    log: results/logs/seq2vec_2.log
+    jobid: 0
+    benchmark: results/benchmarks/seq2vec_2.txt
+    resources: mem_mb=25000
+
+Activating conda environment: /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/dc053c4b
+Using TensorFlow backend.
+WARNING:tensorflow:From /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/dc053c4b/lib/python3.7/site-packages/tensorflow_core/python/ops/resource_variable_ops.py:1630: calling BaseResourceVariable.__init__ (from tensorflow.python.ops.resource_variable_ops) with constraint is deprecated and will be removed in a future version.
+Instructions for updating:
+If using Keras pass *_constraint arguments to layers.
+WARNING:tensorflow:From /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/dc053c4b/lib/python3.7/site-packages/tensorflow_core/python/ops/math_grad.py:1424: where (from tensorflow.python.ops.array_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use tf.where in 2.0, which has the same broadcast rule as np.where
+2020-03-24 17:23:45.962837: I tensorflow/core/platform/cpu_feature_guard.cc:145] This TensorFlow binary is optimized with Intel(R) MKL-DNN to use the following CPU instructions in performance critical operations:  SSE4.1 SSE4.2 AVX AVX2 FMA
+To enable them in non-MKL-DNN operations, rebuild TensorFlow with the appropriate compiler flags.
+2020-03-24 17:23:46.000330: I tensorflow/core/platform/profile_utils/cpu_utils.cc:94] CPU Frequency: 3696000000 Hz
+2020-03-24 17:23:46.001427: I tensorflow/compiler/xla/service/service.cc:168] XLA service 0x55cf7cf2d370 initialized for platform Host (this does not guarantee that XLA will be used). Devices:
+2020-03-24 17:23:46.001502: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): Host, Default Version
+OMP: Info #212: KMP_AFFINITY: decoding x2APIC ids.
+OMP: Info #210: KMP_AFFINITY: Affinity capable, using global cpuid leaf 11 info
+OMP: Info #154: KMP_AFFINITY: Initial OS proc set respected: 0-11
+OMP: Info #156: KMP_AFFINITY: 12 available OS procs
+OMP: Info #157: KMP_AFFINITY: Uniform topology
+OMP: Info #179: KMP_AFFINITY: 1 packages x 6 cores/pkg x 2 threads/core (6 total cores)
+OMP: Info #214: KMP_AFFINITY: OS proc to physical thread map:
+OMP: Info #171: KMP_AFFINITY: OS proc 0 maps to package 0 core 0 thread 0 
+OMP: Info #171: KMP_AFFINITY: OS proc 6 maps to package 0 core 0 thread 1 
+OMP: Info #171: KMP_AFFINITY: OS proc 1 maps to package 0 core 1 thread 0 
+OMP: Info #171: KMP_AFFINITY: OS proc 7 maps to package 0 core 1 thread 1 
+OMP: Info #171: KMP_AFFINITY: OS proc 2 maps to package 0 core 2 thread 0 
+OMP: Info #171: KMP_AFFINITY: OS proc 8 maps to package 0 core 2 thread 1 
+OMP: Info #171: KMP_AFFINITY: OS proc 3 maps to package 0 core 3 thread 0 
+OMP: Info #171: KMP_AFFINITY: OS proc 9 maps to package 0 core 3 thread 1 
+OMP: Info #171: KMP_AFFINITY: OS proc 4 maps to package 0 core 4 thread 0 
+OMP: Info #171: KMP_AFFINITY: OS proc 10 maps to package 0 core 4 thread 1 
+OMP: Info #171: KMP_AFFINITY: OS proc 5 maps to package 0 core 5 thread 0 
+OMP: Info #171: KMP_AFFINITY: OS proc 11 maps to package 0 core 5 thread 1 
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 414 thread 0 bound to OS proc set 0
+2020-03-24 17:23:46.002863: I tensorflow/core/common_runtime/process_util.cc:115] Creating new thread pool with default inter op setting: 2. Tune using inter_op_parallelism_threads for best performance.
+WARNING:tensorflow:From /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/dc053c4b/lib/python3.7/site-packages/keras/backend/tensorflow_backend.py:422: The name tf.global_variables is deprecated. Please use tf.compat.v1.global_variables instead.
+
+### PROTEOME EMBEDDING USING SKIP-GRAM NEURAL NETWORK - 2 ###
+LOAD DATA
+target word vector
+[3628 3628 3628 ...  196   83   82]
+context word vector
+[  41   43   43 ... 1231 2228 3135]
+label vector
+[1 1 1 ... 0 0 0]
+vocabulary size (number of target word IDs +2): 4997
+MODEL GENERATION
+Model: "model_1"
+__________________________________________________________________________________________________
+Layer (type)                    Output Shape         Param #     Connected to                     
+==================================================================================================
+target_word (InputLayer)        (None, 1)            0                                            
+__________________________________________________________________________________________________
+context_word (InputLayer)       (None, 1)            0                                            
+__________________________________________________________________________________________________
+embedding (Embedding)           (None, 1, 100)       499700      target_word[0][0]                
+                                                                 context_word[0][0]               
+__________________________________________________________________________________________________
+target_embedding (Reshape)      (None, 100, 1)       0           embedding[0][0]                  
+__________________________________________________________________________________________________
+context_embedding (Reshape)     (None, 100, 1)       0           embedding[1][0]                  
+__________________________________________________________________________________________________
+dot_product (Dot)               (None, 1, 1)         0           target_embedding[0][0]           
+                                                                 context_embedding[0][0]          
+__________________________________________________________________________________________________
+reshape_1 (Reshape)             (None, 1)            0           dot_product[0][0]                
+__________________________________________________________________________________________________
+1st_sigmoid (Dense)             (None, 1)            2           reshape_1[0][0]                  
+__________________________________________________________________________________________________
+dropout_1 (Dropout)             (None, 1)            0           1st_sigmoid[0][0]                
+__________________________________________________________________________________________________
+2nd_sigmoid (Dense)             (None, 1)            2           dropout_1[0][0]                  
+==================================================================================================
+Total params: 499,704
+Trainable params: 499,704
+Non-trainable params: 0
+__________________________________________________________________________________________________
+None
+MODEL TRAINING
+split word pairs into training and validation data sets
+metrics: ['loss', 'accuracy']
+generating batches for model training
+fit the model
+Epoch 1/200
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 897 thread 1 bound to OS proc set 1
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 946 thread 3 bound to OS proc set 3
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 945 thread 2 bound to OS proc set 2
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 947 thread 4 bound to OS proc set 4
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 948 thread 5 bound to OS proc set 5
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 949 thread 6 bound to OS proc set 6
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 951 thread 8 bound to OS proc set 8
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 950 thread 7 bound to OS proc set 7
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 952 thread 9 bound to OS proc set 9
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 953 thread 10 bound to OS proc set 10
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 956 thread 12 bound to OS proc set 0
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 954 thread 11 bound to OS proc set 11
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 896 thread 13 bound to OS proc set 1
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 958 thread 14 bound to OS proc set 2
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 959 thread 15 bound to OS proc set 3
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 963 thread 17 bound to OS proc set 5
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 962 thread 16 bound to OS proc set 4
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 964 thread 18 bound to OS proc set 6
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 967 thread 19 bound to OS proc set 7
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 968 thread 20 bound to OS proc set 8
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 972 thread 21 bound to OS proc set 9
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 973 thread 22 bound to OS proc set 10
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 975 thread 24 bound to OS proc set 0
+OMP: Info #250: KMP_AFFINITY: pid 414 tid 974 thread 23 bound to OS proc set 11
+ - 340s - loss: 1.0078 - accuracy: 0.6971 - val_loss: 1.0000 - val_accuracy: 0.6971
+Epoch 2/200
+ - 313s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6976
+Epoch 3/200
+ - 280s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6967
+Epoch 4/200
+ - 279s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6975
+Epoch 5/200
+ - 280s - loss: 1.0000 - accuracy: 0.6971 - val_loss: 1.0000 - val_accuracy: 0.6966
+Epoch 6/200
+ - 283s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6969
+Epoch 7/200
+ - 280s - loss: 1.0000 - accuracy: 0.6971 - val_loss: 1.0000 - val_accuracy: 0.6971
+Epoch 8/200
+ - 280s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6982
+Epoch 9/200
+ - 281s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6965
+Epoch 10/200
+ - 281s - loss: 1.0000 - accuracy: 0.6971 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 11/200
+ - 281s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 12/200
+ - 282s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6963
+Epoch 13/200
+ - 281s - loss: 1.0000 - accuracy: 0.6970 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 14/200
+ - 282s - loss: 1.0000 - accuracy: 0.6970 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 15/200
+ - 282s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6974
+Epoch 16/200
+ - 282s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 17/200
+ - 282s - loss: 1.0000 - accuracy: 0.6969 - val_loss: 1.0000 - val_accuracy: 0.6967
+Epoch 18/200
+ - 282s - loss: 1.0000 - accuracy: 0.6976 - val_loss: 1.0000 - val_accuracy: 0.6975
+Epoch 19/200
+ - 282s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6972
+Epoch 20/200
+ - 287s - loss: 1.0000 - accuracy: 0.6974 - val_loss: 1.0000 - val_accuracy: 0.6974
+Epoch 21/200
+ - 286s - loss: 1.0000 - accuracy: 0.6971 - val_loss: 1.0000 - val_accuracy: 0.6971
+Epoch 22/200
+ - 283s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6976
+Epoch 23/200
+ - 283s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6967
+Epoch 24/200
+ - 283s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6975
+Epoch 25/200
+ - 287s - loss: 1.0000 - accuracy: 0.6971 - val_loss: 1.0000 - val_accuracy: 0.6966
+Epoch 26/200
+ - 283s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6969
+Epoch 27/200
+ - 283s - loss: 1.0000 - accuracy: 0.6971 - val_loss: 1.0000 - val_accuracy: 0.6971
+Epoch 28/200
+ - 284s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6983
+Epoch 29/200
+ - 283s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6965
+Epoch 30/200
+ - 283s - loss: 1.0000 - accuracy: 0.6971 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 31/200
+ - 283s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 32/200
+ - 284s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6963
+Epoch 33/200
+ - 294s - loss: 1.0000 - accuracy: 0.6970 - val_loss: 1.0000 - val_accuracy: 0.6973
+/bin/bash: line 1:   414 Terminated              python /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/scripts/tmp1_8ox5oe.skip_gram_NN_2.py
+[Tue Mar 24 20:01:24 2020]
+Error in rule seq2vec_model_training:
+    jobid: 0
+    output: results/embedded_proteome/seq2vec_weights.csv, results/embedded_proteome/model.h5, results/embedded_proteome/model_metrics.txt
+    log: results/logs/seq2vec_2.log (check log file(s) for error message)
+    conda-env: /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/dc053c4b
+
+RuleException:
+CalledProcessError in line 39 of /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/src/snakefiles/seq2vec.py:
+Command 'source /home/hroetsc/anaconda3/bin/activate '/home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/dc053c4b'; set -euo pipefail; python /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/scripts/tmp1_8ox5oe.skip_gram_NN_2.py' returned non-zero exit status 143.
+  File "/home/hroetsc/Documents/ProtTransEmbedding/Snakemake/src/snakefiles/seq2vec.py", line 39, in __rule_seq2vec_model_training
+  File "/home/hroetsc/anaconda3/envs/snakemake/lib/python3.6/concurrent/futures/thread.py", line 56, in run
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/log/2020-03-24T172216.805718.snakemake.log
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 12
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	all
+	1	plot_model_metrics
+	1	plotting
+	1	proteome_repres
+	1	seq2vec_model_training
+	5
+
+[Tue Mar 24 20:04:20 2020]
+rule seq2vec_model_training:
+    input: results/embedded_proteome/skipgrams.txt, results/embedded_proteome/seq2vec_ids.csv
+    output: results/embedded_proteome/seq2vec_weights.csv, results/embedded_proteome/model.h5, results/embedded_proteome/model_metrics.txt
+    log: results/logs/seq2vec_2.log
+    jobid: 0
+    benchmark: results/benchmarks/seq2vec_2.txt
+    resources: mem_mb=25000
+
+Activating conda environment: /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/dc053c4b
+Using TensorFlow backend.
+WARNING:tensorflow:From /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/dc053c4b/lib/python3.7/site-packages/tensorflow_core/python/ops/resource_variable_ops.py:1630: calling BaseResourceVariable.__init__ (from tensorflow.python.ops.resource_variable_ops) with constraint is deprecated and will be removed in a future version.
+Instructions for updating:
+If using Keras pass *_constraint arguments to layers.
+WARNING:tensorflow:From /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/dc053c4b/lib/python3.7/site-packages/tensorflow_core/python/ops/math_grad.py:1424: where (from tensorflow.python.ops.array_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use tf.where in 2.0, which has the same broadcast rule as np.where
+2020-03-24 20:05:43.676370: I tensorflow/core/platform/cpu_feature_guard.cc:145] This TensorFlow binary is optimized with Intel(R) MKL-DNN to use the following CPU instructions in performance critical operations:  SSE4.1 SSE4.2 AVX AVX2 FMA
+To enable them in non-MKL-DNN operations, rebuild TensorFlow with the appropriate compiler flags.
+2020-03-24 20:05:43.700368: I tensorflow/core/platform/profile_utils/cpu_utils.cc:94] CPU Frequency: 3696000000 Hz
+2020-03-24 20:05:43.701221: I tensorflow/compiler/xla/service/service.cc:168] XLA service 0x55fe5f7851e0 initialized for platform Host (this does not guarantee that XLA will be used). Devices:
+2020-03-24 20:05:43.701262: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): Host, Default Version
+OMP: Info #212: KMP_AFFINITY: decoding x2APIC ids.
+OMP: Info #210: KMP_AFFINITY: Affinity capable, using global cpuid leaf 11 info
+OMP: Info #154: KMP_AFFINITY: Initial OS proc set respected: 0-11
+OMP: Info #156: KMP_AFFINITY: 12 available OS procs
+OMP: Info #157: KMP_AFFINITY: Uniform topology
+OMP: Info #179: KMP_AFFINITY: 1 packages x 6 cores/pkg x 2 threads/core (6 total cores)
+OMP: Info #214: KMP_AFFINITY: OS proc to physical thread map:
+OMP: Info #171: KMP_AFFINITY: OS proc 0 maps to package 0 core 0 thread 0 
+OMP: Info #171: KMP_AFFINITY: OS proc 6 maps to package 0 core 0 thread 1 
+OMP: Info #171: KMP_AFFINITY: OS proc 1 maps to package 0 core 1 thread 0 
+OMP: Info #171: KMP_AFFINITY: OS proc 7 maps to package 0 core 1 thread 1 
+OMP: Info #171: KMP_AFFINITY: OS proc 2 maps to package 0 core 2 thread 0 
+OMP: Info #171: KMP_AFFINITY: OS proc 8 maps to package 0 core 2 thread 1 
+OMP: Info #171: KMP_AFFINITY: OS proc 3 maps to package 0 core 3 thread 0 
+OMP: Info #171: KMP_AFFINITY: OS proc 9 maps to package 0 core 3 thread 1 
+OMP: Info #171: KMP_AFFINITY: OS proc 4 maps to package 0 core 4 thread 0 
+OMP: Info #171: KMP_AFFINITY: OS proc 10 maps to package 0 core 4 thread 1 
+OMP: Info #171: KMP_AFFINITY: OS proc 5 maps to package 0 core 5 thread 0 
+OMP: Info #171: KMP_AFFINITY: OS proc 11 maps to package 0 core 5 thread 1 
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 8725 thread 0 bound to OS proc set 0
+2020-03-24 20:05:43.701992: I tensorflow/core/common_runtime/process_util.cc:115] Creating new thread pool with default inter op setting: 2. Tune using inter_op_parallelism_threads for best performance.
+WARNING:tensorflow:From /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/dc053c4b/lib/python3.7/site-packages/keras/backend/tensorflow_backend.py:422: The name tf.global_variables is deprecated. Please use tf.compat.v1.global_variables instead.
+
+### PROTEOME EMBEDDING USING SKIP-GRAM NEURAL NETWORK - 2 ###
+LOAD DATA
+target word vector
+[3628 3628 3628 ...  196   83   82]
+context word vector
+[  41   43   43 ... 1231 2228 3135]
+label vector
+[1 1 1 ... 0 0 0]
+vocabulary size (number of target word IDs +2): 4997
+MODEL GENERATION
+Model: "model_1"
+__________________________________________________________________________________________________
+Layer (type)                    Output Shape         Param #     Connected to                     
+==================================================================================================
+target_word (InputLayer)        (None, 1)            0                                            
+__________________________________________________________________________________________________
+context_word (InputLayer)       (None, 1)            0                                            
+__________________________________________________________________________________________________
+embedding (Embedding)           (None, 1, 100)       499700      target_word[0][0]                
+                                                                 context_word[0][0]               
+__________________________________________________________________________________________________
+target_embedding (Reshape)      (None, 100, 1)       0           embedding[0][0]                  
+__________________________________________________________________________________________________
+context_embedding (Reshape)     (None, 100, 1)       0           embedding[1][0]                  
+__________________________________________________________________________________________________
+dot_product (Dot)               (None, 1, 1)         0           target_embedding[0][0]           
+                                                                 context_embedding[0][0]          
+__________________________________________________________________________________________________
+reshape_1 (Reshape)             (None, 1)            0           dot_product[0][0]                
+__________________________________________________________________________________________________
+1st_sigmoid (Dense)             (None, 1)            2           reshape_1[0][0]                  
+__________________________________________________________________________________________________
+dropout_1 (Dropout)             (None, 1)            0           1st_sigmoid[0][0]                
+__________________________________________________________________________________________________
+2nd_sigmoid (Dense)             (None, 1)            2           dropout_1[0][0]                  
+==================================================================================================
+Total params: 499,704
+Trainable params: 499,704
+Non-trainable params: 0
+__________________________________________________________________________________________________
+None
+MODEL TRAINING
+split word pairs into training and validation data sets
+metrics: ['loss', 'accuracy']
+generating batches for model training
+fit the model
+Epoch 1/35
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9892 thread 1 bound to OS proc set 1
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9926 thread 2 bound to OS proc set 2
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9927 thread 3 bound to OS proc set 3
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9928 thread 4 bound to OS proc set 4
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9930 thread 6 bound to OS proc set 6
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9929 thread 5 bound to OS proc set 5
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9891 thread 7 bound to OS proc set 7
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9931 thread 8 bound to OS proc set 8
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9933 thread 10 bound to OS proc set 10
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9932 thread 9 bound to OS proc set 9
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9935 thread 12 bound to OS proc set 0
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9934 thread 11 bound to OS proc set 11
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9936 thread 13 bound to OS proc set 1
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9937 thread 14 bound to OS proc set 2
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9939 thread 16 bound to OS proc set 4
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9938 thread 15 bound to OS proc set 3
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9940 thread 17 bound to OS proc set 5
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9941 thread 18 bound to OS proc set 6
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9942 thread 19 bound to OS proc set 7
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9943 thread 20 bound to OS proc set 8
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9944 thread 21 bound to OS proc set 9
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9945 thread 22 bound to OS proc set 10
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9946 thread 23 bound to OS proc set 11
+OMP: Info #250: KMP_AFFINITY: pid 8725 tid 9947 thread 24 bound to OS proc set 0
+ - 270s - loss: 1.0135 - accuracy: 0.6961 - val_loss: 1.0000 - val_accuracy: 0.6974
+Epoch 2/35
+ - 258s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6969
+Epoch 3/35
+ - 259s - loss: 1.0000 - accuracy: 0.6974 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 4/35
+ - 259s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6972
+Epoch 5/35
+ - 259s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6977
+Epoch 6/35
+ - 260s - loss: 1.0000 - accuracy: 0.6970 - val_loss: 1.0000 - val_accuracy: 0.6977
+Epoch 7/35
+ - 260s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6970
+Epoch 8/35
+ - 259s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6977
+Epoch 9/35
+ - 260s - loss: 1.0000 - accuracy: 0.6971 - val_loss: 1.0000 - val_accuracy: 0.6974
+Epoch 10/35
+ - 260s - loss: 1.0000 - accuracy: 0.6969 - val_loss: 1.0000 - val_accuracy: 0.6970
+Epoch 11/35
+ - 260s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6968
+Epoch 12/35
+ - 260s - loss: 1.0000 - accuracy: 0.6974 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 13/35
+ - 260s - loss: 1.0000 - accuracy: 0.6974 - val_loss: 1.0000 - val_accuracy: 0.6976
+Epoch 14/35
+ - 260s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6967
+Epoch 15/35
+ - 260s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6976
+Epoch 16/35
+ - 260s - loss: 1.0000 - accuracy: 0.6974 - val_loss: 1.0000 - val_accuracy: 0.6965
+Epoch 17/35
+ - 260s - loss: 1.0000 - accuracy: 0.6971 - val_loss: 1.0000 - val_accuracy: 0.6972
+Epoch 18/35
+ - 260s - loss: 1.0000 - accuracy: 0.6969 - val_loss: 1.0000 - val_accuracy: 0.6980
+Epoch 19/35
+ - 261s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6964
+Epoch 20/35
+ - 265s - loss: 1.0000 - accuracy: 0.6970 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 21/35
+ - 266s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6974
+Epoch 22/35
+ - 263s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6969
+Epoch 23/35
+ - 262s - loss: 1.0000 - accuracy: 0.6974 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 24/35
+ - 262s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 25/35
+ - 261s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6976
+Epoch 26/35
+ - 262s - loss: 1.0000 - accuracy: 0.6970 - val_loss: 1.0000 - val_accuracy: 0.6977
+Epoch 27/35
+ - 261s - loss: 1.0000 - accuracy: 0.6973 - val_loss: 1.0000 - val_accuracy: 0.6970
+Epoch 28/35
+ - 262s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6976
+Epoch 29/35
+ - 286s - loss: 1.0000 - accuracy: 0.6971 - val_loss: 1.0000 - val_accuracy: 0.6974
+Epoch 30/35
+ - 261s - loss: 1.0000 - accuracy: 0.6969 - val_loss: 1.0000 - val_accuracy: 0.6970
+Epoch 31/35
+ - 262s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6968
+Epoch 32/35
+ - 261s - loss: 1.0000 - accuracy: 0.6974 - val_loss: 1.0000 - val_accuracy: 0.6973
+Epoch 33/35
+ - 261s - loss: 1.0000 - accuracy: 0.6974 - val_loss: 1.0000 - val_accuracy: 0.6976
+Epoch 34/35
+ - 261s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6967
+Epoch 35/35
+ - 261s - loss: 1.0000 - accuracy: 0.6972 - val_loss: 1.0000 - val_accuracy: 0.6976
+WARNING:tensorflow:From /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/scripts/tmpi2v8nsum.skip_gram_NN_2.py:227: The name tf.reset_default_graph is deprecated. Please use tf.compat.v1.reset_default_graph instead.
+
+SAVE WEIGHTS
+configuration of embedding layer:
+{'name': 'embedding', 'trainable': True, 'batch_input_shape': (None, 1), 'dtype': 'float32', 'input_dim': 4997, 'output_dim': 100, 'embeddings_initializer': {'class_name': 'VarianceScaling', 'config': {'scale': 1.0, 'mode': 'fan_avg', 'distribution': 'uniform', 'seed': None}}, 'embeddings_regularizer': None, 'activity_regularizer': None, 'embeddings_constraint': None, 'mask_zero': False, 'input_length': 1}
+[Tue Mar 24 22:38:28 2020]
+Finished job 0.
+1 of 5 steps (20%) done
+
+[Tue Mar 24 22:38:28 2020]
+rule proteome_repres:
+    input: results/embedded_proteome/seq2vec_weights.csv, results/embedded_proteome/seq2vec_ids.csv, data/peptidome/formatted_proteome.csv, results/encoded_proteome/TF_IDF.csv, results/encoded_proteome/words.csv
+    output: results/embedded_proteome/proteome_repres.csv, results/embedded_proteome/proteome_repres_random.csv, results/embedded_proteome/proteome_repres_KS-test.csv
+    log: results/logs/proteome_repres.log
+    jobid: 5
+    resources: mem_mb=25000
+
+[Tue Mar 24 22:38:28 2020]
+rule plot_model_metrics:
+    input: results/embedded_proteome/model_metrics.txt
+    output: results/metrics/model_acc.png, results/metrics/model_loss.png
+    jobid: 4
+    resources: mem_mb=25000
+
+Activating conda environment: /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/140dd2a4
+Activating conda environment: /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/140dd2a4
+[1] "### RETRIEVE PROTEIN REPRESENATION ###"
+
+Attaching package: ‘plyr’
+
+The following object is masked from ‘package:seqinr’:
+
+    count
+
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:plyr’:
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following object is masked from ‘package:seqinr’:
+
+    count
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Warning message:
+In read.table(snakemake@input[["metrics"]], stringsAsFactors = F) :
+  incomplete final line found by readTableHeader on 'results/embedded_proteome/model_metrics.txt'
+
+Attaching package: ‘data.table’
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+Loading required package: magrittr
+
+Attaching package: ‘ggpubr’
+
+The following object is masked from ‘package:plyr’:
+
+    mutate
+
+Loading required package: Matrix
+Saving 7 x 7 in image
+
+Attaching package: ‘reshape2’
+
+The following objects are masked from ‘package:data.table’:
+
+    dcast, melt
+
+[1] "LOAD DATA"
+Saving 7 x 7 in image
+[Tue Mar 24 22:38:35 2020]
+Finished job 4.
+2 of 5 steps (40%) done
+Joining, by = "word_ID"
+Joining, by = "UniProtID"
+[1] "CALCULATE NUMERIC REPRESENTATION OF EVERY PROTEIN"
+  |                                                                              |                                                                      |   0%  |                                                                              |                                                                      |   1%  |                                                                              |=                                                                     |   1%  |                                                                              |=                                                                     |   2%  |                                                                              |==                                                                    |   2%  |                                                                              |==                                                                    |   3%  |                                                                              |==                                                                    |   4%  |                                                                              |===                                                                   |   4%  |                                                                              |===                                                                   |   5%  |                                                                              |====                                                                  |   5%  |                                                                              |====                                                                  |   6%  |                                                                              |=====                                                                 |   6%  |                                                                              |=====                                                                 |   7%  |                                                                              |=====                                                                 |   8%  |                                                                              |======                                                                |   8%  |                                                                              |======                                                                |   9%  |                                                                              |=======                                                               |   9%  |                                                                              |=======                                                               |  10%  |                                                                              |=======                                                               |  11%  |                                                                              |========                                                              |  11%  |                                                                              |========                                                              |  12%  |                                                                              |=========                                                             |  12%  |                                                                              |=========                                                             |  13%  |                                                                              |=========                                                             |  14%  |                                                                              |==========                                                            |  14%  |                                                                              |==========                                                            |  15%  |                                                                              |===========                                                           |  15%  |                                                                              |===========                                                           |  16%  |                                                                              |============                                                          |  16%  |                                                                              |============                                                          |  17%  |                                                                              |============                                                          |  18%  |                                                                              |=============                                                         |  18%  |                                                                              |=============                                                         |  19%  |                                                                              |==============                                                        |  19%  |                                                                              |==============                                                        |  20%  |                                                                              |==============                                                        |  21%  |                                                                              |===============                                                       |  21%  |                                                                              |===============                                                       |  22%  |                                                                              |================                                                      |  22%  |                                                                              |================                                                      |  23%  |                                                                              |================                                                      |  24%  |                                                                              |=================                                                     |  24%  |                                                                              |=================                                                     |  25%  |                                                                              |==================                                                    |  25%  |                                                                              |==================                                                    |  26%  |                                                                              |===================                                                   |  26%  |                                                                              |===================                                                   |  27%  |                                                                              |===================                                                   |  28%  |                                                                              |====================                                                  |  28%  |                                                                              |====================                                                  |  29%  |                                                                              |=====================                                                 |  29%  |                                                                              |=====================                                                 |  30%  |                                                                              |=====================                                                 |  31%  |                                                                              |======================                                                |  31%  |                                                                              |======================                                                |  32%  |                                                                              |=======================                                               |  32%  |                                                                              |=======================                                               |  33%  |                                                                              |=======================                                               |  34%  |                                                                              |========================                                              |  34%  |                                                                              |========================                                              |  35%  |                                                                              |=========================                                             |  35%  |                                                                              |=========================                                             |  36%  |                                                                              |==========================                                            |  36%  |                                                                              |==========================                                            |  37%  |                                                                              |==========================                                            |  38%  |                                                                              |===========================                                           |  38%  |                                                                              |===========================                                           |  39%  |                                                                              |============================                                          |  39%  |                                                                              |============================                                          |  40%  |                                                                              |============================                                          |  41%  |                                                                              |=============================                                         |  41%  |                                                                              |=============================                                         |  42%  |                                                                              |==============================                                        |  42%  |                                                                              |==============================                                        |  43%  |                                                                              |==============================                                        |  44%  |                                                                              |===============================                                       |  44%  |                                                                              |===============================                                       |  45%  |                                                                              |================================                                      |  45%  |                                                                              |================================                                      |  46%  |                                                                              |=================================                                     |  46%  |                                                                              |=================================                                     |  47%  |                                                                              |=================================                                     |  48%  |                                                                              |==================================                                    |  48%  |                                                                              |==================================                                    |  49%  |                                                                              |===================================                                   |  49%  |                                                                              |===================================                                   |  50%  |                                                                              |===================================                                   |  51%  |                                                                              |====================================                                  |  51%  |                                                                              |====================================                                  |  52%  |                                                                              |=====================================                                 |  52%  |                                                                              |=====================================                                 |  53%  |                                                                              |=====================================                                 |  54%  |                                                                              |======================================                                |  54%  |                                                                              |======================================                                |  55%  |                                                                              |=======================================                               |  55%  |                                                                              |=======================================                               |  56%  |                                                                              |========================================                              |  56%  |                                                                              |========================================                              |  57%  |                                                                              |========================================                              |  58%  |                                                                              |=========================================                             |  58%  |                                                                              |=========================================                             |  59%  |                                                                              |==========================================                            |  59%  |                                                                              |==========================================                            |  60%  |                                                                              |==========================================                            |  61%  |                                                                              |===========================================                           |  61%  |                                                                              |===========================================                           |  62%  |                                                                              |============================================                          |  62%  |                                                                              |============================================                          |  63%  |                                                                              |============================================                          |  64%  |                                                                              |=============================================                         |  64%  |                                                                              |=============================================                         |  65%  |                                                                              |==============================================                        |  65%  |                                                                              |==============================================                        |  66%  |                                                                              |===============================================                       |  66%  |                                                                              |===============================================                       |  67%  |                                                                              |===============================================                       |  68%  |                                                                              |================================================                      |  68%  |                                                                              |================================================                      |  69%  |                                                                              |=================================================                     |  69%  |                                                                              |=================================================                     |  70%  |                                                                              |=================================================                     |  71%  |                                                                              |==================================================                    |  71%  |                                                                              |==================================================                    |  72%  |                                                                              |===================================================                   |  72%  |                                                                              |===================================================                   |  73%  |                                                                              |===================================================                   |  74%  |                                                                              |====================================================                  |  74%  |                                                                              |====================================================                  |  75%  |                                                                              |=====================================================                 |  75%  |                                                                              |=====================================================                 |  76%  |                                                                              |======================================================                |  76%  |                                                                              |======================================================                |  77%  |                                                                              |======================================================                |  78%  |                                                                              |=======================================================               |  78%  |                                                                              |=======================================================               |  79%  |                                                                              |========================================================              |  79%  |                                                                              |========================================================              |  80%  |                                                                              |========================================================              |  81%  |                                                                              |=========================================================             |  81%  |                                                                              |=========================================================             |  82%  |                                                                              |==========================================================            |  82%  |                                                                              |==========================================================            |  83%  |                                                                              |==========================================================            |  84%  |                                                                              |===========================================================           |  84%  |                                                                              |===========================================================           |  85%  |                                                                              |============================================================          |  85%  |                                                                              |============================================================          |  86%  |                                                                              |=============================================================         |  86%  |                                                                              |=============================================================         |  87%  |                                                                              |=============================================================         |  88%  |                                                                              |==============================================================        |  88%  |                                                                              |==============================================================        |  89%  |                                                                              |===============================================================       |  89%  |                                                                              |===============================================================       |  90%  |                                                                              |===============================================================       |  91%  |                                                                              |================================================================      |  91%  |                                                                              |================================================================      |  92%  |                                                                              |=================================================================     |  92%  |                                                                              |=================================================================     |  93%  |                                                                              |=================================================================     |  94%  |                                                                              |==================================================================    |  94%  |                                                                              |==================================================================    |  95%  |                                                                              |===================================================================   |  95%  |                                                                              |===================================================================   |  96%  |                                                                              |====================================================================  |  96%  |                                                                              |====================================================================  |  97%  |                                                                              |====================================================================  |  98%  |                                                                              |===================================================================== |  98%  |                                                                              |===================================================================== |  99%  |                                                                              |======================================================================|  99%  |                                                                              |======================================================================| 100%[1] "FORMAT OUTPUT"
+[1] "EVALUATION USING A RANDOM EMBEDDING"
+  |                                                                              |                                                                      |   0%  |                                                                              |                                                                      |   1%  |                                                                              |=                                                                     |   1%  |                                                                              |=                                                                     |   2%  |                                                                              |==                                                                    |   2%  |                                                                              |==                                                                    |   3%  |                                                                              |==                                                                    |   4%  |                                                                              |===                                                                   |   4%  |                                                                              |===                                                                   |   5%  |                                                                              |====                                                                  |   5%  |                                                                              |====                                                                  |   6%  |                                                                              |=====                                                                 |   6%  |                                                                              |=====                                                                 |   7%  |                                                                              |=====                                                                 |   8%  |                                                                              |======                                                                |   8%  |                                                                              |======                                                                |   9%  |                                                                              |=======                                                               |   9%  |                                                                              |=======                                                               |  10%  |                                                                              |=======                                                               |  11%  |                                                                              |========                                                              |  11%  |                                                                              |========                                                              |  12%  |                                                                              |=========                                                             |  12%  |                                                                              |=========                                                             |  13%  |                                                                              |=========                                                             |  14%  |                                                                              |==========                                                            |  14%  |                                                                              |==========                                                            |  15%  |                                                                              |===========                                                           |  15%  |                                                                              |===========                                                           |  16%  |                                                                              |============                                                          |  16%  |                                                                              |============                                                          |  17%  |                                                                              |============                                                          |  18%  |                                                                              |=============                                                         |  18%  |                                                                              |=============                                                         |  19%  |                                                                              |==============                                                        |  19%  |                                                                              |==============                                                        |  20%  |                                                                              |==============                                                        |  21%  |                                                                              |===============                                                       |  21%  |                                                                              |===============                                                       |  22%  |                                                                              |================                                                      |  22%  |                                                                              |================                                                      |  23%  |                                                                              |================                                                      |  24%  |                                                                              |=================                                                     |  24%  |                                                                              |=================                                                     |  25%  |                                                                              |==================                                                    |  25%  |                                                                              |==================                                                    |  26%  |                                                                              |===================                                                   |  26%  |                                                                              |===================                                                   |  27%  |                                                                              |===================                                                   |  28%  |                                                                              |====================                                                  |  28%  |                                                                              |====================                                                  |  29%  |                                                                              |=====================                                                 |  29%  |                                                                              |=====================                                                 |  30%  |                                                                              |=====================                                                 |  31%  |                                                                              |======================                                                |  31%  |                                                                              |======================                                                |  32%  |                                                                              |=======================                                               |  32%  |                                                                              |=======================                                               |  33%  |                                                                              |=======================                                               |  34%  |                                                                              |========================                                              |  34%  |                                                                              |========================                                              |  35%  |                                                                              |=========================                                             |  35%  |                                                                              |=========================                                             |  36%  |                                                                              |==========================                                            |  36%  |                                                                              |==========================                                            |  37%  |                                                                              |==========================                                            |  38%  |                                                                              |===========================                                           |  38%  |                                                                              |===========================                                           |  39%  |                                                                              |============================                                          |  39%  |                                                                              |============================                                          |  40%  |                                                                              |============================                                          |  41%  |                                                                              |=============================                                         |  41%  |                                                                              |=============================                                         |  42%  |                                                                              |==============================                                        |  42%  |                                                                              |==============================                                        |  43%  |                                                                              |==============================                                        |  44%  |                                                                              |===============================                                       |  44%  |                                                                              |===============================                                       |  45%  |                                                                              |================================                                      |  45%  |                                                                              |================================                                      |  46%  |                                                                              |=================================                                     |  46%  |                                                                              |=================================                                     |  47%  |                                                                              |=================================                                     |  48%  |                                                                              |==================================                                    |  48%  |                                                                              |==================================                                    |  49%  |                                                                              |===================================                                   |  49%  |                                                                              |===================================                                   |  50%  |                                                                              |===================================                                   |  51%  |                                                                              |====================================                                  |  51%  |                                                                              |====================================                                  |  52%  |                                                                              |=====================================                                 |  52%  |                                                                              |=====================================                                 |  53%  |                                                                              |=====================================                                 |  54%  |                                                                              |======================================                                |  54%  |                                                                              |======================================                                |  55%  |                                                                              |=======================================                               |  55%  |                                                                              |=======================================                               |  56%  |                                                                              |========================================                              |  56%  |                                                                              |========================================                              |  57%  |                                                                              |========================================                              |  58%  |                                                                              |=========================================                             |  58%  |                                                                              |=========================================                             |  59%  |                                                                              |==========================================                            |  59%  |                                                                              |==========================================                            |  60%  |                                                                              |==========================================                            |  61%  |                                                                              |===========================================                           |  61%  |                                                                              |===========================================                           |  62%  |                                                                              |============================================                          |  62%  |                                                                              |============================================                          |  63%  |                                                                              |============================================                          |  64%  |                                                                              |=============================================                         |  64%  |                                                                              |=============================================                         |  65%  |                                                                              |==============================================                        |  65%  |                                                                              |==============================================                        |  66%  |                                                                              |===============================================                       |  66%  |                                                                              |===============================================                       |  67%  |                                                                              |===============================================                       |  68%  |                                                                              |================================================                      |  68%  |                                                                              |================================================                      |  69%  |                                                                              |=================================================                     |  69%  |                                                                              |=================================================                     |  70%  |                                                                              |=================================================                     |  71%  |                                                                              |==================================================                    |  71%  |                                                                              |==================================================                    |  72%  |                                                                              |===================================================                   |  72%  |                                                                              |===================================================                   |  73%  |                                                                              |===================================================                   |  74%  |                                                                              |====================================================                  |  74%  |                                                                              |====================================================                  |  75%  |                                                                              |=====================================================                 |  75%  |                                                                              |=====================================================                 |  76%  |                                                                              |======================================================                |  76%  |                                                                              |======================================================                |  77%  |                                                                              |======================================================                |  78%  |                                                                              |=======================================================               |  78%  |                                                                              |=======================================================               |  79%  |                                                                              |========================================================              |  79%  |                                                                              |========================================================              |  80%  |                                                                              |========================================================              |  81%  |                                                                              |=========================================================             |  81%  |                                                                              |=========================================================             |  82%  |                                                                              |==========================================================            |  82%  |                                                                              |==========================================================            |  83%  |                                                                              |==========================================================            |  84%  |                                                                              |===========================================================           |  84%  |                                                                              |===========================================================           |  85%  |                                                                              |============================================================          |  85%  |                                                                              |============================================================          |  86%  |                                                                              |=============================================================         |  86%  |                                                                              |=============================================================         |  87%  |                                                                              |=============================================================         |  88%  |                                                                              |==============================================================        |  88%  |                                                                              |==============================================================        |  89%  |                                                                              |===============================================================       |  89%  |                                                                              |===============================================================       |  90%  |                                                                              |===============================================================       |  91%  |                                                                              |================================================================      |  91%  |                                                                              |================================================================      |  92%  |                                                                              |=================================================================     |  92%  |                                                                              |=================================================================     |  93%  |                                                                              |=================================================================     |  94%  |                                                                              |==================================================================    |  94%  |                                                                              |==================================================================    |  95%  |                                                                              |===================================================================   |  95%  |                                                                              |===================================================================   |  96%  |                                                                              |====================================================================  |  96%  |                                                                              |====================================================================  |  97%  |                                                                              |====================================================================  |  98%  |                                                                              |===================================================================== |  98%  |                                                                              |===================================================================== |  99%  |                                                                              |======================================================================|  99%  |                                                                              |======================================================================| 100%[1] "compare distributions of embeddings using Kolmogorov-Smirnov test"
+[1] "found 25205 proteins (100 %) where embedding is significantly different from random embedding"
+[Wed Mar 25 01:04:28 2020]
+Finished job 5.
+3 of 5 steps (60%) done
+
+[Wed Mar 25 01:04:28 2020]
+rule plotting:
+    input: results/embedded_proteome/proteome_repres.csv, results/embedded_proteome/proteome_repres_random.csv, data/peptidome/biophys_properties.csv
+    output: results/embedded_proteome/protein_repres_props.csv, results/embedded_proteome/protein_repres_props_random.csv
+    log: results/logs/plotting.log
+    jobid: 6
+    resources: mem_mb=25000
+
+Activating conda environment: /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/conda/140dd2a4
+[1] "### DIMENSION REDUCTION / PLOTTING ###"
+
+Attaching package: ‘plyr’
+
+The following object is masked from ‘package:seqinr’:
+
+    count
+
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:plyr’:
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following object is masked from ‘package:seqinr’:
+
+    count
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: Matrix
+[1] "APPLY UMAP TO EMBEDDINGS"
+[1] "trained weights"
+01:04:43 UMAP embedding parameters a = 1.896 b = 0.8006
+01:04:43 Read 25205 rows and found 100 numeric columns
+01:04:43 Using Annoy for neighbor search, n_neighbors = 5
+code for methods in class “Rcpp_AnnoyAngular” was not checked for suspicious field assignments (recommended package ‘codetools’ not available?)
+code for methods in class “Rcpp_AnnoyAngular” was not checked for suspicious field assignments (recommended package ‘codetools’ not available?)
+code for methods in class “Rcpp_AnnoyEuclidean” was not checked for suspicious field assignments (recommended package ‘codetools’ not available?)
+code for methods in class “Rcpp_AnnoyEuclidean” was not checked for suspicious field assignments (recommended package ‘codetools’ not available?)
+code for methods in class “Rcpp_AnnoyManhattan” was not checked for suspicious field assignments (recommended package ‘codetools’ not available?)
+code for methods in class “Rcpp_AnnoyManhattan” was not checked for suspicious field assignments (recommended package ‘codetools’ not available?)
+code for methods in class “Rcpp_AnnoyHamming” was not checked for suspicious field assignments (recommended package ‘codetools’ not available?)
+code for methods in class “Rcpp_AnnoyHamming” was not checked for suspicious field assignments (recommended package ‘codetools’ not available?)
+01:04:43 Building Annoy index with metric = euclidean, n_trees = 50
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+**************************************************|
+01:04:46 Writing NN index file to temp file /tmp/RtmpbPsZml/file3fb342b5ca44
+01:04:46 Searching Annoy index using 11 threads, search_k = 500
+01:04:46 Annoy recall = 100%
+01:04:47 Commencing smooth kNN distance calibration using 11 threads
+01:04:47 Found 7 connected components, falling back to 'spca' initialization with init_sdev = 1
+01:04:47 Initializing from PCA
+01:04:47 PCA: 2 components explained 86.21% variance
+01:04:47 Commencing optimization for 500 epochs, with 175156 positive edges
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+**************************************************|
+01:04:55 Optimization finished
+[1] "random weights"
+01:04:55 UMAP embedding parameters a = 1.896 b = 0.8006
+01:04:55 Read 25205 rows and found 100 numeric columns
+01:04:55 Using Annoy for neighbor search, n_neighbors = 5
+01:04:55 Building Annoy index with metric = euclidean, n_trees = 50
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+**************************************************|
+01:04:58 Writing NN index file to temp file /tmp/RtmpbPsZml/file3fb3742090d2
+01:04:58 Searching Annoy index using 11 threads, search_k = 500
+01:04:58 Annoy recall = 100%
+01:04:58 Commencing smooth kNN distance calibration using 11 threads
+01:04:59 Initializing from normalized Laplacian + noise
+01:04:59 Commencing optimization for 500 epochs, with 201436 positive edges
+0%   10   20   30   40   50   60   70   80   90   100%
+[----|----|----|----|----|----|----|----|----|----|
+**************************************************|
+01:05:08 Optimization finished
+Joining, by = "UniProtID"
+Joining, by = "UniProtID"
+[1] "GENERATE PLOTS"
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+NULL
+[Wed Mar 25 01:07:23 2020]
+Finished job 6.
+4 of 5 steps (80%) done
+
+[Wed Mar 25 01:07:23 2020]
+localrule all:
+    input: results/encoded_proteome/model_vocab.csv, results/metrics/model_acc.png, results/metrics/model_loss.png, results/embedded_proteome/proteome_repres.csv, results/embedded_proteome/protein_repres_props.csv
+    jobid: 1
+    resources: mem_mb=25000
+
+[Wed Mar 25 01:07:23 2020]
+Finished job 1.
+5 of 5 steps (100%) done
+Complete log: /home/hroetsc/Documents/ProtTransEmbedding/Snakemake/.snakemake/log/2020-03-24T200420.312945.snakemake.log

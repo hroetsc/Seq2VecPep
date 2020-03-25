@@ -19,6 +19,6 @@ library(tokenizers.bpe)
 # train BPE model
 bpeModel = bpe(snakemake@input[["conc_UniProt"]],
                coverage = 0.999,
-               vocab_size = 5000, #50000 #10000 #1000 #10000
+               vocab_size = 3000, #50000 #10000 #1000 #10000
                threads = 11,
                model_path = unlist(snakemake@output[["BPE_model"]]))

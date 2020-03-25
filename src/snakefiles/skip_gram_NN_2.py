@@ -36,10 +36,10 @@ gc.enable()
 
 # GPU settings - https://michaelblogscode.wordpress.com/2017/10/10/reducing-and-profiling-gpu-memory-usage-in-keras-with-tensorflow-backend/
 # tensorflow wizardy
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True # do not pre-allocate memory
-config.gpu_options.per_process_gpu_memory_fraction = 0.5 # only allow half of the memory to be allocated
-K.tensorflow_backend.set_session(tf.Session(config=config)) # create session
+#config = tf.ConfigProto()
+#config.gpu_options.allow_growth = True # do not pre-allocate memory
+#config.gpu_options.per_process_gpu_memory_fraction = 0.5 # only allow half of the memory to be allocated
+#K.tensorflow_backend.set_session(tf.Session(config=config)) # create session
 
 # =============================================================================
 # # HYPERPARAMETERS
@@ -48,9 +48,9 @@ workers = 12
 
 # window of a word: [i - window_size, i + window_size+1]
 embeddingDim = 100
-epochs = 10
+epochs = 35 # baaaaaaah #200 min
 
-batchSize = 32
+batchSize = 64
 valSplit = 0.20
 
 learning_rate = 0.01
@@ -168,8 +168,8 @@ class BatchGenerator(keras.utils.Sequence):
 
          return [batch_target, batch_context], batch_Y
 
-     #def on_epoch_end(self):
-     #    pass
+     def on_epoch_end(self):
+         pass
 
 
 # apply batch generator
@@ -181,8 +181,8 @@ test_generator = BatchGenerator(target_test, context_test, Y_test, batchSize)
 print("fit the model")
 
 # can be ignored in case batch generator uses keras.utils.Sequence() class (?)
-steps = np.ceil(target_train.shape[0]/batchSize)
-val_steps = np.ceil(target_test.shape[0]/batchSize)
+steps = np.ceil((target_train.shape[0]/batchSize)*0.05)
+val_steps = np.ceil((target_test.shape[0]/batchSize)*0.05)
 
 fit = model.fit_generator(generator=train_generator,
                     validation_data=test_generator,
@@ -194,6 +194,7 @@ fit = model.fit_generator(generator=train_generator,
                     workers=workers,
                     use_multiprocessing=True,
                     shuffle=False)
+
 # shuffle has to be false bc BatchBenerator can't cope with shuffled data!
 
 # =============================================================================
