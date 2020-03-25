@@ -9,6 +9,7 @@ print("### PROTEOME EMBEDDING USING SKIP-GRAM NEURAL NETWORK - 2 ###")
 
 import os
 import gc
+import threading
 import numpy as np
 import pandas as pd
 
@@ -36,10 +37,10 @@ gc.enable()
 
 # GPU settings - https://michaelblogscode.wordpress.com/2017/10/10/reducing-and-profiling-gpu-memory-usage-in-keras-with-tensorflow-backend/
 # tensorflow wizardy
-#config = tf.ConfigProto()
-#config.gpu_options.allow_growth = True # do not pre-allocate memory
-#config.gpu_options.per_process_gpu_memory_fraction = 0.5 # only allow half of the memory to be allocated
-#K.tensorflow_backend.set_session(tf.Session(config=config)) # create session
+# config = tf.ConfigProto()
+# config.gpu_options.allow_growth = True # do not pre-allocate memory
+# config.gpu_options.per_process_gpu_memory_fraction = 0.5 # only allow half of the memory to be allocated
+# K.tensorflow_backend.set_session(tf.Session(config=config)) # create session
 
 # =============================================================================
 # # HYPERPARAMETERS
@@ -48,9 +49,9 @@ workers = 12
 
 # window of a word: [i - window_size, i + window_size+1]
 embeddingDim = 100
-epochs = 35 # baaaaaaah #200 min
+epochs = 50 # baaaaaaah #200 min
 
-batchSize = 64
+batchSize = 32
 valSplit = 0.20
 
 learning_rate = 0.01
@@ -138,7 +139,7 @@ print("MODEL TRAINING")
 print("split word pairs into training and validation data sets")
 target_train, target_test, context_train, context_test, Y_train, Y_test = train_test_split(target_word, context_word, Y, test_size=valSplit)
 
-print('metrics: {}'.format(model.metrics_names))
+print('model metrics: {}'.format(model.metrics_names))
 
 # USE FIT_GENERATOR
 # train on batch - make batch generator threadsafe (with small number of steps and multiprocessing otherwise duplicated batches occur)
@@ -152,6 +153,58 @@ print('metrics: {}'.format(model.metrics_names))
 # https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly
 # https://www.tensorflow.org/api_docs/python/tf/keras/utils/Sequence
 
+
+# https://keunwoochoi.wordpress.com/2017/08/24/tip-fit_generator-in-keras-how-to-parallelise-correctly/
+# =============================================================================
+# class threadsafe_iter:
+#     """Takes an iterator/generator and makes it thread-safe by
+#     serializing call to the `next` method of given iterator/generator.
+#     """
+#     def __init__(self, it):
+#         self.it = it
+#         self.lock = threading.Lock()
+#
+#     def __iter__(self):
+#         return self
+#
+#     def next(self):
+#         with self.lock:
+#             return self.it.next()
+#
+# def threadsafe_generator(f):
+#     """A decorator that takes a generator function and makes it thread-safe.
+#     """
+#     def g(*a, **kw):
+#         return threadsafe_iter(f(*a, **kw))
+#     return g
+#
+# =============================================================================
+
+
+# =============================================================================
+# @threadsafe_generator
+# def batch_generator(target, context, Y, batch_size):
+#     n_batches = int(np.ceil(target.shape[0]/int(batch_size))) # divide input length by batch size
+#     counter = 0
+#     #threading.Lock()
+#     while 1:
+#         target_batch = target[batch_size*counter:batch_size*(counter+1)]
+#         context_batch = context[batch_size*counter:batch_size*(counter+1)]
+#         Y_batch = Y[batch_size*counter:batch_size*(counter+1)]
+#
+#         #print([target_batch, context_batch], Y_batch)
+#
+#         print(counter)
+#
+#         counter += 1
+#         yield([target_batch, context_batch], Y_batch)
+#
+#         if counter >= n_batches: # clean for next epoch
+#             counter = 0
+#
+#         gc.collect()
+# =============================================================================
+
 class BatchGenerator(keras.utils.Sequence):
 
      def __init__(self, target, context, Y, batch_size):
@@ -162,15 +215,17 @@ class BatchGenerator(keras.utils.Sequence):
          return int(np.ceil(len(self.target) / float(self.batch_size)))
 
      def __getitem__(self, idx):
-         batch_target = np.array(self.target[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32')
-         batch_context = np.array(self.context[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32')
-         batch_Y = np.array(self.Y[idx*self.batch_size : (idx + 1)*self.batch_size], dtype = 'int32')
+
+         #print(idx)
+
+         batch_target = self.target[idx*self.batch_size : (idx + 1)*self.batch_size]
+         batch_context = self.context[idx*self.batch_size : (idx + 1)*self.batch_size]
+         batch_Y = self.Y[idx*self.batch_size : (idx + 1)*self.batch_size]
 
          return [batch_target, batch_context], batch_Y
 
      def on_epoch_end(self):
          pass
-
 
 # apply batch generator
 print("generating batches for model training")
@@ -180,20 +235,19 @@ test_generator = BatchGenerator(target_test, context_test, Y_test, batchSize)
 # fit model
 print("fit the model")
 
-# can be ignored in case batch generator uses keras.utils.Sequence() class (?)
-steps = np.ceil((target_train.shape[0]/batchSize)*0.05)
-val_steps = np.ceil((target_test.shape[0]/batchSize)*0.05)
+# can be ignored in case batch generator uses keras.utils.Sequence() class
+#steps = np.ceil(target_train.shape[0]/batchSize)
+#val_steps = np.ceil(target_test.shape[0]/batchSize)
 
-fit = model.fit_generator(generator=train_generator,
-                    validation_data=test_generator,
-                    steps_per_epoch = steps,
-                    validation_steps = val_steps,
+fit = model.fit_generator(generator = train_generator,
+                    validation_data = test_generator,
                     epochs = epochs,
                     initial_epoch = 0,
                     verbose=2,
-                    workers=workers,
-                    use_multiprocessing=True,
-                    shuffle=False)
+                    max_queue_size = 1,
+                    workers = workers,
+                    use_multiprocessing = False,
+                    shuffle = False)
 
 # shuffle has to be false bc BatchBenerator can't cope with shuffled data!
 

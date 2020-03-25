@@ -13,6 +13,8 @@ rule rPCP_calculation:
         rPCP = features["peptidome"]["rPCP"]
     log:
         "results/logs/rPCP_calculation.log"
+    benchmark:
+        "results/benchmarks/rPCP_calculation.txt"
     #conda:
     #    "R_dependencies.yml"
     params:
@@ -31,6 +33,8 @@ rule proteome_formatting:
         formatted_proteome = features["peptidome"]["formatted_proteome"]
     log:
         "results/logs/proteome_formatting.log"
+    benchmark:
+        "results/benchmarks/proteome_formatting.txt"
     conda:
         "R_dependencies.yml"
     params:
@@ -46,6 +50,8 @@ rule BPE_training1:
         conc_UniProt = "data/peptidome/concatenated_UniProt.txt"
     log:
         "results/logs/train_BPE.log"
+    benchmark:
+        "results/benchmarks/BPE_training1.txt"
     conda:
         "R_dependencies.yml"
     params:
@@ -61,6 +67,8 @@ rule BPE_training2:
         BPE_model = features["encoded_proteome"]["BPE_model"]
     log:
         "results/logs/train_BPE2.log"
+    benchmark:
+        "results/benchmarks/BPE_training2.txt"
     conda:
         "R_dependencies.yml"
     params:
@@ -78,6 +86,8 @@ rule generate_tokens:
         words = features["encoded_proteome"]["words"]
     log:
         "results/logs/generate_tokens.log"
+    benchmark:
+        "results/benchmarks/generate_tokens.txt"
     conda:
         "R_dependencies.yml"
     params:
@@ -93,6 +103,8 @@ rule TF_IDF:
         TF_IDF = features["encoded_proteome"]["TF_IDF"]
     log:
         "results/logs/TF_IDF.log"
+    benchmark:
+        "results/benchmarks/TF_IDF.txt"
     conda:
         "R_dependencies_TF-IDF.yml"
     params:
@@ -108,6 +120,8 @@ rule biophys_props:
         properties = features["peptidome"]["properties"]
     log:
         "results/logs/biophys_props.log"
+    benchmark:
+        "results/benchmarks/biophys_props.txt"
     conda:
         "R_dependencies.yml"
     params:

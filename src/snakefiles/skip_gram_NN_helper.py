@@ -42,23 +42,23 @@ def parallel_processing(n, wid, windowSize, vocab_size, n_batches, file, keep):
 
 
     for i in range(1, len(skip_grams)):
-        
+
         if i+1 not in range(1, len(skip_grams)):
             keep_idx = np.append(keep_idx, np.array(i, dtype = 'int32').reshape(1,), axis=0)
-        
+
         elif skip_grams[i,0] != skip_grams[i+1,0]:
             counter =  i - counter_prev
-            
+
             if counter_prev+1 == i:
                 keep_idx = np.append(keep_idx, np.array(i, dtype = 'int32').reshape(1,), axis=0)
                 counter_prev = i
-            
+
             else:
                 keep_idx = np.append(keep_idx, np.random.randint(low = counter_prev+1, high = i, size = int(np.ceil(counter*keep))), axis=0)
                 counter_prev = i
-            
+
     skip_grams = skip_grams[keep_idx-1,]
-    
+
     # save everything in one file
     f = open(file, 'ab').close() # overwrite existing files
     f = open(file, 'ab')

@@ -6,9 +6,9 @@
 # author:       HR
 
 # tmp!!!
-# protein.repres = read.csv(file = "results/embedded_proteome/opt_proteome_repres_10000.csv", stringsAsFactors = F, header = T)
-# protein.repres.random = read.csv(file = "results/embedded_proteome/opt_proteome_repres_random_10000.csv", stringsAsFactors = F, header = T)
-# PropMatrix = read.csv(file = "data/peptidome/biophys_properties.csv", stringsAsFactors = F, header = T)
+protein.repres = read.csv(file = "results/embedded_proteome/proteome_repres.csv", stringsAsFactors = F, header = T)
+protein.repres.random = read.csv(file = "results/embedded_proteome/proteome_repres_random.csv", stringsAsFactors = F, header = T)
+PropMatrix = read.csv(file = "data/peptidome/biophys_properties.csv", stringsAsFactors = F, header = T)
 
 print("### DIMENSION REDUCTION / PLOTTING ###")
 
@@ -89,7 +89,7 @@ color.gradient = function(x, colsteps=1000) {
   return( colorRampPalette(spectral) (colsteps) [ findInterval(x, seq(min(x),max(x), length.out=colsteps)) ] )
 }
 # size gradient
-size.gradient = function(x, r_min = min(x), r_max = max(x), t_min = 0.1, t_max = 1.5) {
+size.gradient = function(x, r_min = min(x), r_max = max(x), t_min = 0.5, t_max = 1.5) {
   return((((x-r_min)/(r_max - r_min)) * (t_max - t_min)) + t_min)
 }
 
@@ -102,16 +102,16 @@ plotting = function(prop = "", data = "", random = ""){
     title = paste0("embedded proteome, by ", as.character(prop))
     label = ""
   }
-  
+
   png(filename = paste0("results/plots/",
                         str_replace_all(as.character(prop), coll("."), coll("_")), label,".png"),
       width = 1500, height = 1500, res = 300)
   print(plot(data$X2 ~ data$X1,
               col = color.gradient(data[, prop]),
-              cex = size.gradient(data[, prop]),
+              cex = size.gradient(data[, "rPCP"]),
               xlab = "UMAP 1", ylab = "UMAP 2",
               main = title,
-              sub = "red: low, blue: high",
+              sub = "red: low, blue: high, size: rPCP",
               cex.sub = 0.8,
               pch = 1))
   dev.off()
@@ -133,12 +133,12 @@ for (i in (dim_range[2]+3):ncol(proteinsUMAP.Props)){
 # files = list.files(path = unlist(snakemake@output[["plot"]]),
 #                    pattern = ".png", all.files = T, full.names = T)
 # file_list = rep(NA, length(files))
-# 
+#
 # for (f in 1:length(files)) {
 #   file_list[f] = str_split(files[f], pattern = coll("/"), simplify = T)[3]
 #   file_list[f] = str_split(file_list[f], pattern = coll("."), simplify = T)[1]
 # }
-# 
+#
 # # compare files in directory with properties
 # for (c in 2:ncol(PropMatrix)){
 #   if(! str_replace_all(colnames(PropMatrix)[c], coll("."), coll("_")) %in% file_list) {

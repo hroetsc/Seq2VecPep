@@ -6,8 +6,7 @@ unsupervised pattern mining for the embedding of biological sequences
 
 ## file explanation ##
 **src/snakefiles** contains all scripts that are in the Snakemake pipeline. `report.html` explains their interdependencies as well as the order of execution in the pipeline.  
-All rules are concatenated in the `Snakefile`. Software versions, configurations and input/output files can be accessed via `environment_lab.yaml`, `config.yml` and `features.yml`, respectively.  
-nohup writes the shell output into `nohup.out`.
+All rules are concatenated in the `Snakefile`. Software versions, configurations and input/output files can be accessed via `environment_lab.yaml`, `config.yml` and `features.yml`, respectively.
 
 ## upload changes when working remotely ##
 clone repository, copy new files in repository  

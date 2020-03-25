@@ -6,7 +6,7 @@
 # author:       HR
 
 # tmp!!!
-# setwd("/home/hanna/Desktop/Snakemake/")
+# setwd("/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/Snakemake/")
 # metrics = read.table("results/embedded_proteome/model_metrics.txt", stringsAsFactors = F)
 
 library(stringr)

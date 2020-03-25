@@ -30,8 +30,8 @@ rule seq2vec_model_training:
         "results/logs/seq2vec_2.log"
     benchmark:
         "results/benchmarks/seq2vec_2.txt"
-    conda:
-        "python_dependencies.yml"
+    #conda:
+    #    "python_dependencies.yml"
     params:
         n=config["max_cores"],
         mem=config["mem_mb"]
@@ -65,6 +65,8 @@ rule proteome_repres: # with TF_IDF
         KS = features["embedded_proteome"]["KS"]
     log:
         "results/logs/proteome_repres.log"
+    benchmark:
+        "results/benchmarks/proteome_repres.txt"
     conda:
         "R_dependencies.yml"
     params:
@@ -84,6 +86,8 @@ rule plotting:
         #plot = "results/plots/"
     log:
         "results/logs/plotting.log"
+    benchmark:
+        "results/benchmarks/plotting.txt"
     conda:
         "R_dependencies.yml"
     params:
