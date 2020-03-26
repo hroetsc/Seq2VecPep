@@ -13,3 +13,9 @@ clone repository, copy new files in repository
 `git add .`  
 `git commit -m "<some comment>"`  
 `git push origin master`  
+
+## environment handling ##
+To create a new environment from a `.yml` file in the `envs/` folder, enter:  
+`conda env create -f environment_seq2vec.yml`  
+To activate the environment, enter: `conda activate seq2vec`.  
+The Python scripts run in different environments specified by `.yml` files in the `src/snakefiles/` folder.
