@@ -66,5 +66,9 @@ l = ggplot(loss, aes(x = epoch, y = val, group = label)) +
 l
 
 ### OUTPUT ###
+# tmp!!
+# ggsave(filename = "results/metrics/model_acc.png", plot = a, device = "png", dpi = "retina")
+# ggsave(filename = "results/metrics/model_loss.png", plot = l, device = "png", dpi = "retina")
+
 ggsave(filename = unlist(snakemake@output[["acc"]]), plot = a, device = "png", dpi = "retina")
 ggsave(filename = unlist(snakemake@output[["loss"]]), plot = l, device = "png", dpi = "retina")

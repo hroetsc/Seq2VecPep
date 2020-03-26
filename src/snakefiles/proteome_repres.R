@@ -153,7 +153,7 @@ vocab_size = nrow(weight_matrix) # input dimension of embedding layer
 embedding_dim = dim_range[2] - dim_range[1] +1 # output dimension of embedding layer
 
 # calculate limits for sampling from uniform distribution
-limit = as.numeric(sqrt(6/(vocab_size + embedding_dim)))
+limit = as.numeric(sqrt(6/(vocab_size)))
 
 # function that generates random protein representation given the limit and the number of tokens
 random_protein = function(limit = "", no_tokens = "", protein = "", tokens = "") {

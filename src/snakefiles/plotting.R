@@ -6,9 +6,9 @@
 # author:       HR
 
 # tmp!!!
-protein.repres = read.csv(file = "results/embedded_proteome/proteome_repres.csv", stringsAsFactors = F, header = T)
-protein.repres.random = read.csv(file = "results/embedded_proteome/proteome_repres_random.csv", stringsAsFactors = F, header = T)
-PropMatrix = read.csv(file = "data/peptidome/biophys_properties.csv", stringsAsFactors = F, header = T)
+# protein.repres = read.csv(file = "results/embedded_proteome/proteome_repres.csv", stringsAsFactors = F, header = T)
+# protein.repres.random = read.csv(file = "results/embedded_proteome/proteome_repres_random.csv", stringsAsFactors = F, header = T)
+# PropMatrix = read.csv(file = "data/peptidome/biophys_properties.csv", stringsAsFactors = F, header = T)
 
 print("### DIMENSION REDUCTION / PLOTTING ###")
 
@@ -154,5 +154,5 @@ write.csv(proteinsUMAP.Props, file = unlist(snakemake@output[["proteome_props"]]
 write.csv(proteinsUMAP.Props.random, file = unlist(snakemake@output[["proteome_props_random"]]))
 
 # tmp!
-# write.csv(proteinsUMAP.Props, file = "results/embedded_proteome/opt_protein_repres_props_10000.csv")
-# write.csv(proteinsUMAP.Props.random, file = "results/embedded_proteome/opt_protein_repres_props_10000_random.csv")
+# write.csv(proteinsUMAP.Props, file = "results/embedded_proteome/protein_repres_props.csv")
+# write.csv(proteinsUMAP.Props.random, file = "results/embedded_proteome/protein_repres_props_random.csv")

@@ -80,11 +80,25 @@ print(context_word)
 
 print('label vector')
 Y = Y.reshape(Y.shape[0],)
+# replace 0 by -1
+Y = np.where(Y == 0, -1, Y)
 print(Y)
 
 vocab_size = len(ids.index)+2
 print("vocabulary size (number of target word IDs +2): {}".format(vocab_size))
 
+# =============================================================================
+# # tmp!!!
+# ind = np.random.randint(0, target_word.shape[0], size = 200000)
+# target_word = target_word[ind]
+# context_word = context_word[ind]
+# Y = Y[ind]
+# 
+# pd.DataFrame.to_csv(pd.DataFrame(target_word), 'results/embedded_proteome/target.csv', header=False, index = False)
+# pd.DataFrame.to_csv(pd.DataFrame(context_word), 'results/embedded_proteome/context.csv', header=False, index = False)
+# pd.DataFrame.to_csv(pd.DataFrame(Y), 'results/embedded_proteome/label.csv', header=False, index = False)
+# 
+# =============================================================================
 # =============================================================================
 # # MODEL CREATION
 # =============================================================================
@@ -100,7 +114,7 @@ input_context = keras.layers.Input(((1,)), name='context_word')
 embedding = Embedding(input_dim = vocab_size,
                         output_dim = embeddingDim,
                         input_length = 1,
-                        embeddings_initializer = 'glorot_uniform',
+                        embeddings_initializer = 'he_uniform',
                         name = 'embedding')
 # later create lookup table with weights so that one could initialize the embedding layer with pretrained weights
 
@@ -115,9 +129,11 @@ dot_product = dot([target, context], axes = 1, normalize = True, name = 'dot_pro
 dot_product = Reshape((1,))(dot_product)
 
 # add the sigmoid dense layer
-output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='1st_sigmoid')(dot_product)
+
+output = Dense(64, activation = 'relu', kernel_initializer = 'he_uniform', name='1st_dense')(dot_product)
 output = Dropout(0.5)(output)
-output = Dense(1, activation='sigmoid', kernel_initializer = 'glorot_uniform', name='2nd_sigmoid')(output)
+
+output = Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='5th_dense')(output)
 
 # create the primary training model
 model = Model(inputs=[input_target, input_context], outputs=output)

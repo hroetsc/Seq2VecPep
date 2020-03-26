@@ -83,6 +83,9 @@ print("randomize protein order")
 # randomly shuffle proteins to make downstream model training more robust
 words = words[sample(nrow(words)), ]
 
+###############################################
+# tmp!!!
+# words = words[sample(nrow(words), 100), ]
 
 ### OUTPUT ###
 # save model vocabulary

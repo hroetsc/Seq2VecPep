@@ -11,7 +11,7 @@ rule seq2vec_skip_grams:
     benchmark:
         "results/benchmarks/seq2vec_1.txt"
     conda:
-        "python_dependencies.yml"
+        "environment_seq2vec.yml"
     params:
         n=config["max_cores"],
         mem=config["mem_mb"]
@@ -30,8 +30,8 @@ rule seq2vec_model_training:
         "results/logs/seq2vec_2.log"
     benchmark:
         "results/benchmarks/seq2vec_2.txt"
-    #conda:
-    #    "python_dependencies.yml"
+    conda:
+        "environment_seq2vec_training.yml"
     params:
         n=config["max_cores"],
         mem=config["mem_mb"]
