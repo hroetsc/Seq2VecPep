@@ -13,3 +13,8 @@ clone repository, copy new files in repository
 `git add .`  
 `git commit -m "<some comment>"`  
 `git push origin master`  
+
+## environment handling ###
+Create a virtual environment for Snakemake: `conda env create -f envs/environment_seq2vec.yml`  
+Activate the environment: `conda activate seq2vec`  
+Execute Snakemake in this environment. Note: The python scripts (`skip_gram_NN_1.py` and `skip_gram_NN_2.py` are executed in different environments which are specified in the rule's conda argument).
