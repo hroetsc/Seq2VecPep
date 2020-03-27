@@ -89,15 +89,15 @@ print("vocabulary size (number of target word IDs +2): {}".format(vocab_size))
 
 # =============================================================================
 # # tmp!!!
-# ind = np.random.randint(0, target_word.shape[0], size = 200000)
-# target_word = target_word[ind]
-# context_word = context_word[ind]
-# Y = Y[ind]
-# 
+ind = np.random.randint(0, target_word.shape[0], size = 200000)
+target_word = target_word[ind]
+context_word = context_word[ind]
+Y = Y[ind]
+#
 # pd.DataFrame.to_csv(pd.DataFrame(target_word), 'results/embedded_proteome/target.csv', header=False, index = False)
 # pd.DataFrame.to_csv(pd.DataFrame(context_word), 'results/embedded_proteome/context.csv', header=False, index = False)
 # pd.DataFrame.to_csv(pd.DataFrame(Y), 'results/embedded_proteome/label.csv', header=False, index = False)
-# 
+#
 # =============================================================================
 # =============================================================================
 # # MODEL CREATION

@@ -31,7 +31,7 @@ rule seq2vec_model_training:
     benchmark:
         "results/benchmarks/seq2vec_2.txt"
     conda:
-        "environment_seq2vec_training.yml"
+        "environment_base.yml"
     params:
         n=config["max_cores"],
         mem=config["mem_mb"]

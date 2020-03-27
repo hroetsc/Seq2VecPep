@@ -86,6 +86,7 @@ print(Y)
 vocab_size = len(ids.index)+2
 print("vocabulary size (number of target word IDs +2): {}".format(vocab_size))
 
+
 # =============================================================================
 # # MODEL CREATION
 # =============================================================================

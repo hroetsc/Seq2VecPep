@@ -157,7 +157,7 @@ workers = 12
 
 # window of a word: [i - window_size, i + window_size+1]
 embeddingDim = 100
-epochs = 30 # baaaaaaah #200 min
+epochs = 5 # baaaaaaah #200 min
 
 batchSize = 32
 valSplit = 0.20
@@ -207,7 +207,7 @@ input_context = keras.layers.Input(((1,)), name='context_word')
 embedding = Embedding(input_dim = vocab_size,
                         output_dim = embeddingDim,
                         input_length = 1,
-                        embeddings_initializer = 'he_uniform',
+                        embeddings_initializer = 'glorot_uniform',
                         name = 'embedding')
 # later create lookup table with weights so that one could initialize the embedding layer with pretrained weights
 
@@ -223,10 +223,9 @@ dot_product = Reshape((1,))(dot_product)
 
 # add the sigmoid dense layer
 
-output = Dense(64, activation = 'relu', kernel_initializer = 'he_uniform', name='1st_dense')(dot_product)
+output = Dense(1, activation = 'sigmoid', kernel_initializer = 'glorot_uniform', name='1st_dense')(dot_product)
 output = Dropout(0.5)(output)
-
-output = Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='5th_dense')(output)
+output = Dense(1, activation = 'sigmoid', kernel_initializer = 'glorot_uniform', name='5th_dense')(output)
 
 # create the primary training model
 model = Model(inputs=[input_target, input_context], outputs=output)
