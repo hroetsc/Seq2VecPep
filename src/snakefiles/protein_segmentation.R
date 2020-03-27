@@ -18,9 +18,9 @@ library(tokenizers.bpe)
 
 #tmp !!!
 # setwd("Documents/ProtTransEmbedding/Snakemake/")
-proteins = read.csv("data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
-bpeModel = bpe_load_model("results/encoded_proteome/BPE_model.bpe",
-                          threads = 14)
+# proteins = read.csv("data/peptidome/formatted_proteome.csv", stringsAsFactors = F, header = T)
+# bpeModel = bpe_load_model("results/encoded_proteome/BPE_model.bpe",
+#                           threads = 14)
 
 ### INPUT ###
 # load protein datasets

@@ -279,4 +279,4 @@ m.write("accuracy \t {} \n val_accuracy \t {} \n loss \t {} \n val_loss \t {}".f
 m.close()
 
 K.clear_session()
-#tf.reset_default_graph()
+tf.compat.v1.reset_default_graph()
