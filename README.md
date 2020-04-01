@@ -8,7 +8,7 @@ Clone this repository. Within the Seq2Vec folder, create a virtual Snakemake env
 Activate the environment:  
 `conda activate seq2vec`  
 If necessary, install or update Snakemake:  
-`conda install -c conda-forge -c bioconda snakemake`
+`conda install -c conda-forge -c bioconda snakemake`  
 Adjust hyperparameters in the hyperparams.csv file (this is not how it should be, will be improved in the future). I will also add an explanation for all hyperparameters.  
 Execute the pipeline:  
 `snakemake --use-conda -j <number of threads> -R <some rule, in case you want to re-run anything>` or  
