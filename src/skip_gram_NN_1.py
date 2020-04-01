@@ -101,7 +101,7 @@ print("SAVE WORD-IDS")
 
 # save corresponding IDs
 ids = pd.DataFrame(word2id.items())
-pd.DataFrame.to_csv(ids, snakemake.output['ids'], header=False)
+pd.DataFrame.to_csv(ids, snakemake.output['ids'], header=False, index = False)
 
 #pool.close() # to save memory
 #pool.join()

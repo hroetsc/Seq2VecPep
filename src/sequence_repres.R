@@ -45,14 +45,15 @@ weight_matrix = read.csv(file = snakemake@input[["weights"]], stringsAsFactors =
 
 # corresponding subwords
 indices = read.csv(file = snakemake@input[["ids"]], stringsAsFactors = F, header = F)
-colnames(indices)[2] = "subword"
+if (ncol(indices) == 3){
+  indices$V1 = NULL
+}
+colnames(indices) = c("subword", "word_ID")
 
 
 ### MAIN PART ###
 # merge indices and weights
 colnames(weight_matrix)[1] = "word_ID"
-indices$V1 = NULL
-colnames(indices) = c("subword", "word_ID")
 indices$subword = toupper(indices$subword)
 
 weights = full_join(weight_matrix, indices)
@@ -68,7 +69,7 @@ sequences.master = na.omit(sequences.master)
 # to get the respective embedding dimension
 # thereby, normalize token embeddings by TF-IDF score
 
-print("CALCULATE NUMERIC REPRESENTATION OF EVERY PROTEIN")
+print("CALCULATE NUMERIC REPRESENTATION OF EVERY SEQUENCE")
 
 # define function (that allows parallel searching) for tokens in weight matrix
 find_tokens = function(token = ""){
@@ -83,7 +84,7 @@ find_tokens = function(token = ""){
 # define function that finds TF-IDF score for token in correct sequence
 find_TF.IDF = function(sequence = "", tokens = "") {
   scores = rep(NA, length(tokens))
-  tmp = TF_IDF[which(TF_IDF$UniProtID == sequence), ]
+  tmp = TF_IDF[which(TF_IDF$Accession == sequence), ]
 
   for (t in 1:length(tokens)) {
     if (tokens[t] %in% tmp$token) {
@@ -115,7 +116,7 @@ for (i in 1:nrow(sequences.master)) {
   }
 
   # extract TF-IDF scores for all tokens
-  tmp[, "TF_IDF"] = find_TF.IDF(sequence = sequences.master$UniProtID[i],
+  tmp[, "TF_IDF"] = find_TF.IDF(sequence = sequences.master$Accession[i],
                                 tokens = tmp$token)
 
   # multiply token embeddings by their TF-IDF scores
