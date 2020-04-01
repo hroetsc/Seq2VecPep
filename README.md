@@ -19,6 +19,8 @@ If you are done, type: `conda deactivate` to return to your base environment.
 **src/** contains all scripts that are in the Snakemake pipeline. `report.html` explains their interdependencies as well as the order of execution in the pipeline.  
 All rules are concatenated in the `Snakefile`. Software versions and input/output files can be accessed via `environment_lab.yaml` and `features.yml`, respectively. 
 Hyperparameters are currently stored in `hyperparams.csv`
+</br>
+**input requirements** The input file (`Seqinput` in `hyperparams.csv` must contain at least two columns: `Accession` and `seqs` which contain the name of a protein/transcript and its sequence, respectively.
 
 ## environment handling ###
 Note: The python scripts (`skip_gram_NN_1.py` and `skip_gram_NN_2.py` are executed in different environments which are specified in the rule's conda argument).
