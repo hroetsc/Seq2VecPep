@@ -147,8 +147,6 @@ class BatchGenerator(keras.utils.Sequence):
 
      def __getitem__(self, idx):
 
-         #print(idx)
-
          batch_target = self.target[idx*self.batch_size : (idx + 1)*self.batch_size]
          batch_context = self.context[idx*self.batch_size : (idx + 1)*self.batch_size]
          batch_Y = self.Y[idx*self.batch_size : (idx + 1)*self.batch_size]
