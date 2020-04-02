@@ -25,27 +25,6 @@ library(ggpubr)
 library(uwot)
 library(reshape2)
 
-##################################
-# tmp!
-# sequences = read.csv(file = "../../ProtTransEmbedding/Seq2Vec/data/formatted_sequences.csv",
-#                      stringsAsFactors = F, header = T)
-# TF_IDF = read.csv(file = "./database-embedding/results/TF_IDF.csv", stringsAsFactors = F, header = T)
-# words = read.csv(file = "./database-embedding/results/words.csv", stringsAsFactors = F, header = T)
-# weight_matrix = read.csv(file = "./database-embedding/results/seq2vec_weights.csv", stringsAsFactors = F, header = F)
-# indices = read.csv(file = "./database-embedding/results/seq2vec_ids.csv", stringsAsFactors = F, header = F)
-
-# sequences = read.csv(file = "../../ProtTransEmbedding/Seq2Vec/data/formatted_sequences.csv",
-#                      stringsAsFactors = F, header = T)
-# TF_IDF = read.csv(file = "../../ProtTransEmbedding/Seq2Vec/results/encoded_sequence/TF_IDF.csv", stringsAsFactors = F, header = T)
-# words = read.csv(file = "../../ProtTransEmbedding/Seq2Vec/results/encoded_sequence/words.csv", stringsAsFactors = F, header = T)
-# weight_matrix = read.csv(file = "../../ProtTransEmbedding/Seq2Vec/results/embedded_sequence/seq2vec_weights.csv", stringsAsFactors = F, header = F)
-# indices = read.csv(file = "../../ProtTransEmbedding/Seq2Vec/results/embedded_sequence/seq2vec_ids.csv", stringsAsFactors = F, header = F)
-# 
-# # target word order as indices?
-# skipgrams = read.table("../../ProtTransEmbedding/Seq2Vec/results/embedded_sequence/skipgrams.txt", sep = " ", stringsAsFactors = F)
-# target_words = unique(skipgrams$V1)
-#####################################
-
 ### INPUT ###
 print("LOAD DATA")
 # sequences information

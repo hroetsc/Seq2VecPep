@@ -24,6 +24,12 @@ print(paste0("using vocabulary size of ", vocab_size))
 
 threads = as.numeric(params[which(params$parameter == "threads"), "value"])
 
+# can run OOM if trained on too many threads
+if(threads > 8){
+  threads = 8
+}
+
+
 ### MAIN PART ###
 # train BPE model
 bpeModel = bpe(snakemake@input[["conc_UniProt"]],

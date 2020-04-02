@@ -36,7 +36,7 @@ ModelVocab = bpeModel$vocabulary
 ModelVocab = tibble::as_tibble(ModelVocab)
 
 ### MAIN PART ###
-print("PEPTIDE-PAIR ENCODING")
+print("BYTE-PAIR ENCODING")
 # peptide pair encoding
 progressBar = txtProgressBar(min = 0, max = nrow(sequences), style = 3)
 sequences.Encoded.list = list()
