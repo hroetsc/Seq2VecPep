@@ -166,6 +166,8 @@ print("fit the model")
 
 fit = model.fit_generator(generator = train_generator,
                     validation_data = test_generator,
+                    steps_per_epoch = 500000,
+                    validation_steps = 100000,
                     epochs = epochs,
                     initial_epoch = 0,
                     verbose=2,
