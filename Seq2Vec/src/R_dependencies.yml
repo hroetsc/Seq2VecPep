@@ -1,0 +1,30 @@
+channels:
+  - conda-forge
+  - r
+  - bioconda
+
+dependencies:
+  - r-base=3.6.2
+  - r-tibble=2.1.3
+  - r-dplyr=0.8.5
+  - r-plyr=1.8.6
+  - r-tidyr=1.0.2
+  - r-data.table=1.12.8
+  - r-seqinr=3.6-1
+  - r-protr=1.6-2
+  - r-Peptides=2.4.1
+  - r-BiocManager=1.30.10
+  - r-Rcurl=1.95-4.12
+#  - r-bioconductor-biostrings=2.54.0
+  - r-readr=1.3.1
+  - r-stringr=1.4.0
+  - r-berryFunctions=1.18.2
+  - r-rlist=0.4.6.1
+  - r-tokenizers.bpe=0.1.0
+  - r-uwot=0.1.8
+  - r-ggplot2=3.3.0
+  - r-ggthemes=4.2.0
+  - r-ggpubr=0.2.5
+  - r-reshape2=1.4.3
+  - r-rcolorbrewer=1.1-2
+#  - r-grdevices=3.6.1
