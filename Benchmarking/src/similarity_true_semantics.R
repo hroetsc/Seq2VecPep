@@ -62,7 +62,7 @@ alig = parGOSim(terms,
 alig = (alig - min(alig)) / (max(alig) - min(alig))
 
 res = matrix(ncol = ncol(alig)+1, nrow = nrow(alig))
-res[, 1] = sequences$Accession
+res[, 1] = proteins
 res[, c(2:ncol(res))] = alig
 colnames(res) = c("Accession", seq(1, ncol(alig)))
 

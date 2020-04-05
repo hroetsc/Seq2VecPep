@@ -34,6 +34,8 @@ foreach(i = 1:length(input)) %dopar% {
     emb$tokens = NULL
   }
   
+  emb[, which(!is.finite(colSums(emb)))] = NULL
+  
   # initialize matrix for similarity scores
   sim = matrix(nrow = length(proteins), ncol = length(proteins))
   colnames(sim) = proteins
@@ -55,8 +57,6 @@ foreach(i = 1:length(input)) %dopar% {
     }
   }
   
-  # scale all values between 0 and 1
-  sim = (sim - min(sim)) / (max(sim) - min(sim))
   
   # add protein information
   res = matrix(ncol = ncol(sim)+1, nrow = nrow(sim))

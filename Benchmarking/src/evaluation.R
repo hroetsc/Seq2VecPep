@@ -22,13 +22,108 @@ library(doMC)
 library(plyr)
 
 # tmp!
-# syntax = read.csv("similarity/true_syntax.csv", stringsAsFactors = F, header = T)
-# semantics = read.csv("similarity/true_semantics.csv", stringsAsFactors = F, header = T)
-# pred = read.csv("similarity/seq2vec_CCR.csv", stringsAsFactors = F, header = T)
+syntax = read.csv("similarity/true_syntax.csv", stringsAsFactors = F, header = T)
+semantics = read.csv("similarity/true_semantics.csv", stringsAsFactors = F, header = T)
+pred = read.csv("similarity/seq2vec.csv", stringsAsFactors = F, header = T)
 
+# parallel computing
 cl <- makeCluster(detectCores())
 registerDoParallel(cl)
 registerDoMC(detectCores())
+
+# functions
+# preprocessing
+prots = function(tbl = ""){
+  # sort in protein order
+  if ("Accession" %in% colnames(tbl)){
+    tbl = tbl[order(tbl[, "Accession"]), ]
+    return(tbl[, "Accession"])
+  } else {
+    tbl = tbl[order(tbl[,1]), ]
+    return(tbl[,1])
+  }
+}
+
+cleaning = function(tbl = ""){
+  # sort in protein order
+  if ("Accession" %in% colnames(tbl)){
+    tbl = tbl[order(tbl[, "Accession"]), ]
+    tbl$Accession = NULL
+  } else {
+    tbl = tbl[order(tbl[,1]), ]
+    tbl[,1] = NULL
+  }
+  
+  # remove redundant columns
+  if ("seqs" %in% colnames(tbl)){
+    tbl$seqs = NULL
+  }
+  
+  if ("X" %in% colnames(tbl)){
+    tbl$X = NULL
+  }
+  
+  return(as.matrix(tbl))
+}
+
+# viz
+spectral <- brewer.pal(11, "Spectral")
+spectralRamp <- colorRampPalette(spectral)
+spectral5000 <- spectralRamp(5000)
+
+# plotting
+plotting = function(tbl = "", file = ""){
+  
+  scale = seq(from = 1, to = nrow(tbl), by = round(nrow(tbl)*0.1, 0))
+  
+  png(filename = file,
+      height = 2000, width = 2000, res = 300)
+  
+  print(levelplot(tbl,
+                  pretty = T,
+                  col.regions = spectral5000,
+                  main = "difference between true and predicted protein similarity",
+                  xlab = "proteins",
+                  ylab = "proteins",
+                  cex.lab = 0.1,
+                  scales=list(x= scale, y= scale)))
+  
+  dev.off()
+}
+
+# calculate scores
+compare = function(true = "", predicted = "", prot_pred = "", prot_true = "",
+                   plot_file = "", out_file = ""){
+  # same proteins
+  if(!dim(true)[1] == dim(predicted)[1]){
+    k = which(prot_pred %in% prot_true)
+    predicted = predicted[, k]
+    predicted = predicted[k, ]
+  }
+
+  # scale matrices !!!
+  true = true / sum(true)
+  true = scale(true)
+  predicted = predicted / sum(predicted)
+  predicted = scale(predicted)
+  
+  tbl = abs(predicted - true)
+  tbl = as.matrix(tbl)
+  
+  tbl = scale(tbl, center = rep(1, ncol(tbl)))
+  
+  # plot heatmap
+  plotting(tbl = tbl, file = plot_file)
+  
+  write.csv(tbl, file = out_file, row.names = F)
+  
+  # mean of difference between matrices
+  score = mean(tbl)
+  SD = sd(tbl)
+  return(c(score, SD))
+}
+
+# actually start computing
 
 input = snakemake@input[["predicted"]]
 
@@ -43,104 +138,28 @@ foreach(i = 1:length(input)) %dopar% {
   
   ### MAIN PART ###
   # preprocessing
-  prots = function(tbl = ""){
-    # sort in protein order
-    if ("Accession" %in% colnames(tbl)){
-      tbl = tbl[order(tbl[, "Accession"]), ]
-      return(tbl[, "Accession"])
-    } else {
-      tbl = tbl[order(tbl[,1]), ]
-      return(tbl[,1])
-    }
-  }
   prot_syn = prots(tbl = syntax)
   prot_sem = prots(tbl = semantics)
   prot_pred = prots(tbl = pred)
-  
-  
-  cleaning = function(tbl = ""){
-    # sort in protein order
-    if ("Accession" %in% colnames(tbl)){
-      tbl = tbl[order(tbl[, "Accession"]), ]
-      tbl$Accession = NULL
-    } else {
-      tbl = tbl[order(tbl[,1]), ]
-      tbl[,1] = NULL
-    }
-    
-    # remove redundant columns
-    if ("seqs" %in% colnames(tbl)){
-      tbl$seqs = NULL
-    }
-    
-    if ("X" %in% colnames(tbl)){
-      tbl$X = NULL
-    }
-    
-    return(as.matrix(tbl))
-  }
-  
   
   syntax = cleaning(tbl = syntax)
   semantics = cleaning(tbl = semantics)
   pred = cleaning(tbl = pred)
   
-  
-  # viz
-  spectral <- brewer.pal(11, "Spectral")
-  spectralRamp <- colorRampPalette(spectral)
-  spectral5000 <- spectralRamp(5000)
-  
-  plotting = function(tbl = "", file = ""){
-    
-    scale = seq(from = 1, to = nrow(tbl), by = round(nrow(tbl)*0.1, 0))
-    
-    png(filename = file,
-        height = 2000, width = 2000, res = 300)
-    
-    print(levelplot(t(tbl),
-                    pretty = T,
-                    col.regions = spectral5000,
-                    main = "difference between true and predicted protein similarity",
-                    xlab = "proteins",
-                    ylab = "proteins",
-                    cex.lab = 0.1,
-                    scales=list(x= scale, y= scale)))
-    
-    dev.off()
-  }
-  
   # calculate scores
-  
-  compare = function(true = "", predicted = "", prot_pred = "",
-                     plot_file = ""){
-    # same proteins
-    if(!dim(true)[1] == dim(predicted)[1]){
-      k = which(prot_pred %in% colnames(true))
-      predicted = predicted[, k]
-      predicted = predicted[k, ]
-    }
-    
-    tbl = abs(true - predicted)
-    tbl = as.matrix(tbl)
-    tbl[which(!is.finite(tbl))] = 1
-    # plot heatmap
-    plotting(tbl = tbl, file = plot_file)
-    
-    # mean of difference between matrices
-    score = mean(tbl)
-    return(score)
-  }
-  
-  syn = compare(true = syntax, predicted = pred, prot_pred = prot_pred,
-                plot_file = unlist(snakemake@output[["syntax_heatmap"]][i]))
-  sem = compare(true = semantics, predicted = pred, prot_pred = prot_pred,
-                plot_file = unlist(snakemake@output[["semantics_heatmap"]][i]))
+  syn = compare(true = syntax, predicted = pred, prot_pred = prot_pred, prot_true = prot_syn,
+                plot_file = unlist(snakemake@output[["syntax_heatmap"]][i]),
+                out_file = unlist(snakemake@output[["syntax_diff"]][i]))
+  sem = compare(true = semantics, predicted = pred, prot_pred = prot_pred, prot_true = prot_sem,
+                plot_file = unlist(snakemake@output[["semantics_heatmap"]][i]),
+                out_file = unlist(snakemake@output[["semantics_diff"]][i]))
   
   scores = data.frame(syntax = syn,
                       semantics = sem)
   
   ### OUTPUT ###
   write.table(x = scores, file = unlist(snakemake@output[["scores"]][i]), sep = " ", row.names = F)
+  
+  print(paste0("done with ", snakemake@input[["predicted"]][i]))
 }
 

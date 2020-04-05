@@ -16,6 +16,7 @@ library(readr)
 
 ### INPUT ###
 # formatted sequences
+#sequences = read.csv("Benchmarking/data/red_formatted_proteome.csv", stringsAsFactors = F, header = T)
 sequences = read.csv(snakemake@input[["formatted_sequence"]], stringsAsFactors = F, header = T)
 
 ### MAIN PART ###
@@ -38,6 +39,14 @@ for (q in 1:nrow(QSO)) {
   
   x = extractQSO(sequences$seqs[q], nlag = lag)
   QSO[q, 3:(2+length(x))] = x
+}
+
+for (p in 3:ncol(QSO)){
+  QSO[,p] = as.numeric(as.character(QSO[,p]))
+}
+
+if(lag < 25){
+  QSO[, which(!is.finite(colSums(QSO[,3:ncol(QSO)])))] = NULL
 }
 
 QSO = as.data.frame(QSO)

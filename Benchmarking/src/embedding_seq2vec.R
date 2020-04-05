@@ -16,6 +16,11 @@ library(stringr)
 library(readr)
 library(data.table)
 
+# sequences = read.csv("Benchmarking/data/red_formatted_proteome.csv", stringsAsFactors = F, header = T)
+# words = read.csv("Benchmarking/data/words.csv", stringsAsFactors = F, header = T)
+# weight_matrix = read.csv("Benchmarking/data/seq2vec_weights.csv", stringsAsFactors = F, header = F)
+# indices = read.csv("Benchmarking/data/seq2vec_ids.csv", stringsAsFactors = F, header = F)
+
 ### INPUT ###
 sequences = read.csv(snakemake@input[["formatted_sequence"]], stringsAsFactors = F, header = T)
 # sequences and encoded sequences

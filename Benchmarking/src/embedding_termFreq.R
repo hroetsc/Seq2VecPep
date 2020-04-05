@@ -47,7 +47,7 @@ sequences = left_join(Accessions, sequences)
 maxlen = max(no_tokens)
 print(paste0("maximum number of tokens per protein is ", maxlen))
 
-dim = 200
+dim = 100
 print(paste0("truncating, so that vectors are of length ", dim))
 
 term_freq = matrix(ncol = dim+2, nrow = length(words.split))

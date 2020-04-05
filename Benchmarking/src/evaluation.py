@@ -10,8 +10,10 @@ rule evaluation:
         semantics_heatmap = expand('similarity/plots/{sample}_semantics.png',
                             sample = features["final"]),
         scores = expand('similarity/scores/{sample}.txt',
+                            sample = features["final"]),
+        syntax_diff = expand('similarity/matrices/{sample}_syntax.csv',
+                            sample = features["final"]),
+        semantics_diff = expand('similarity/matrices/{sample}_semantics.csv',
                             sample = features["final"])
     script:
         "evaluation.R"
-
-# add rule that concatenates scores and makes nice plots

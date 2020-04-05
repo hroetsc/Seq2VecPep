@@ -15,18 +15,19 @@ library(ggthemes)
 ### INPUT ###
 fs = list.files(path = "similarity/scores", pattern = ".txt", full.names = T)
 
-scores = as.data.frame(matrix(ncol = 3, nrow = length(fs)))
+scores = as.data.frame(matrix(ncol = 5, nrow = length(fs)))
 scores[,1] = fs
 
 for (s in 1:nrow(scores)){
   tmp = read.table(file = scores[s,1], sep = " ", stringsAsFactors = F, header = T)
   scores[s, c(2:3)] = tmp[1,c(1:2)]
+  scores[s, c(4:5)] = tmp[2,c(1:2)]
 }
 
 
 ### MAIN PART ###
 scores = as.data.frame(scores)
-colnames(scores) = c("file", "syntax", "semantics")
+colnames(scores) = c("file", "syntax", "semantics", "SD_syntax", "SD_semantics")
 
 # split filenames to retrieve conditions
 names = str_split_fixed(scores$file, coll("/"), Inf) %>% as.data.frame()
@@ -44,9 +45,6 @@ scores[which(scores$weighting == "CCR"), "weighting"] = "none"
 scores[which(scores$PC1_removal == ""), "PC1_removal"] = "none"
 scores$file = NULL
 
-# take reciprocal value to make scores more intuitive
-#scores$syntax = 1/scores$syntax
-#scores$semantics = 1/scores$semantics
 
 # make it suitable for mirrored bar plot
 scores = rbind(scores, scores)
@@ -58,19 +56,45 @@ scores[c(((nrow(scores)*0.5)+1):nrow(scores)), "value"] = -1* scores$semantics[c
 scores$syntax = NULL
 scores$semantics = NULL
 
+scores[c(1:nrow(scores)*0.5), "SD_semantics"] = NA
+scores[c(((nrow(scores)*0.5)+1):nrow(scores)), "SD_syntax"] = NA
+scores[c(1:nrow(scores)*0.5), "SD"] = scores$SD_syntax[c(1:nrow(scores)*0.5)]
+scores[c(((nrow(scores)*0.5)+1):nrow(scores)), "SD"] = scores$SD_semantics[c(((nrow(scores)*0.5)+1):nrow(scores))]
+scores$SD_syntax = NULL
+scores$SD_semantics = NULL
+
+
+# more understandable group labels
+scores[which(scores$embedding == "biophys"), "embedding"] = "biophysical\nproperties"
+scores[which(scores$embedding == "QSO"), "embedding"] = "quasi-\nsequence-\norder"
+scores[which(scores$embedding == "seq2vec"), "embedding"] = "Seq2Vec"
+scores[which(scores$embedding == "termfreq"), "embedding"] = "term\nfrequency"
+
+# take reciprocal value to make scores more intuitive
+# scores$value = 1/scores$value
+
 # plotting
 p = ggplot(scores, aes(x = embedding, y = value, fill = weighting, alpha = 0.8)) +
   geom_bar(stat = "identity", position = "dodge",
-           aes(color = PC1_removal))+
+           aes(color = PC1_removal)) +
+  #geom_errorbar(aes(ymin = value-SD, ymax = value+SD, group = weighting), width = 1,
+  #              stat = "identity",
+  #              position = position_dodge2(1, preserve = "single", padding = 0.001)) +
   scale_y_continuous(breaks = seq(-1, 1, 0.1)) +
-  scale_fill_manual(values = c("cornflowerblue", "aquamarine", "chartreuse2")) +
-  scale_color_manual(values = c("black", "firebrick1")) +
+  scale_fill_manual(values = c("cornflowerblue", "aquamarine", "chartreuse2"),
+                    label = c("none", "Smooth Inverse Freq.", "Term Freq. - Inverse Doc. Freq."),
+                    name = "weighting of tokens") +
+  scale_color_manual(values = c("black", "firebrick1"),
+                     label = c("yes", "no"),
+                     name = "removal of PC1") +
   ggtitle("ability of embedding/postprocessing methods \nto capture sequence similarity",
-          subtitle = "small values indicate higher ability") +
+          subtitle = "mean difference (+- SD) to true similarities - small values indicate high ability") +
   ylab("semantics (negative scale) and syntax (positive scale)") +
   theme_minimal()
 
 p
 
 ### OUTPUT ###
-ggsave(filename = "result.png", plot = p, device = "png", dpi = "retina")
+ggsave(filename = "result.png", plot = p, device = "png", dpi = "retina",
+       width = 12.3, height = 7.54)
+
