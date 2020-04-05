@@ -82,8 +82,8 @@ Y = Y.reshape(Y.shape[0],)
 Y = np.where(Y == 0, -1, Y)
 print(Y)
 
-vocab_size = len(ids.index)+2
-print("vocabulary size (number of target word IDs +2): {}".format(vocab_size))
+vocab_size = len(ids.index) + 1
+print("vocabulary size (number of target word IDs + 1): {}".format(vocab_size))
 
 
 # =============================================================================
@@ -112,9 +112,14 @@ dot_product = dot([target, context], axes = 1, normalize = True, name = 'dot_pro
 dot_product = Reshape((1,))(dot_product)
 
 # add dense layers
-output = Dense(64, activation = 'relu', kernel_initializer = 'he_uniform', name='relu_dense')(dot_product)
+output = Dense(64, activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(dot_product)
 output = Dropout(0.5)(output)
-output = Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='tanh_dense')(output)
+output = Dense(32, activation = 'tanh', kernel_initializer = 'he_uniform', name='2nd_dense')(output)
+output = Dropout(0.5)(output)
+output = Dense(16, activation = 'tanh', kernel_initializer = 'he_uniform', name='3rd_dense')(output)
+output = Dropout(0.5)(output)
+output = Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='4th_dense')(output)
+
 
 # create the primary training model
 model = Model(inputs=[input_target, input_context], outputs=output)
@@ -166,8 +171,6 @@ print("fit the model")
 
 fit = model.fit_generator(generator = train_generator,
                     validation_data = test_generator,
-                    steps_per_epoch = 500000,
-                    validation_steps = 100000,
                     epochs = epochs,
                     initial_epoch = 0,
                     verbose=2,
