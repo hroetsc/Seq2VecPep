@@ -14,8 +14,9 @@ Adjust hyperparameters in the `hyperparams.csv` file (this is not how it should 
   
 Execute the pipeline:  
 `snakemake --use-conda -j <number of threads> -R <some rule, in case you want to re-run anything>`  
-If you are done, type: `conda deactivate` to return to your base environment.
-
+If you are done, type: `conda deactivate` to return to your base environment.  
+  
+Note: The python scripts (`skip_gram_NN_1.py` and `skip_gram_NN_2.py` are executed in different environments which are specified in the rule's conda argument).
 
 ## hyperparameters ##
 - `threads`: self-explanatory. The number of threads used by the pipeline. Note that the Snakemake `-j` flag is dominant over this hyperparameter.  
@@ -31,11 +32,8 @@ If you are done, type: `conda deactivate` to return to your base environment.
 - `batchSize`: As the whole skip-gram corpus would not fit into memory, the model is trained on batches.
 
 ## file explanation ##
-**src/** contains all scripts that are in the Snakemake pipeline. `report.html` explains their interdependencies as well as the order of execution in the pipeline.  
-All rules are concatenated in the `Snakefile`. Software versions and input/output files can be accessed via `environment_lab.yaml` and `features.yml`, respectively. 
+**src/** contains all scripts that are in the Snakemake pipeline. `report.html`, `FILEGRAPH.pdf` and `DAG.pdf` explain their interdependencies as well as the order of execution in the pipeline.  
+All rules are concatenated in the `Snakefile`. Input/output files can be accessed via `features.yml`. 
 Hyperparameters are currently stored in `hyperparams.csv`
   
 **input requirements** The input file (`Seqinput` in `hyperparams.csv` must contain at least two columns: `Accession` and `seqs` which contain the name of a protein/transcript and its sequence, respectively.
-
-## environment handling ###
-Note: The python scripts (`skip_gram_NN_1.py` and `skip_gram_NN_2.py` are executed in different environments which are specified in the rule's conda argument).
