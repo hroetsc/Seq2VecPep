@@ -41,6 +41,7 @@ accuracy = data.frame(val = c(acc, val_acc),
 a = ggplot(accuracy, aes(x = epoch, y = val, group = label)) +
   geom_line(aes(linetype = label, color = label)) +
   geom_point(aes(color = label))+
+  scale_y_continuous(breaks = seq(0,1,0.1)) +
   ggtitle('accuracy of skip-gram NN') +
   ylab('accuracy') +
   ylim(c(0,1)) +
@@ -55,9 +56,10 @@ loss = data.frame(val = c(loss, val_loss),
 l = ggplot(loss, aes(x = epoch, y = val, group = label)) +
   geom_line(aes(linetype = label, color = label)) +
   geom_point(aes(color = label))+
+  scale_y_continuous(breaks = seq(0,1,0.1)) +
   ggtitle('loss of skip-gram NN') +
   ylab('loss') +
-  #ylim(c(0,1)) +
+  ylim(c(0,1)) +
   theme_minimal()
 l
 
