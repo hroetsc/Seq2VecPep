@@ -24,9 +24,6 @@ sequences = read.csv(file = params[which(params$parameter == "Seqinput"), "value
                      stringsAsFactors = F, header = T)
 sequences = as.data.frame(sequences)
 
-args = commandArgs(T)
-workers = args[1]
-
 # load the model
 threads = as.numeric(params[which(params$parameter == "threads"), "value"])
 

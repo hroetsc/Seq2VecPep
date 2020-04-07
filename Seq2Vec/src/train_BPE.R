@@ -19,9 +19,13 @@ library(tokenizers.bpe)
 # data set to train bpe algorithm:
 # Swissprot mouse, canonical and isoforms (reviewed proteins)
 params = read.csv(snakemake@input[["params"]], stringsAsFactors = F, header = T)
+
+seqtype = params[which(params$parameter == "Seqtype"), "value"]
+
 trainFASTA = read.fasta(params[which(params$parameter == "BPEinput"), "value"],
-                        seqtype = "AA",
+                        seqtype = seqtype,
                         whole.header = T)
+
 
 ### MAIN PART ###
 # keep track of origin of sequences
