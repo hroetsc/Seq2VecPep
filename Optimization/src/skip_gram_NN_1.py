@@ -44,23 +44,19 @@ import skip_gram_NN_helper
 gc.enable()
 
 # =============================================================================
+# # INPUT
+# =============================================================================
+words = pd.read_csv(snakemake.input['words'], header = 0)
+params = pd.read_csv(snakemake.input['params'], header = 0)
+
+# =============================================================================
 # # HYPERPARAMETERS
 # =============================================================================
-workers = 12
-windowSize = 10
-keep = 0.3
 
-# INPUT
-words = pd.read_csv(snakemake.input['words'], header = 0)
-
-# =============================================================================
-# # tmp!!!
-# os.chdir('/home/hroetsc/Documents/ProtTransEmbedding/Snakemake')
-# words = pd.read_csv('results/encoded_proteome/words.csv', header = 0)
-# idx = np.random.randint(0, len(pd.DataFrame.count(words, 1)), size = 10000)
-# words = words.iloc[list(idx),]
-#
-# =============================================================================
+workers = int(params[params['parameter'] == 'threads']['value'])
+keep = float(params[params['parameter'] == 'keep']['value'])
+negSkipgrams = float(params[params['parameter'] == 'negSkipgrams']['value'])
+windowSize = int(params[params['parameter'] == 'windowSize']['value'])
 
 
 # =============================================================================
@@ -97,7 +93,7 @@ pool = multiprocessing.Pool(workers)
 
 if __name__ == "__main__":
     pool.starmap( skip_gram_NN_helper.parallel_processing,
-                ([[n, wids[n], windowSize, vocab_size, n_batches, snakemake.output['skip_grams'], keep] for n in range(n_batches)]) )
+                ([[n, wids[n], windowSize, vocab_size, n_batches, snakemake.output['skip_grams'], keep, negSkipgrams] for n in range(n_batches)]) )
 print('done with generating skip-grams')
 
 # =============================================================================

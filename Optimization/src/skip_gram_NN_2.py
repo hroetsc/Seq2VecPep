@@ -55,16 +55,27 @@ gc.enable()
 
 
 # HYPERPARAMETERS
-workers = 12
-epochs = 10 # the more, the merrier
-valSplit = 0.20
-batchSize = 32
-
-# INPUT
 print("LOAD DATA")
+params = pd.read_csv(snakemake.input['params'], header = 0)
 skip_grams = pd.read_csv(snakemake.input['skip_grams'], sep = " ", header = None)
 ids = pd.read_csv(snakemake.input['ids'], header = None)
 
+# =============================================================================
+# # HYPERPARAMETERS
+# =============================================================================
+
+workers = int(params[params['parameter'] == 'threads']['value'])
+
+embeddingDim = int(params[params['parameter'] == 'embedding']['value'])
+epochs = int(params[params['parameter'] == 'epochs']['value'])
+
+valSplit = float(params[params['parameter'] == 'valSplit']['value'])
+batchSize = int(params[params['parameter'] == 'batchSize']['value'])
+
+learning_rate = 0.004
+adam_decay = 1e-06
+
+# =============================================================================
 # split skip-grams into target, context and label np.array()
 target_word = np.array(skip_grams.iloc[:,0], dtype = 'int32')
 context_word = np.array(skip_grams.iloc[:,1], dtype = 'int32')
@@ -84,8 +95,8 @@ Y = Y.reshape(Y.shape[0],)
 Y = np.where(Y == 0, -1, Y)
 print(Y)
 
-vocab_size = len(ids.index)+2
-print("vocabulary size (number of target word IDs +2): {}".format(vocab_size))
+vocab_size = len(ids.index) + 1
+print("vocabulary size (number of target word IDs + 1): {}".format(vocab_size))
 
 # SEARCH PARAMETERS FOR HYPERPARAMETER OPTIMIZATION
 # https://medium.com/@crawftv/parameter-hyperparameter-tuning-with-bayesian-optimization-7acf42d348e1
@@ -156,10 +167,9 @@ def create_model (embedding_size, learning_rate, adam_decay, relu_units):
     dot_product = Reshape((1,))(dot_product)
 
     # add dense layer
-    output = Dense(int(relu_units), activation = 'relu', kernel_initializer = 'he_uniform', name='relu_dense')(dot_product)
+    output = Dense(64, activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(dot_product)
     output = Dropout(0.5)(output)
-
-    output = Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='tanh_dense')(output)
+    output = Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='2nd_dense')(output)
 
     # create the primary training model
     model = Model(inputs=[input_target, input_context], outputs=output)
@@ -211,7 +221,7 @@ def fitness(embedding_size, learning_rate, adam_decay, relu_units):
 # gaussian
 gp_result = gp_minimize(func = fitness,
                             dimensions = dimensions,
-                            n_calls = 20,
+                            n_calls = 12,
                             noise = 0.01,
                             n_jobs = -1,
                             kappa = 5,
@@ -223,7 +233,7 @@ tf.compat.v1.reset_default_graph()
 # gradient boosted regression trees
 gbrt_result = gbrt_minimize(func = fitness,
                             dimensions=dimensions,
-                            n_calls = 20,
+                            n_calls = 12,
                             n_jobs = -1,
                             x0 = default_parameters)
 K.clear_session()

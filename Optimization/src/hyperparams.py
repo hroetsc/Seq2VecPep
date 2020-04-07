@@ -1,47 +1,55 @@
-rule BPE_training:
+rule BPE_training1:
     input:
+        params = "hyperparams.csv"
+    output:
         conc_UniProt = "data/concatenated_UniProt.txt"
+    conda:
+        "R_dependencies.yml"
+    script:
+        "train_BPE.R"
+
+
+rule BPE_training2:
+    input:
+        conc_UniProt = "data/concatenated_UniProt.txt",
+        params = "hyperparams.csv"
     output:
         BPE_model = 'data/BPE_model.bpe'
     conda:
         "R_dependencies.yml"
-    params:
-        n=config["max_cores"],
-        mem=config["mem_mb"]
     script:
         "train_BPE2.R"
 
+
 rule generate_tokens:
     input:
-        formatted_proteome = 'data/formatted_proteome.csv',
+        params = "hyperparams.csv"
         BPE_model = 'data/BPE_model.bpe'
     output:
         model_vocab = 'results/model_vocab.csv',
         words = 'results/words.csv'
     conda:
         "R_dependencies.yml"
-    params:
-        n=config["max_cores"],
-        mem=config["mem_mb"]
     script:
-        "protein_segmentation.R"
+        "sequence_tokenization.R"
+
 
 rule seq2vec_skip_grams:
     input:
+        params = "hyperparams.csv",
         words = 'results/words.csv'
     output:
         skip_grams = 'results/skipgrams.txt',
         ids = 'results/seq2vec_ids.csv'
     conda:
         "environment_seq2vec.yml"
-    params:
-        n=config["max_cores"],
-        mem=config["mem_mb"]
     script:
         "skip_gram_NN_1.py"
 
+
 rule model_hyperopt:
     input:
+        params = "hyperparams.csv",
         skip_grams = 'results/skipgrams.txt',
         ids = 'results/seq2vec_ids.csv'
     output:
@@ -53,8 +61,5 @@ rule model_hyperopt:
         gbrt_obj = 'results/obj_gbrt.png'
     conda:
         "environment_base.yml"
-    params:
-        n=config["max_cores"],
-        mem=config["mem_mb"]
     script:
         "skip_gram_NN_2.py"
