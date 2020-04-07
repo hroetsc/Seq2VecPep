@@ -20,6 +20,7 @@ Note: The python scripts (`skip_gram_NN_1.py` and `skip_gram_NN_2.py` are execut
 
 ## hyperparameters ##
 - `threads`: self-explanatory. The number of threads used by the pipeline. Note that the Snakemake `-j` flag is dominant over this hyperparameter.  
+- `Seqtype`: either `AA` for proteins/peptides or `DNA` for nucleic acids
 - `Seqinput`: .csv file which must contain at least two columns: `Accession` and `seqs` (see file explanation)  
 - `BPEinput`: .fasta file which is used to train the BPE algorithm. The default is the whole reviewed UniProtKB (SwissProt). 
 - `BPEvocab`: vocab size for the byte-pair encoding algorithm.
