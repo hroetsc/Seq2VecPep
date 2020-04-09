@@ -20,15 +20,12 @@ sequences = sequences[order(sequences$Accession), ]
 cores = detectCores()
 alig = parSeqSim(sequences$seqs,
                  cores = cores,
-                 batches = 100, # to save memory
+                 batches = 200, # to save memory
                  verbose = T,
                  type = "local",
                  gap.opening = -2,
                  gap.extension = -8,
                  submat = "BLOSUM50")
-
-# scale all values between 0 and 1
-alig = (alig - min(alig)) / (max(alig) - min(alig))
 
 res = matrix(ncol = ncol(alig)+1, nrow = nrow(alig))
 res[, 1] = sequences$Accession

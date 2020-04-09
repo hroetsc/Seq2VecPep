@@ -14,6 +14,7 @@ library(dplyr)
 
 ### INPUT ###
 # formatted sequences
+sequences = read.csv("transcriptome/data/opt_transcriptome_human.csv", stringsAsFactors = F, header = T)
 sequences = read.csv(snakemake@input[["formatted_sequence"]], stringsAsFactors = F, header = T)
 
 ### MAIN PART ###
@@ -21,23 +22,17 @@ sequences = read.csv(snakemake@input[["formatted_sequence"]], stringsAsFactors =
 sequences = sequences[order(sequences$Accession), ]
 
 # retrieve GO terms for every UniProtID
-ensembl = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
+ensembl = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
 GOterms = getBM(mart = ensembl,
-                attributes = c("go_id", "uniprotswissprot", "uniprotsptrembl"))
+                attributes = c("go_id", "ensembl_transcript_id_version"))
+
+colnames(GOterms) = c("GOterm", "Accession")
 
 # filter data set
-GO_terms_sp = GOterms[, c(1:2)]
-colnames(GO_terms_sp) = c("GOterm", "Accession")
-sequences_sp = left_join(sequences, GO_terms_sp)
-sequences_sp = na.omit(sequences_sp)
+sequences = left_join(sequences, GOterms)
+sequences = na.omit(sequences)
 
-GO_terms_tr = GOterms[, c(1,3)]
-colnames(GO_terms_tr) = c("GOterm", "Accession")
-sequences_tr = left_join(sequences, GO_terms_tr)
-sequences_tr = na.omit(sequences_tr)
-
-sequences = full_join(sequences_sp, sequences_tr)
-print(paste0("found GO terms for ", length(unique(sequences$Accession)), " proteins"))
+print(paste0("found GO terms for ", length(unique(sequences$Accession)), " transcripts"))
 
 # create master table for GO term similarity for each protein
 sequences = sequences[order(sequences$Accession), ]
@@ -53,13 +48,15 @@ for (p in 1:length(proteins)){
   terms[[p]] = GOterms[[p]][, "GOterm"]
 }
 
-# calculate mean GO-term similarity
-alig = parGOSim(terms,
-                type = "go", organism = "mouse",
-                measure = "Wang")
+# gene_list = list()
+# for (t in 1:nrow(sequences)){
+#   gene_list[[t]] = sequences$Accession[t]
+# }
 
-# scale all values between 0 and 1
-alig = (alig - min(alig)) / (max(alig) - min(alig))
+# calculate mean GO-term similarity
+alig = parGOSim(golist = GOterms,
+                type = "go", organism = "human",
+                measure = "Wang")
 
 res = matrix(ncol = ncol(alig)+1, nrow = nrow(alig))
 res[, 1] = proteins

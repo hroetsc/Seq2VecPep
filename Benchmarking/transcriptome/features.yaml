@@ -1,0 +1,57 @@
+# files used in pipeline
+data:
+    formatted_sequence: data/opt_transcriptome_human.csv
+    words: data/words.csv
+    weights: data/seq2vec_weights.csv
+    indices: data/seq2vec_ids.csv
+    TF-IDF: data/TF_IDF.csv
+
+embeddings:
+    seq2vec: postprocessing/seq2vec.csv
+    termfreq: postprocessing/termfreq.csv
+    random: postprocessing/random.csv
+    DNADCC: postprocessing/DNADCC.csv
+    DNAPse: postprocessing/DNAPse.csv
+
+weighting:
+    seq2vec_TFIDF: postprocessing/seq2vec_TFIDF.csv
+    random_TFIDF: postprocessing/random_TFIDF.csv
+    seq2vec_SIF: postprocessing/seq2vec_SIF.csv
+    random_SIF: postprocessing/random_SIF.csv
+
+similarity:
+    true_syntax: similarity/true_syntax.csv
+    true_semantics: similarity/true_semantics.csv
+
+CCR:
+    - seq2vec
+    - seq2vec_TFIDF
+    - seq2vec_SIF
+    - random
+    - random_TFIDF
+    - random_SIF
+    - termfreq
+    - DNADCC
+    - DNAPse
+
+
+final:
+    - seq2vec
+    - seq2vec_CCR
+    - seq2vec_TFIDF
+    - seq2vec_TFIDF_CCR
+    - seq2vec_SIF
+    - seq2vec_SIF_CCR
+    - random
+    - random_CCR
+    - random_TFIDF
+    - random_TFIDF_CCR
+    - random_SIF
+    - random_SIF_CCR
+    - termfreq
+    - termfreq_CCR
+    - DNADCC
+    - DNADCC_CCR
+    - DNAPse
+    - DNAPse_CCR
+...

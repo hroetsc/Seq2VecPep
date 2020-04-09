@@ -17,6 +17,12 @@ registerDoMC(detectCores())
 
 input = snakemake@input[["embedding"]]
 
+# function that returns cosine of angle between two vectors
+dot_product = function(v1 = "", v2 = ""){
+  p = sum(v1 * v2)/(sqrt(sum(v1^2)) * sqrt(sum(v2^2)))
+  return(p)
+}
+
 foreach(i = 1:length(input)) %dopar% {
   print(snakemake@input[["embedding"]][i])
   
@@ -41,11 +47,6 @@ foreach(i = 1:length(input)) %dopar% {
   colnames(sim) = proteins
   rownames(sim) = proteins
   
-  # function that returns cosine of angle between two vectors
-  dot_product = function(v1 = "", v2 = ""){
-    p = sum(v1 * v2)/(sqrt(sum(v1^2)) * sqrt(sum(v2^2)))
-    return(p)
-  }
   
   progressBar = txtProgressBar(min = 0, max = length(proteins), style = 3)
   for (s in 1:length(proteins)){

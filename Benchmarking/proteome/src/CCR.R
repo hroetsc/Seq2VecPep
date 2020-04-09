@@ -33,9 +33,12 @@ for (i in 1:length(input)){
   
   emb[, which(!is.finite(colSums(emb)))] = NULL
   
-  # apply PCA
-  emb.pca = prcomp(emb)
-  print(summary(emb.pca))
+  # calculate the mean vector and remove it
+  mu = colSums(emb) / nrow(emb)
+  
+  for (e in 1:nrow(emb)){
+    emb[e,] = emb[e,] - mu
+  }
   
   # returns the residuals of a linear regression of each column on the principal components
   emb = as.matrix(emb)

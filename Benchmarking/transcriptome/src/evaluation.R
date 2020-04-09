@@ -22,9 +22,9 @@ library(doMC)
 library(plyr)
 
 # tmp!
-syntax = read.csv("similarity/true_syntax.csv", stringsAsFactors = F, header = T)
-semantics = read.csv("similarity/true_semantics.csv", stringsAsFactors = F, header = T)
-pred = read.csv("similarity/seq2vec.csv", stringsAsFactors = F, header = T)
+# syntax = read.csv("transcriptome/similarity/true_syntax.csv", stringsAsFactors = F, header = T)
+# semantics = read.csv("transcriptome/similarity/true_semantics.csv", stringsAsFactors = F, header = T)
+# pred = read.csv("transcriptome/similarity/random_CCR.csv", stringsAsFactors = F, header = T)
 
 # parallel computing
 cl <- makeCluster(detectCores())
@@ -82,7 +82,7 @@ plotting = function(tbl = "", file = ""){
   print(levelplot(tbl,
                   pretty = T,
                   col.regions = spectral5000,
-                  main = "difference between true and predicted protein similarity",
+                  main = "predicted transcript similarity",
                   xlab = "proteins",
                   ylab = "proteins",
                   cex.lab = 0.1,
@@ -90,6 +90,7 @@ plotting = function(tbl = "", file = ""){
   
   dev.off()
 }
+
 
 # calculate scores
 compare = function(true = "", predicted = "", prot_pred = "", prot_true = "",
@@ -101,25 +102,21 @@ compare = function(true = "", predicted = "", prot_pred = "", prot_true = "",
     predicted = predicted[k, ]
   }
 
-  # scale matrices !!!
-  true = true / sum(true)
-  true = scale(true)
-  predicted = predicted / sum(predicted)
-  predicted = scale(predicted)
+  # plot heatmap
+  plotting(tbl = predicted, file = plot_file)
+  
+  # z-transformation
+  predicted = (predicted - mean(predicted)) / sd(predicted)
+  true = (true - mean(true)) / sd(true)
   
   tbl = abs(predicted - true)
-  tbl = as.matrix(tbl)
   
-  tbl = scale(tbl, center = rep(1, ncol(tbl)))
-  
-  # plot heatmap
-  plotting(tbl = tbl, file = plot_file)
-  
-  write.csv(tbl, file = out_file, row.names = F)
+  write.csv(predicted, file = out_file, row.names = F)
   
   # mean of difference between matrices
   score = mean(tbl)
   SD = sd(tbl)
+  
   return(c(score, SD))
 }
 
