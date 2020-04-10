@@ -25,7 +25,6 @@ library(ggpubr)
 library(uwot)
 library(reshape2)
 
-library(parallel)
 library(foreach)
 library(doParallel)
 library(doMC)

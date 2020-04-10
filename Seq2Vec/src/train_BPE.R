@@ -20,10 +20,8 @@ library(tokenizers.bpe)
 # Swissprot mouse, canonical and isoforms (reviewed proteins)
 params = read.csv(snakemake@input[["params"]], stringsAsFactors = F, header = T)
 
-seqtype = params[which(params$parameter == "Seqtype"), "value"]
-
 trainFASTA = read.fasta(params[which(params$parameter == "BPEinput"), "value"],
-                        seqtype = seqtype,
+                        seqtype = "AA",
                         whole.header = T)
 
 

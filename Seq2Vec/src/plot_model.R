@@ -43,7 +43,7 @@ a = ggplot(accuracy, aes(x = epoch, y = val, group = label)) +
   geom_point(aes(color = label))+
   ggtitle('accuracy of skip-gram NN') +
   ylab('accuracy') +
-  ylim(c(0,1)) +
+  scale_y_continuous(limits = c(0,1), breaks = seq(1, 1, 0.1)) +
   theme_minimal()
 a
 
@@ -57,7 +57,7 @@ l = ggplot(loss, aes(x = epoch, y = val, group = label)) +
   geom_point(aes(color = label))+
   ggtitle('loss of skip-gram NN') +
   ylab('loss') +
-  ylim(c(0,1)) +
+  scale_y_continuous(limits = c(0,1), breaks = seq(1, 1, 0.1)) +
   theme_minimal()
 l
 

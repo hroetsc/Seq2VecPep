@@ -59,8 +59,15 @@ epochs = int(params[params['parameter'] == 'epochs']['value'])
 valSplit = float(params[params['parameter'] == 'valSplit']['value'])
 batchSize = int(params[params['parameter'] == 'batchSize']['value'])
 
-learning_rate = 0.004
-adam_decay = 1e-06
+seqtype = params[params['parameter'] == 'Seqtype']['value']
+
+if seqtype == 'AA':
+    learning_rate = 0.004
+    adam_decay = 1e-06
+elif seqtype == 'RNA':
+    learning_rate = 0.004
+    adam_decay = 1e-06
+
 
 # =============================================================================
 # split skip-grams into target, context and label np.array()
@@ -114,11 +121,7 @@ dot_product = Reshape((1,))(dot_product)
 # add dense layers
 output = Dense(64, activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(dot_product)
 output = Dropout(0.5)(output)
-output = Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='2nd_dense')(output)
-#output = Dropout(0.5)(output)
-#output = Dense(16, activation = 'tanh', kernel_initializer = 'he_uniform', name='3rd_dense')(output)
-#output = Dropout(0.5)(output)
-#output = Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='4th_dense')(output)
+output = Dense(2, activation = 'tanh', kernel_initializer = 'he_uniform', name='2nd_dense')(output)
 
 
 # create the primary training model
