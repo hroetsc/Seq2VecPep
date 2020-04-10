@@ -37,9 +37,9 @@ ModelVocab = bpeModel$vocabulary
 ModelVocab = tibble::as_tibble(ModelVocab)
 
 # multiprocessing
-cl <- makeCluster(as.numeric(params[which(params$parameter == "threads"), "value"]))
-registerDoParallel(cl)
-registerDoMC(as.numeric(params[which(params$parameter == "threads"), "value"]))
+#cl <- makeCluster(as.numeric(params[which(params$parameter == "threads"), "value"]))
+#registerDoParallel(cl)
+#registerDoMC(as.numeric(params[which(params$parameter == "threads"), "value"]))
 
 
 ### MAIN PART ###
@@ -49,18 +49,18 @@ print("BYTE-PAIR ENCODING")
 
 sequences.Encoded.list = list()
 
-foreach(n = 1:nrow(sequences)) %dopar% {
+for(n in 1:nrow(sequences)){
   setTxtProgressBar(progressBar, n)
- 
+
   # encode sequence
   PepEncoded = bpe_encode(model = bpeModel, x = as.character(sequences$seqs[n]), type = "subwords")
   PepEncoded = unlist(PepEncoded)[-1]
-  
+
   # temporary data frame that contains encoded sequence
   currentPeptide = as_tibble(matrix(ncol = ncol(sequences)+1, nrow = length(PepEncoded)))
   currentPeptide[, c(1:(ncol(currentPeptide)-1))] = as_tibble(lapply(sequences[n,], rep, length(PepEncoded)))
   currentPeptide[, ncol(currentPeptide)] = PepEncoded
-  
+
   # add to original data frame
   sequences.Encoded.list[[n]] = currentPeptide
 }
