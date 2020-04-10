@@ -23,7 +23,7 @@ rule BPE_training2:
 
 rule generate_tokens:
     input:
-        params = "hyperparams.csv"
+        params = "hyperparams.csv",
         BPE_model = 'data/BPE_model.bpe'
     output:
         model_vocab = 'results/model_vocab.csv',

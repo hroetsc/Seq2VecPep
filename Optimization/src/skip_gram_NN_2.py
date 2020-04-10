@@ -167,9 +167,9 @@ def create_model (embedding_size, learning_rate, adam_decay, relu_units):
     dot_product = Reshape((1,))(dot_product)
 
     # add dense layer
-    output = Dense(64, activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(dot_product)
+    output = Dense(int(relu_units), activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(dot_product)
     output = Dropout(0.5)(output)
-    output = Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='2nd_dense')(output)
+    output = Dense(2, activation = 'tanh', kernel_initializer = 'he_uniform', name='2nd_dense')(output)
 
     # create the primary training model
     model = Model(inputs=[input_target, input_context], outputs=output)
@@ -206,6 +206,8 @@ def fitness(embedding_size, learning_rate, adam_decay, relu_units):
     accuracy = blackbox.history['val_accuracy'][-1]
 
     # Print the classification accuracy.
+    print()
+    print('embedding size: {} - learning rate: {} - adam decay: {} - input units: {}'.format(embedding_size, learning_rate, adam_decay, relu_units))
     print()
     print("Accuracy: {0:.2%}".format(accuracy))
     print()
