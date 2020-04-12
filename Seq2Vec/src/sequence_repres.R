@@ -30,12 +30,12 @@ library(doParallel)
 library(doMC)
 
 
-# sequences = read.csv("../../ProtTransEmbedding/files/ProteasomeDB.csv", stringsAsFactors = F, header = T)
-# words = read.csv("database-embedding/words.csv", stringsAsFactors = F, header = T)
-# weight_matrix = read.csv("database-embedding/seq2vec_weights.csv", stringsAsFactors = F, header = F)
-# indices = read.csv("database-embedding/seq2vec_ids.csv", stringsAsFactors = F, header = F)
-# TF_IDF = read.csv("database-embedding/TF_IDF.csv", stringsAsFactors = F, header = T)
-# params = read.csv("database-embedding/hyperparams.csv", stringsAsFactors = F, header = T)
+# sequences = read.csv("20_Predictor/INPUT/ProteasomeDB_all.csv", stringsAsFactors = F, header = T)
+# words = read.csv("20_Predictor/predictor-embedding/words.csv", stringsAsFactors = F, header = T)
+# weight_matrix = read.csv("20_Predictor/predictor-embedding/seq2vec_weights.csv", stringsAsFactors = F, header = F)
+# indices = read.csv("20_Predictor/predictor-embedding/seq2vec_ids.csv", stringsAsFactors = F, header = F)
+# TF_IDF = read.csv("20_Predictor/predictor-embedding/TF_IDF.csv", stringsAsFactors = F, header = T)
+# params = read.csv("20_Predictor/predictor-embedding/hyperparams.csv", stringsAsFactors = F, header = T)
 
 ### INPUT ###
 print("LOAD DATA")
@@ -55,13 +55,13 @@ indices = read.csv(file = snakemake@input[["ids"]], stringsAsFactors = F, header
 
 ### MAIN PART ###
 # multiprocessing
-cl <- makeCluster(as.numeric(params[which(params$parameter == "threads"), "value"]))
-registerDoParallel(cl)
-registerDoMC(as.numeric(params[which(params$parameter == "threads"), "value"]))
-
-# cl <- makeCluster(16)
+# cl <- makeCluster(as.numeric(params[which(params$parameter == "threads"), "value"]))
 # registerDoParallel(cl)
-# registerDoMC(16)
+# registerDoMC(as.numeric(params[which(params$parameter == "threads"), "value"]))
+
+cl <- makeCluster(8)
+registerDoParallel(cl)
+registerDoMC(cl)
 
 
 TF_IDF$token = toupper(TF_IDF$token)
@@ -83,7 +83,11 @@ weights = unique(weights)
 
 # combine sequences table with tokens file
 sequences.master = left_join(sequences, words)
-sequences.master = na.omit(sequences.master)
+sequences.master = unique(sequences.master)
+
+#sequences.master = sequences.master[-which(is.na(sequences.master$tokens)), ]
+
+# sequences.master = na.omit(sequences.master)
 
 # define function (that allows parallel searching) for tokens in weight matrix
 find_tokens = function(token = ""){
@@ -121,8 +125,11 @@ sequence.repres[, c(1:(dim_range[1]-1))] = sequences.master
 # iterate sequences in master table to get their representation
 
 print("RETRIEVING NUMERIC REPRESENTATION OF EVERY SEQUENCE")
+progressBar = txtProgressBar(min = 0, max = nrow(sequences.master), style = 3)
 
-sequence.repres = foreach(i = 1:nrow(sequences.master), .combine = "rbind") %dopar% {
+for(i in 1:nrow(sequences.master)) {
+  
+  setTxtProgressBar(progressBar, i)
   
   # build temporary table that contains all tokens and weights for the current sequences
   current_tokens = t(str_split(sequences.master$tokens[i], pattern = " ", simplify = T))
@@ -157,13 +164,13 @@ sequence.repres = foreach(i = 1:nrow(sequences.master), .combine = "rbind") %dop
 
 print("DONE")
 
-sequence.repres = cbind(sequences.master, sequence.repres)
+#sequence.repres = cbind(sequences.master, sequence.repres)
 
-sequence.repres = na.omit(sequence.repres)
+#sequence.repres = na.omit(sequence.repres)
 sequence.repres = unique(sequence.repres)
 
 ### OUTPUT ###
 # vector representation of sequences
-# write.csv(sequence.repres, file = "database-embedding/sequence_repres_TF-IDF.csv", row.names = F)
+# write.csv(sequence.repres, file = "20_Predictor/predictor-embedding/sequence_repres.csv", row.names = F)
 
 write.csv(sequence.repres, file = unlist(snakemake@output[["sequence_repres"]]), row.names = F)

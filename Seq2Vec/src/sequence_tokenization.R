@@ -45,7 +45,7 @@ ModelVocab = tibble::as_tibble(ModelVocab)
 ### MAIN PART ###
 print("BYTE-PAIR ENCODING")
 # peptide pair encoding
-#progressBar = txtProgressBar(min = 0, max = nrow(sequences), style = 3)
+progressBar = txtProgressBar(min = 0, max = nrow(sequences), style = 3)
 
 sequences.Encoded.list = list()
 
@@ -69,7 +69,7 @@ sequences.Encoded = as.data.frame(ldply(sequences.Encoded.list, rbind))
 colnames(sequences.Encoded) = c(colnames(sequences), "segmented_seq")
 
 print("FORMAT OUTPUT")
-sequences.Encoded = na.omit(sequences.Encoded)
+#sequences.Encoded = na.omit(sequences.Encoded)
 
 
 # format words: table with Accession and corresponding tokens separated by space
