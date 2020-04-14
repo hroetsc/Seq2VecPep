@@ -61,13 +61,9 @@ batchSize = int(params[params['parameter'] == 'batchSize']['value'])
 
 seqtype = params[params['parameter'] == 'Seqtype']['value']
 
-if seqtype == 'AA':
-    learning_rate = 0.004
-    adam_decay = 1e-06
-elif seqtype == 'RNA':
-    learning_rate = 0.004
-    adam_decay = 1e-06
 
+learning_rate = 0.004
+adam_decay = 1e-06
 
 # =============================================================================
 # split skip-grams into target, context and label np.array()

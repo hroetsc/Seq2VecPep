@@ -1,0 +1,690 @@
+### PROTEOME EMBEDDING USING SKIP-GRAM NEURAL NETWORK - 2 ###
+Using TensorFlow backend.
+2020-04-10 15:46:03.397453: W tensorflow/stream_executor/platform/default/dso_loader.cc:55] Could not load dynamic library 'libnvinfer.so.6'; dlerror: libnvinfer.so.6: cannot open shared object file: No such file or directory
+2020-04-10 15:46:03.397523: W tensorflow/stream_executor/platform/default/dso_loader.cc:55] Could not load dynamic library 'libnvinfer_plugin.so.6'; dlerror: libnvinfer_plugin.so.6: cannot open shared object file: No such file or directory
+2020-04-10 15:46:03.397531: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:30] Cannot dlopen some TensorRT libraries. If you would like to use Nvidia GPU with TensorRT, please make sure the missing libraries mentioned above are installed properly.
+LOAD DATA
+target word vector
+[2468 2468 2468 ... 2826    6   71]
+context word vector
+[ 455  455  358 ...    1 1062 1724]
+label vector (converted 0 to -1)
+[ 1  1  1 ... -1 -1 -1]
+vocabulary size (number of target word IDs + 1): 4179
+INITIALIZE HYPERPARAMETER OPTIMIZATION
+MODEL GENERATION
+2020-04-10 15:46:04.752234: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcuda.so.1
+2020-04-10 15:46:04.753507: E tensorflow/stream_executor/cuda/cuda_driver.cc:351] failed call to cuInit: CUDA_ERROR_NO_DEVICE: no CUDA-capable device is detected
+2020-04-10 15:46:04.753522: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:156] kernel driver does not appear to be running on this host (C3PO): /proc/driver/nvidia/version does not exist
+2020-04-10 15:46:04.753685: I tensorflow/core/platform/cpu_feature_guard.cc:142] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 FMA
+2020-04-10 15:46:04.777573: I tensorflow/core/platform/profile_utils/cpu_utils.cc:94] CPU Frequency: 3699505000 Hz
+2020-04-10 15:46:04.778227: I tensorflow/compiler/xla/service/service.cc:168] XLA service 0x55ef2c288e60 initialized for platform Host (this does not guarantee that XLA will be used). Devices:
+2020-04-10 15:46:04.778251: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): Host, Default Version
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 181s - loss: 0.8304 - accuracy: 0.2236 - val_loss: 0.4972 - val_accuracy: 0.4686
+Epoch 2/10
+ - 178s - loss: 0.6567 - accuracy: 0.5086 - val_loss: 0.5218 - val_accuracy: 0.5074
+Epoch 3/10
+ - 166s - loss: 0.6244 - accuracy: 0.5404 - val_loss: 0.5325 - val_accuracy: 0.5226
+Epoch 4/10
+:q!
+ - 177s - loss: 0.6039 - accuracy: 0.5600 - val_loss: 0.5419 - val_accuracy: 0.5331
+Epoch 5/10
+ - 178s - loss: 0.5884 - accuracy: 0.5754 - val_loss: 0.5522 - val_accuracy: 0.5419
+Epoch 6/10
+ - 167s - loss: 0.5758 - accuracy: 0.5882 - val_loss: 0.5676 - val_accuracy: 0.5488
+Epoch 7/10
+ - 179s - loss: 0.5657 - accuracy: 0.5988 - val_loss: 0.5838 - val_accuracy: 0.5541
+Epoch 8/10
+ - 170s - loss: 0.5566 - accuracy: 0.6084 - val_loss: 0.5990 - val_accuracy: 0.5587
+Epoch 9/10
+ - 176s - loss: 0.5492 - accuracy: 0.6164 - val_loss: 0.6143 - val_accuracy: 0.5630
+Epoch 10/10
+ - 180s - loss: 0.5425 - accuracy: 0.6235 - val_loss: 0.6298 - val_accuracy: 0.5667
+
+embedding size: 100 - learning rate: 0.001 - adam decay: 0.001 - input units: 64
+
+Accuracy: 56.67%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 623s - loss: 0.7649 - accuracy: 0.3535 - val_loss: 0.5453 - val_accuracy: 0.4993
+Epoch 2/10
+ - 624s - loss: 0.5926 - accuracy: 0.5856 - val_loss: 0.5348 - val_accuracy: 0.5380
+Epoch 3/10
+ - 638s - loss: 0.5471 - accuracy: 0.6266 - val_loss: 0.5291 - val_accuracy: 0.5626
+Epoch 4/10
+ - 627s - loss: 0.5175 - accuracy: 0.6549 - val_loss: 0.5260 - val_accuracy: 0.5782
+Epoch 5/10
+ - 623s - loss: 0.4961 - accuracy: 0.6759 - val_loss: 0.5251 - val_accuracy: 0.5889
+Epoch 6/10
+ - 624s - loss: 0.4795 - accuracy: 0.6925 - val_loss: 0.5221 - val_accuracy: 0.5970
+Epoch 7/10
+ - 624s - loss: 0.4662 - accuracy: 0.7055 - val_loss: 0.5194 - val_accuracy: 0.6038
+Epoch 8/10
+ - 776s - loss: 0.4549 - accuracy: 0.7164 - val_loss: 0.5172 - val_accuracy: 0.6092
+Epoch 9/10
+ - 746s - loss: 0.4455 - accuracy: 0.7254 - val_loss: 0.5146 - val_accuracy: 0.6140
+Epoch 10/10
+ - 776s - loss: 0.4373 - accuracy: 0.7333 - val_loss: 0.5117 - val_accuracy: 0.6180
+
+embedding size: 477 - learning rate: 0.00037953492569161765 - adam decay: 0.0010133707782574604 - input units: 226
+
+Accuracy: 61.80%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 195s - loss: 0.9839 - accuracy: 0.0426 - val_loss: 0.8980 - val_accuracy: 0.0000e+00
+Epoch 2/10
+ - 220s - loss: 0.9824 - accuracy: 0.0401 - val_loss: 0.8983 - val_accuracy: 0.0000e+00
+Epoch 3/10
+ - 218s - loss: 0.9813 - accuracy: 0.0391 - val_loss: 0.8989 - val_accuracy: 0.0000e+00
+Epoch 4/10
+ - 216s - loss: 0.9812 - accuracy: 0.0385 - val_loss: 0.8990 - val_accuracy: 0.0000e+00
+Epoch 5/10
+ - 191s - loss: 0.9810 - accuracy: 0.0379 - val_loss: 0.8991 - val_accuracy: 0.0000e+00
+Epoch 6/10
+ - 215s - loss: 0.9806 - accuracy: 0.0375 - val_loss: 0.8991 - val_accuracy: 0.0000e+00
+Epoch 7/10
+ - 218s - loss: 0.9809 - accuracy: 0.0373 - val_loss: 0.8993 - val_accuracy: 0.0000e+00
+Epoch 8/10
+ - 217s - loss: 0.9802 - accuracy: 0.0371 - val_loss: 0.8993 - val_accuracy: 0.0000e+00
+Epoch 9/10
+ - 196s - loss: 0.9804 - accuracy: 0.0368 - val_loss: 0.8993 - val_accuracy: 0.0000e+00
+Epoch 10/10
+ - 218s - loss: 0.9796 - accuracy: 0.0368 - val_loss: 0.8994 - val_accuracy: 0.0000e+00
+
+embedding size: 69 - learning rate: 0.00024083188386798534 - adam decay: 0.00759014851083345 - input units: 215
+
+Accuracy: 0.00%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 399s - loss: 0.7145 - accuracy: 0.4249 - val_loss: 0.6117 - val_accuracy: 0.5122
+Epoch 2/10
+ - 364s - loss: 0.5600 - accuracy: 0.6052 - val_loss: 0.5972 - val_accuracy: 0.5544
+Epoch 3/10
+ - 398s - loss: 0.4965 - accuracy: 0.6662 - val_loss: 0.5637 - val_accuracy: 0.5830
+Epoch 4/10
+ - 398s - loss: 0.4612 - accuracy: 0.7015 - val_loss: 0.5377 - val_accuracy: 0.6034
+Epoch 5/10
+ - 365s - loss: 0.4374 - accuracy: 0.7251 - val_loss: 0.5208 - val_accuracy: 0.6186
+Epoch 6/10
+ - 398s - loss: 0.4199 - accuracy: 0.7422 - val_loss: 0.5168 - val_accuracy: 0.6296
+Epoch 7/10
+ - 399s - loss: 0.4059 - accuracy: 0.7551 - val_loss: 0.5177 - val_accuracy: 0.6374
+Epoch 8/10
+ - 365s - loss: 0.3946 - accuracy: 0.7656 - val_loss: 0.5219 - val_accuracy: 0.6440
+Epoch 9/10
+ - 399s - loss: 0.3851 - accuracy: 0.7743 - val_loss: 0.5261 - val_accuracy: 0.6492
+Epoch 10/10
+ - 395s - loss: 0.3770 - accuracy: 0.7815 - val_loss: 0.5325 - val_accuracy: 0.6536
+
+embedding size: 239 - learning rate: 0.0026321141700632383 - adam decay: 0.001368725983049431 - input units: 95
+
+Accuracy: 65.36%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 130s - loss: 0.9830 - accuracy: 0.0393 - val_loss: 0.8863 - val_accuracy: 0.0000e+00
+Epoch 2/10
+ - 150s - loss: 0.9695 - accuracy: 0.0202 - val_loss: 0.8871 - val_accuracy: 0.0000e+00
+Epoch 3/10
+ - 150s - loss: 0.9663 - accuracy: 0.0152 - val_loss: 0.8879 - val_accuracy: 0.0000e+00
+Epoch 4/10
+ - 151s - loss: 0.9641 - accuracy: 0.0125 - val_loss: 0.8883 - val_accuracy: 0.0000e+00
+Epoch 5/10
+ - 145s - loss: 0.9632 - accuracy: 0.0106 - val_loss: 0.8885 - val_accuracy: 0.0000e+00
+Epoch 6/10
+ - 133s - loss: 0.9622 - accuracy: 0.0094 - val_loss: 0.8888 - val_accuracy: 0.0000e+00
+Epoch 7/10
+ - 151s - loss: 0.9615 - accuracy: 0.0085 - val_loss: 0.8888 - val_accuracy: 0.0000e+00
+Epoch 8/10
+ - 151s - loss: 0.9607 - accuracy: 0.0076 - val_loss: 0.8890 - val_accuracy: 0.0000e+00
+Epoch 9/10
+ - 149s - loss: 0.9603 - accuracy: 0.0070 - val_loss: 0.8891 - val_accuracy: 0.0000e+00
+Epoch 10/10
+ - 144s - loss: 0.9596 - accuracy: 0.0066 - val_loss: 0.8892 - val_accuracy: 0.0000e+00
+
+embedding size: 17 - learning rate: 0.0015763931405879913 - adam decay: 0.009504861101930455 - input units: 150
+
+Accuracy: 0.00%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 299s - loss: 0.9721 - accuracy: 0.0251 - val_loss: 0.8986 - val_accuracy: 0.0000e+00
+Epoch 2/10
+ - 334s - loss: 0.9696 - accuracy: 0.0226 - val_loss: 0.8993 - val_accuracy: 0.0000e+00
+Epoch 3/10
+ - 333s - loss: 0.9691 - accuracy: 0.0216 - val_loss: 0.8993 - val_accuracy: 0.0000e+00
+Epoch 4/10
+ - 334s - loss: 0.9692 - accuracy: 0.0207 - val_loss: 0.8994 - val_accuracy: 0.0000e+00
+Epoch 5/10
+ - 326s - loss: 0.9687 - accuracy: 0.0202 - val_loss: 0.8996 - val_accuracy: 0.0000e+00
+Epoch 6/10
+ - 296s - loss: 0.9683 - accuracy: 0.0200 - val_loss: 0.8999 - val_accuracy: 0.0000e+00
+Epoch 7/10
+ - 334s - loss: 0.9675 - accuracy: 0.0197 - val_loss: 0.9000 - val_accuracy: 0.0000e+00
+Epoch 8/10
+ - 334s - loss: 0.9676 - accuracy: 0.0195 - val_loss: 0.9002 - val_accuracy: 0.0000e+00
+Epoch 9/10
+ - 334s - loss: 0.9682 - accuracy: 0.0196 - val_loss: 0.9003 - val_accuracy: 0.0000e+00
+Epoch 10/10
+ - 329s - loss: 0.9678 - accuracy: 0.0191 - val_loss: 0.9002 - val_accuracy: 0.0000e+00
+
+embedding size: 104 - learning rate: 0.0003746040281022209 - adam decay: 0.006415773594807362 - input units: 218
+
+Accuracy: 0.00%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 824s - loss: 0.7219 - accuracy: 0.4141 - val_loss: 0.5005 - val_accuracy: 0.5097
+Epoch 2/10
+ - 858s - loss: 0.5687 - accuracy: 0.5999 - val_loss: 0.4644 - val_accuracy: 0.5480
+Epoch 3/10
+ - 813s - loss: 0.5109 - accuracy: 0.6556 - val_loss: 0.4681 - val_accuracy: 0.5733
+Epoch 4/10
+ - 865s - loss: 0.4763 - accuracy: 0.6919 - val_loss: 0.4819 - val_accuracy: 0.5927
+Epoch 5/10
+ - 817s - loss: 0.4529 - accuracy: 0.7168 - val_loss: 0.4963 - val_accuracy: 0.6076
+Epoch 6/10
+ - 864s - loss: 0.4354 - accuracy: 0.7348 - val_loss: 0.5090 - val_accuracy: 0.6197
+Epoch 7/10
+ - 865s - loss: 0.4213 - accuracy: 0.7487 - val_loss: 0.5200 - val_accuracy: 0.6295
+Epoch 8/10
+ - 809s - loss: 0.4100 - accuracy: 0.7594 - val_loss: 0.5284 - val_accuracy: 0.6367
+Epoch 9/10
+ - 851s - loss: 0.4003 - accuracy: 0.7686 - val_loss: 0.5347 - val_accuracy: 0.6427
+Epoch 10/10
+ - 803s - loss: 0.3920 - accuracy: 0.7761 - val_loss: 0.5407 - val_accuracy: 0.6479
+
+embedding size: 418 - learning rate: 0.006014988479823 - adam decay: 0.0029235864299744555 - input units: 146
+
+Accuracy: 64.79%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 732s - loss: 0.7600 - accuracy: 0.3572 - val_loss: 0.6279 - val_accuracy: 0.5021
+Epoch 2/10
+ - 736s - loss: 0.6056 - accuracy: 0.5682 - val_loss: 0.6375 - val_accuracy: 0.5338
+Epoch 3/10
+ - 687s - loss: 0.5645 - accuracy: 0.6092 - val_loss: 0.6509 - val_accuracy: 0.5559
+Epoch 4/10
+ - 735s - loss: 0.5369 - accuracy: 0.6376 - val_loss: 0.6679 - val_accuracy: 0.5729
+Epoch 5/10
+ - 736s - loss: 0.5163 - accuracy: 0.6596 - val_loss: 0.6841 - val_accuracy: 0.5851
+Epoch 6/10
+ - 688s - loss: 0.5002 - accuracy: 0.6767 - val_loss: 0.6994 - val_accuracy: 0.5941
+Epoch 7/10
+ - 734s - loss: 0.4870 - accuracy: 0.6905 - val_loss: 0.7128 - val_accuracy: 0.6009
+Epoch 8/10
+ - 737s - loss: 0.4760 - accuracy: 0.7019 - val_loss: 0.7247 - val_accuracy: 0.6066
+Epoch 9/10
+ - 688s - loss: 0.4668 - accuracy: 0.7112 - val_loss: 0.7343 - val_accuracy: 0.6115
+Epoch 10/10
+ - 736s - loss: 0.4587 - accuracy: 0.7193 - val_loss: 0.7429 - val_accuracy: 0.6157
+
+embedding size: 381 - learning rate: 0.0017554865504583494 - adam decay: 0.002508369241628288 - input units: 114
+
+Accuracy: 61.57%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 366s - loss: 0.9695 - accuracy: 0.0209 - val_loss: 0.8988 - val_accuracy: 0.0000e+00
+Epoch 2/10
+ - 366s - loss: 0.9682 - accuracy: 0.0193 - val_loss: 0.8990 - val_accuracy: 0.0000e+00
+Epoch 3/10
+ - 164s - loss: 0.9675 - accuracy: 0.0189 - val_loss: 0.8991 - val_accuracy: 0.0000e+00
+Epoch 4/10
+ - 166s - loss: 0.9675 - accuracy: 0.0184 - val_loss: 0.8991 - val_accuracy: 0.0000e+00
+Epoch 5/10
+ - 163s - loss: 0.9674 - accuracy: 0.0182 - val_loss: 0.8992 - val_accuracy: 0.0000e+00
+Epoch 6/10
+ - 168s - loss: 0.9669 - accuracy: 0.0179 - val_loss: 0.8992 - val_accuracy: 0.0000e+00
+Epoch 7/10
+ - 163s - loss: 0.9663 - accuracy: 0.0177 - val_loss: 0.8993 - val_accuracy: 0.0000e+00
+Epoch 8/10
+ - 168s - loss: 0.9668 - accuracy: 0.0175 - val_loss: 0.8993 - val_accuracy: 0.0000e+00
+Epoch 9/10
+ - 164s - loss: 0.9665 - accuracy: 0.0173 - val_loss: 0.8993 - val_accuracy: 0.0000e+00
+Epoch 10/10
+ - 167s - loss: 0.9664 - accuracy: 0.0173 - val_loss: 0.8993 - val_accuracy: 0.0000e+00
+
+embedding size: 121 - learning rate: 0.00015497868731129897 - adam decay: 0.0037431995100904543 - input units: 420
+
+Accuracy: 0.00%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 372s - loss: 0.9513 - accuracy: 0.0038 - val_loss: 0.8447 - val_accuracy: 0.0023
+Epoch 2/10
+ - 372s - loss: 0.9111 - accuracy: 0.0681 - val_loss: 0.6344 - val_accuracy: 0.1730
+Epoch 3/10
+ - 373s - loss: 0.8098 - accuracy: 0.2739 - val_loss: 0.5038 - val_accuracy: 0.3432
+Epoch 4/10
+ - 373s - loss: 0.7472 - accuracy: 0.3952 - val_loss: 0.4564 - val_accuracy: 0.4117
+Epoch 5/10
+ - 377s - loss: 0.7133 - accuracy: 0.4513 - val_loss: 0.4377 - val_accuracy: 0.4458
+Epoch 6/10
+ - 372s - loss: 0.6927 - accuracy: 0.4819 - val_loss: 0.4291 - val_accuracy: 0.4658
+Epoch 7/10
+ - 372s - loss: 0.6782 - accuracy: 0.5012 - val_loss: 0.4234 - val_accuracy: 0.4796
+Epoch 8/10
+ - 430s - loss: 0.6678 - accuracy: 0.5154 - val_loss: 0.4204 - val_accuracy: 0.4888
+Epoch 9/10
+ - 678s - loss: 0.6594 - accuracy: 0.5258 - val_loss: 0.4172 - val_accuracy: 0.4961
+Epoch 10/10
+ - 678s - loss: 0.6525 - accuracy: 0.5344 - val_loss: 0.4148 - val_accuracy: 0.5014
+
+embedding size: 351 - learning rate: 0.002661145849683857 - adam decay: 0.006443375127518831 - input units: 485
+
+Accuracy: 50.14%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 327s - loss: 0.9616 - accuracy: 0.0105 - val_loss: 0.9151 - val_accuracy: 0.0000e+00
+Epoch 2/10
+ - 321s - loss: 0.9582 - accuracy: 0.0099 - val_loss: 0.9251 - val_accuracy: 0.0000e+00
+Epoch 3/10
+ - 347s - loss: 0.9567 - accuracy: 0.0101 - val_loss: 0.9325 - val_accuracy: 0.0000e+00
+Epoch 4/10
+ - 347s - loss: 0.9550 - accuracy: 0.0109 - val_loss: 0.9385 - val_accuracy: 0.0000e+00
+Epoch 5/10
+ - 346s - loss: 0.9533 - accuracy: 0.0119 - val_loss: 0.9433 - val_accuracy: 0.0000e+00
+Epoch 6/10
+ - 299s - loss: 0.9513 - accuracy: 0.0132 - val_loss: 0.9478 - val_accuracy: 1.6012e-05
+Epoch 7/10
+ - 347s - loss: 0.9496 - accuracy: 0.0150 - val_loss: 0.9525 - val_accuracy: 0.0014
+Epoch 8/10
+ - 347s - loss: 0.9478 - accuracy: 0.0169 - val_loss: 0.9564 - val_accuracy: 0.0015
+Epoch 9/10
+ - 346s - loss: 0.9452 - accuracy: 0.0189 - val_loss: 0.9595 - val_accuracy: 0.0019
+Epoch 10/10
+ - 347s - loss: 0.9431 - accuracy: 0.0210 - val_loss: 0.9624 - val_accuracy: 0.0028
+
+embedding size: 120 - learning rate: 0.0010074124883280476 - adam decay: 0.00826345613627584 - input units: 101
+
+Accuracy: 0.28%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 162s - loss: 1.5523 - accuracy: 0.6115 - val_loss: 1.3333 - val_accuracy: 0.6140
+Epoch 2/10
+ - 209s - loss: 1.5475 - accuracy: 0.6131 - val_loss: 1.3333 - val_accuracy: 0.6140
+Epoch 3/10
+ - 208s - loss: 1.5475 - accuracy: 0.6131 - val_loss: 1.3333 - val_accuracy: 0.6140
+Epoch 4/10
+ - 209s - loss: 1.5475 - accuracy: 0.6131 - val_loss: 1.3333 - val_accuracy: 0.6140
+Epoch 5/10
+ - 210s - loss: 1.5475 - accuracy: 0.6131 - val_loss: 1.3333 - val_accuracy: 0.6140
+Epoch 6/10
+ - 209s - loss: 1.5475 - accuracy: 0.6131 - val_loss: 1.3333 - val_accuracy: 0.6140
+Epoch 7/10
+ - 162s - loss: 1.5475 - accuracy: 0.6131 - val_loss: 1.3333 - val_accuracy: 0.6140
+Epoch 8/10
+ - 210s - loss: 1.5475 - accuracy: 0.6131 - val_loss: 1.3333 - val_accuracy: 0.6140
+Epoch 9/10
+ - 208s - loss: 1.5475 - accuracy: 0.6131 - val_loss: 1.3333 - val_accuracy: 0.6140
+Epoch 10/10
+ - 209s - loss: 1.5475 - accuracy: 0.6131 - val_loss: 1.3333 - val_accuracy: 0.6140
+
+embedding size: 5 - learning rate: 0.01 - adam decay: 1e-06 - input units: 512
+
+Accuracy: 61.40%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 323s - loss: 0.7313 - accuracy: 0.4036 - val_loss: 0.5453 - val_accuracy: 0.5008
+Epoch 2/10
+ - 321s - loss: 0.6108 - accuracy: 0.5537 - val_loss: 0.5172 - val_accuracy: 0.5217
+Epoch 3/10
+ - 275s - loss: 0.5743 - accuracy: 0.5882 - val_loss: 0.5041 - val_accuracy: 0.5382
+Epoch 4/10
+ - 321s - loss: 0.5512 - accuracy: 0.6115 - val_loss: 0.5002 - val_accuracy: 0.5521
+Epoch 5/10
+ - 322s - loss: 0.5353 - accuracy: 0.6278 - val_loss: 0.4997 - val_accuracy: 0.5629
+Epoch 6/10
+ - 322s - loss: 0.5233 - accuracy: 0.6406 - val_loss: 0.5000 - val_accuracy: 0.5706
+Epoch 7/10
+ - 322s - loss: 0.5137 - accuracy: 0.6505 - val_loss: 0.4997 - val_accuracy: 0.5770
+Epoch 8/10
+ - 274s - loss: 0.5061 - accuracy: 0.6584 - val_loss: 0.4988 - val_accuracy: 0.5823
+Epoch 9/10
+ - 322s - loss: 0.4993 - accuracy: 0.6656 - val_loss: 0.4995 - val_accuracy: 0.5866
+Epoch 10/10
+ - 322s - loss: 0.4936 - accuracy: 0.6720 - val_loss: 0.4993 - val_accuracy: 0.5902
+
+embedding size: 100 - learning rate: 0.001 - adam decay: 0.001 - input units: 64
+
+Accuracy: 59.02%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 466s - loss: 0.9567 - accuracy: 0.0093 - val_loss: 0.8841 - val_accuracy: 0.0013
+Epoch 2/10
+ - 413s - loss: 0.9445 - accuracy: 0.0224 - val_loss: 0.8572 - val_accuracy: 0.0084
+Epoch 3/10
+ - 466s - loss: 0.9245 - accuracy: 0.0525 - val_loss: 0.8252 - val_accuracy: 0.0526
+Epoch 4/10
+ - 467s - loss: 0.9001 - accuracy: 0.0957 - val_loss: 0.7974 - val_accuracy: 0.1079
+Epoch 5/10
+ - 467s - loss: 0.8763 - accuracy: 0.1432 - val_loss: 0.7770 - val_accuracy: 0.1564
+Epoch 6/10
+ - 414s - loss: 0.8552 - accuracy: 0.1867 - val_loss: 0.7603 - val_accuracy: 0.1970
+Epoch 7/10
+ - 467s - loss: 0.8371 - accuracy: 0.2232 - val_loss: 0.7461 - val_accuracy: 0.2291
+Epoch 8/10
+ - 467s - loss: 0.8220 - accuracy: 0.2536 - val_loss: 0.7342 - val_accuracy: 0.2554
+Epoch 9/10
+ - 467s - loss: 0.8090 - accuracy: 0.2783 - val_loss: 0.7237 - val_accuracy: 0.2773
+Epoch 10/10
+ - 415s - loss: 0.7980 - accuracy: 0.2990 - val_loss: 0.7142 - val_accuracy: 0.2951
+
+embedding size: 206 - learning rate: 0.0007022717010587325 - adam decay: 0.005267182630358268 - input units: 392
+
+Accuracy: 29.51%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 696s - loss: 0.7301 - accuracy: 0.4195 - val_loss: 0.7500 - val_accuracy: 0.5039
+Epoch 2/10
+   - 698s - loss: 0.6042 - accuracy: 0.5722 - val_loss: 0.7873 - val_accuracy: 0.5256
+Epoch 3/10
+ - 500s - loss: 0.5743 - accuracy: 0.5981 - val_loss: 0.8166 - val_accuracy: 0.5421
+Epoch 4/10
+ - 470s - loss: 0.5548 - accuracy: 0.6165 - val_loss: 0.8377 - val_accuracy: 0.5535
+Epoch 5/10
+ - 473s - loss: 0.5398 - accuracy: 0.6312 - val_loss: 0.8550 - val_accuracy: 0.5623
+Epoch 6/10
+ - 462s - loss: 0.5279 - accuracy: 0.6430 - val_loss: 0.8692 - val_accuracy: 0.5691
+Epoch 7/10
+ - 481s - loss: 0.5182 - accuracy: 0.6530 - val_loss: 0.8804 - val_accuracy: 0.5748
+Epoch 8/10
+ - 462s - loss: 0.5101 - accuracy: 0.6612 - val_loss: 0.8900 - val_accuracy: 0.5793
+Epoch 9/10
+ - 481s - loss: 0.5027 - accuracy: 0.6684 - val_loss: 0.8969 - val_accuracy: 0.5834
+Epoch 10/10
+ - 461s - loss: 0.4964 - accuracy: 0.6751 - val_loss: 0.9030 - val_accuracy: 0.5867
+
+embedding size: 364 - learning rate: 0.0013854692453577034 - adam decay: 0.003759817990646451 - input units: 147
+
+Accuracy: 58.67%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 578s - loss: 0.7397 - accuracy: 0.3982 - val_loss: 0.5258 - val_accuracy: 0.5221
+Epoch 2/10
+ - 584s - loss: 0.5297 - accuracy: 0.6446 - val_loss: 0.5544 - val_accuracy: 0.5725
+Epoch 3/10
+ - 590s - loss: 0.4522 - accuracy: 0.7158 - val_loss: 0.6075 - val_accuracy: 0.6072
+Epoch 4/10
+ - 578s - loss: 0.4107 - accuracy: 0.7542 - val_loss: 0.6535 - val_accuracy: 0.6302
+Epoch 5/10
+ - 579s - loss: 0.3839 - accuracy: 0.7787 - val_loss: 0.6859 - val_accuracy: 0.6441
+Epoch 6/10
+ - 585s - loss: 0.3645 - accuracy: 0.7957 - val_loss: 0.7110 - val_accuracy: 0.6538
+Epoch 7/10
+ - 587s - loss: 0.3496 - accuracy: 0.8081 - val_loss: 0.7316 - val_accuracy: 0.6604
+Epoch 8/10
+ - 637s - loss: 0.3380 - accuracy: 0.8177 - val_loss: 0.7474 - val_accuracy: 0.6653
+Epoch 9/10
+ - 677s - loss: 0.3284 - accuracy: 0.8251 - val_loss: 0.7599 - val_accuracy: 0.6694
+Epoch 10/10
+ - 685s - loss: 0.3204 - accuracy: 0.8312 - val_loss: 0.7702 - val_accuracy: 0.6726
+
+embedding size: 426 - learning rate: 0.0002987077979357659 - adam decay: 0.00039463199265290757 - input units: 430
+
+Accuracy: 67.26%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 196s - loss: 0.9593 - accuracy: 0.0078 - val_loss: 0.9072 - val_accuracy: 0.0000e+00
+Epoch 2/10
+ - 173s - loss: 0.9512 - accuracy: 0.0020 - val_loss: 0.9177 - val_accuracy: 0.0000e+00
+Epoch 3/10
+ - 197s - loss: 0.9467 - accuracy: 0.0033 - val_loss: 0.9467 - val_accuracy: 0.0014
+Epoch 4/10
+ - 196s - loss: 0.9315 - accuracy: 0.0183 - val_loss: 0.9701 - val_accuracy: 0.0261
+Epoch 5/10
+ - 195s - loss: 0.8933 - accuracy: 0.0857 - val_loss: 0.9322 - val_accuracy: 0.1292
+Epoch 6/10
+ - 174s - loss: 0.8438 - accuracy: 0.1880 - val_loss: 0.8699 - val_accuracy: 0.2264
+Epoch 7/10
+ - 194s - loss: 0.8024 - accuracy: 0.2729 - val_loss: 0.8230 - val_accuracy: 0.2966
+Epoch 8/10
+ - 194s - loss: 0.7726 - accuracy: 0.3310 - val_loss: 0.7899 - val_accuracy: 0.3431
+Epoch 9/10
+ - 194s - loss: 0.7516 - accuracy: 0.3708 - val_loss: 0.7657 - val_accuracy: 0.3741
+Epoch 10/10
+ - 173s - loss: 0.7361 - accuracy: 0.3975 - val_loss: 0.7472 - val_accuracy: 0.3964
+
+embedding size: 48 - learning rate: 0.0007161060139852565 - adam decay: 0.0015948490910154376 - input units: 316
+
+Accuracy: 39.64%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 232s - loss: 0.9805 - accuracy: 0.0356 - val_loss: 0.8919 - val_accuracy: 0.0000e+00
+Epoch 2/10
+ - 230s - loss: 0.9786 - accuracy: 0.0331 - val_loss: 0.8916 - val_accuracy: 0.0000e+00
+Epoch 3/10
+ - 205s - loss: 0.9774 - accuracy: 0.0320 - val_loss: 0.8906 - val_accuracy: 0.0000e+00
+Epoch 4/10
+ - 229s - loss: 0.9769 - accuracy: 0.0314 - val_loss: 0.8903 - val_accuracy: 0.0000e+00
+Epoch 5/10
+ - 230s - loss: 0.9763 - accuracy: 0.0312 - val_loss: 0.8900 - val_accuracy: 0.0000e+00
+Epoch 6/10
+ - 230s - loss: 0.9764 - accuracy: 0.0305 - val_loss: 0.8904 - val_accuracy: 0.0000e+00
+Epoch 7/10
+ - 205s - loss: 0.9760 - accuracy: 0.0303 - val_loss: 0.8905 - val_accuracy: 0.0000e+00
+Epoch 8/10
+ - 231s - loss: 0.9756 - accuracy: 0.0301 - val_loss: 0.8904 - val_accuracy: 0.0000e+00
+Epoch 9/10
+ - 231s - loss: 0.9756 - accuracy: 0.0300 - val_loss: 0.8903 - val_accuracy: 0.0000e+00
+Epoch 10/10
+ - 225s - loss: 0.9751 - accuracy: 0.0299 - val_loss: 0.8903 - val_accuracy: 0.0000e+00
+
+embedding size: 84 - learning rate: 0.0001984012146708991 - adam decay: 0.005109860477164527 - input units: 168
+
+Accuracy: 0.00%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 431s - loss: 0.9422 - accuracy: 0.0098 - val_loss: 0.8573 - val_accuracy: 0.0497
+Epoch 2/10
+ - 455s - loss: 0.7980 - accuracy: 0.2607 - val_loss: 0.6882 - val_accuracy: 0.3759
+Epoch 3/10
+ - 431s - loss: 0.7152 - accuracy: 0.4365 - val_loss: 0.6578 - val_accuracy: 0.4456
+Epoch 4/10
+ - 469s - loss: 0.6835 - accuracy: 0.4851 - val_loss: 0.6529 - val_accuracy: 0.4708
+Epoch 5/10
+ - 439s - loss: 0.6659 - accuracy: 0.5083 - val_loss: 0.6530 - val_accuracy: 0.4849
+Epoch 6/10
+ - 470s - loss: 0.6540 - accuracy: 0.5225 - val_loss: 0.6537 - val_accuracy: 0.4933
+Epoch 7/10
+ - 469s - loss: 0.6452 - accuracy: 0.5321 - val_loss: 0.6538 - val_accuracy: 0.4999
+Epoch 8/10
+ - 465s - loss: 0.6379 - accuracy: 0.5400 - val_loss: 0.6544 - val_accuracy: 0.5048
+Epoch 9/10
+ - 512s - loss: 0.6319 - accuracy: 0.5463 - val_loss: 0.6554 - val_accuracy: 0.5092
+Epoch 10/10
+ - 477s - loss: 0.6265 - accuracy: 0.5515 - val_loss: 0.6571 - val_accuracy: 0.5128
+
+embedding size: 277 - learning rate: 0.002658876940180205 - adam decay: 0.006104201470222258 - input units: 86
+
+Accuracy: 51.28%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 885s - loss: 0.9546 - accuracy: 0.0035 - val_loss: 0.8977 - val_accuracy: 0.0013
+Epoch 2/10
+ - 857s - loss: 0.9538 - accuracy: 0.0038 - val_loss: 0.8973 - val_accuracy: 0.0013
+Epoch 3/10
+ - 899s - loss: 0.9538 - accuracy: 0.0038 - val_loss: 0.8971 - val_accuracy: 0.0013
+Epoch 4/10
+ - 861s - loss: 0.9540 - accuracy: 0.0038 - val_loss: 0.8969 - val_accuracy: 0.0013
+Epoch 5/10
+ - 864s - loss: 0.9540 - accuracy: 0.0039 - val_loss: 0.8968 - val_accuracy: 0.0013
+Epoch 6/10
+ - 897s - loss: 0.9535 - accuracy: 0.0039 - val_loss: 0.8967 - val_accuracy: 0.0013
+Epoch 7/10
+ - 860s - loss: 0.9537 - accuracy: 0.0040 - val_loss: 0.8967 - val_accuracy: 0.0013
+Epoch 8/10
+ - 899s - loss: 0.9536 - accuracy: 0.0040 - val_loss: 0.8966 - val_accuracy: 0.0013
+Epoch 9/10
+ - 867s - loss: 0.9535 - accuracy: 0.0040 - val_loss: 0.8966 - val_accuracy: 0.0013
+Epoch 10/10
+ - 869s - loss: 0.9536 - accuracy: 0.0039 - val_loss: 0.8965 - val_accuracy: 0.0013
+
+embedding size: 497 - learning rate: 0.00011883670715899709 - adam decay: 0.009513399864666502 - input units: 436
+
+Accuracy: 0.13%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 251s - loss: 0.9406 - accuracy: 0.0149 - val_loss: 0.9049 - val_accuracy: 0.0869
+Epoch 2/10
+ - 246s - loss: 0.7947 - accuracy: 0.2856 - val_loss: 0.7555 - val_accuracy: 0.3760
+Epoch 3/10
+ - 244s - loss: 0.7204 - accuracy: 0.4234 - val_loss: 0.7286 - val_accuracy: 0.4379
+Epoch 4/10
+ - 245s - loss: 0.6942 - accuracy: 0.4637 - val_loss: 0.7257 - val_accuracy: 0.4608
+Epoch 5/10
+ - 217s - loss: 0.6807 - accuracy: 0.4824 - val_loss: 0.7274 - val_accuracy: 0.4738
+Epoch 6/10
+ - 251s - loss: 0.6718 - accuracy: 0.4940 - val_loss: 0.7288 - val_accuracy: 0.4817
+Epoch 7/10
+ - 247s - loss: 0.6654 - accuracy: 0.5014 - val_loss: 0.7310 - val_accuracy: 0.4871
+Epoch 8/10
+ - 247s - loss: 0.6606 - accuracy: 0.5073 - val_loss: 0.7335 - val_accuracy: 0.4915
+Epoch 9/10
+ - 215s - loss: 0.6567 - accuracy: 0.5115 - val_loss: 0.7353 - val_accuracy: 0.4944
+Epoch 10/10
+ - 243s - loss: 0.6533 - accuracy: 0.5154 - val_loss: 0.7367 - val_accuracy: 0.4967
+
+embedding size: 80 - learning rate: 0.0029887817656710633 - adam decay: 0.0057244613034408915 - input units: 146
+
+Accuracy: 49.67%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 661s - loss: 0.7339 - accuracy: 0.4036 - val_loss: 0.4588 - val_accuracy: 0.5179
+Epoch 2/10
+ - 637s - loss: 0.5571 - accuracy: 0.6152 - val_loss: 0.4346 - val_accuracy: 0.5578
+Epoch 3/10
+ - 713s - loss: 0.4974 - accuracy: 0.6701 - val_loss: 0.4554 - val_accuracy: 0.5885
+Epoch 4/10
+ - 710s - loss: 0.4620 - accuracy: 0.7050 - val_loss: 0.4856 - val_accuracy: 0.6064
+Epoch 5/10
+ - 675s - loss: 0.4379 - accuracy: 0.7284 - val_loss: 0.5102 - val_accuracy: 0.6186
+Epoch 6/10
+ - 712s - loss: 0.4201 - accuracy: 0.7456 - val_loss: 0.5344 - val_accuracy: 0.6279
+Epoch 7/10
+ - 669s - loss: 0.4061 - accuracy: 0.7589 - val_loss: 0.5522 - val_accuracy: 0.6346
+Epoch 8/10
+ - 707s - loss: 0.3947 - accuracy: 0.7692 - val_loss: 0.5672 - val_accuracy: 0.6398
+Epoch 9/10
+ - 678s - loss: 0.3851 - accuracy: 0.7778 - val_loss: 0.5814 - val_accuracy: 0.6440
+Epoch 10/10
+ - 701s - loss: 0.3770 - accuracy: 0.7848 - val_loss: 0.5926 - val_accuracy: 0.6476
+
+embedding size: 393 - learning rate: 0.0004691768955337743 - adam decay: 0.0007683050598526541 - input units: 143
+
+Accuracy: 64.76%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 703s - loss: 0.7959 - accuracy: 0.2959 - val_loss: 0.4915 - val_accuracy: 0.4643
+Epoch 2/10
+ - 658s - loss: 0.6409 - accuracy: 0.5341 - val_loss: 0.4871 - val_accuracy: 0.5044
+Epoch 3/10
+ - 699s - loss: 0.6117 - accuracy: 0.5667 - val_loss: 0.4811 - val_accuracy: 0.5227
+Epoch 4/10
+ - 655s - loss: 0.5936 - accuracy: 0.5856 - val_loss: 0.4766 - val_accuracy: 0.5351
+Epoch 5/10
+ - 698s - loss: 0.5804 - accuracy: 0.5996 - val_loss: 0.4734 - val_accuracy: 0.5442
+Epoch 6/10
+ - 698s - loss: 0.5695 - accuracy: 0.6113 - val_loss: 0.4717 - val_accuracy: 0.5513
+Epoch 7/10
+ - 656s - loss: 0.5604 - accuracy: 0.6210 - val_loss: 0.4704 - val_accuracy: 0.5570
+Epoch 8/10
+ - 700s - loss: 0.5522 - accuracy: 0.6297 - val_loss: 0.4695 - val_accuracy: 0.5619
+Epoch 9/10
+ - 657s - loss: 0.5453 - accuracy: 0.6373 - val_loss: 0.4687 - val_accuracy: 0.5661
+Epoch 10/10
+ - 701s - loss: 0.5390 - accuracy: 0.6441 - val_loss: 0.4684 - val_accuracy: 0.5697
+
+embedding size: 383 - learning rate: 0.0025526178562002948 - adam decay: 0.00585307555686603 - input units: 283
+
+Accuracy: 56.97%
+
+/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/conda/f2a26d13/lib/python3.7/site-packages/tensorflow_core/python/framework/indexed_slices.py:433: UserWarning: Converting sparse IndexedSlices to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  "Converting sparse IndexedSlices to a dense Tensor of unknown shape. "
+Epoch 1/10
+ - 636s - loss: 0.7388 - accuracy: 0.3896 - val_loss: 0.5599 - val_accuracy: 0.5397
+Epoch 2/10
+ - 593s - loss: 0.4695 - accuracy: 0.6923 - val_loss: 0.5843 - val_accuracy: 0.6261
+Epoch 3/10
+ - 632s - loss: 0.3568 - accuracy: 0.7940 - val_loss: 0.5514 - val_accuracy: 0.6591
+Epoch 4/10
+ - 592s - loss: 0.3049 - accuracy: 0.8373 - val_loss: 0.5833 - val_accuracy: 0.6738
+Epoch 5/10
+ - 633s - loss: 0.2765 - accuracy: 0.8584 - val_loss: 0.6144 - val_accuracy: 0.6803
+Epoch 6/10
+ - 634s - loss: 0.2592 - accuracy: 0.8692 - val_loss: 0.6515 - val_accuracy: 0.6839
+Epoch 7/10
+ - 527s - loss: 0.2476 - accuracy: 0.8755 - val_loss: 0.6801 - val_accuracy: 0.6866
+Epoch 8/10
+ - 534s - loss: 0.2393 - accuracy: 0.8795 - val_loss: 0.6983 - val_accuracy: 0.6887
+Epoch 9/10
+ - 504s - loss: 0.2330 - accuracy: 0.8820 - val_loss: 0.7146 - val_accuracy: 0.6901
+Epoch 10/10
+ - 531s - loss: 0.2281 - accuracy: 0.8836 - val_loss: 0.7236 - val_accuracy: 0.6913
+
+embedding size: 310 - learning rate: 0.00017373431701625509 - adam decay: 5.475448031151005e-05 - input units: 389
+
+Accuracy: 69.13%
+
+PLOT GENERATION
+SAVE RESULTS
+result of gaussian process hyperparameter optimization
+[(-0.653568685054779, [239, 0.0026321141700632383, 0.001368725983049431, 95]), (-0.6478763818740845, [418, 0.006014988479823, 0.0029235864299744555, 146]), (-0.6179776787757874, [477, 0.00037953492569161765, 0.0010133707782574604, 226]), (-0.6157239675521851, [381, 0.0017554865504583494, 0.002508369241628288, 114]), (-0.6139706373214722, [5, 0.01, 1e-06, 512]), (-0.5666986703872681, [100, 0.001, 0.001, 64]), (-0.5014090538024902, [351, 0.002661145849683857, 0.006443375127518831, 485]), (-0.002750090090557933, [120, 0.0010074124883280476, 0.00826345613627584, 101]), (-0.0, [17, 0.0015763931405879913, 0.009504861101930455, 150]), (-0.0, [69, 0.00024083188386798534, 0.00759014851083345, 215]), (-0.0, [104, 0.0003746040281022209, 0.006415773594807362, 218]), (-0.0, [121, 0.00015497868731129897, 0.0037431995100904543, 420])]
+result of gradient boosted regression trees hyperparameter optimization
+[(-0.69130939245224, [310, 0.00017373431701625509, 5.475448031151005e-05, 389]), (-0.6725711822509766, [426, 0.0002987077979357659, 0.00039463199265290757, 430]), (-0.6476202011108398, [393, 0.0004691768955337743, 0.0007683050598526541, 143]), (-0.5902085304260254, [100, 0.001, 0.001, 64]), (-0.5866858959197998, [364, 0.0013854692453577034, 0.003759817990646451, 147]), (-0.569724977016449, [383, 0.0025526178562002948, 0.00585307555686603, 283]), (-0.5127977132797241, [277, 0.002658876940180205, 0.006104201470222258, 86]), (-0.4967014789581299, [80, 0.0029887817656710633, 0.0057244613034408915, 146]), (-0.39644530415534973, [48, 0.0007161060139852565, 0.0015948490910154376, 316]), (-0.2950722575187683, [206, 0.0007022717010587325, 0.005267182630358268, 392]), (-0.001345022232271731, [497, 0.00011883670715899709, 0.009513399864666502, 436]), (-0.0, [84, 0.0001984012146708991, 0.005109860477164527, 168])]
+[Sat Apr 11 20:54:31 2020]
+Finished job 1.
+1 of 2 steps (50%) done
+
+[Sat Apr 11 20:54:31 2020]
+localrule all:
+    input: results/hyperopt_gp.csv, results/hyperopt_gbrt.csv, results/conv_gp.png, results/conv_gbrt.png, results/obj_gp.png, results/obj_gbrt.png
+    jobid: 0
+
+[Sat Apr 11 20:54:31 2020]
+Finished job 0.
+2 of 2 steps (100%) done
+Complete log: /home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/ProtOpt/.snakemake/log/2020-04-10T154557.293902.snakemake.log
