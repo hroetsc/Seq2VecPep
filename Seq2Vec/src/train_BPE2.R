@@ -15,6 +15,7 @@ library(seqinr)
 library(berryFunctions)
 library(tokenizers.bpe)
 
+
 ### INPUT ###
 # load arguments
 params = read.csv(snakemake@input[["params"]], stringsAsFactors = F, header = T)
@@ -31,7 +32,7 @@ if(threads > 8){
 
 
 ### MAIN PART ###
-# train BPE model
+# train BPE model and save it
 bpeModel = bpe(snakemake@input[["conc_UniProt"]],
                coverage = 0.999,
                vocab_size = vocab_size,

@@ -6,6 +6,8 @@
 # author:       HR
 
 print("### PROTEOME EMBEDDING USING SKIP-GRAM NEURAL NETWORK - 1 ###")
+
+
 import os
 import sys
 import re
@@ -50,6 +52,7 @@ gc.enable()
 words = pd.read_csv(snakemake.input['words'], header = 0)
 params = pd.read_csv(snakemake.input['params'], header = 0)
 
+
 # =============================================================================
 # # HYPERPARAMETERS
 # =============================================================================
@@ -79,13 +82,18 @@ id2word = {v:k for k, v in word2id.items()}
 print('CONVERT WORDS TO IDs')
 wids = [[word2id[w] for w in text.text_to_word_sequence(token)] for token in words['tokens']]
 no_of_sequences = len(wids)
+
 print("number of sequences / batches: {}".format(no_of_sequences))
 vocab_size = len(word2id.keys())
+
 print("vocabulary size: {}".format(vocab_size))
+
+
 
 print('GENERATE SKIP-GRAMS')
 n_batches = no_of_sequences
 print("skip-grams are calculated in batches (equivalent to sequences)")
+
 
 # parallel processing
 # generate skip-grams for every sequence independently
@@ -97,11 +105,9 @@ if __name__ == "__main__":
 print('done with generating skip-grams')
 
 
+
 print("SAVE WORD-IDS")
 
 # save corresponding IDs
 ids = pd.DataFrame(word2id.items())
 pd.DataFrame.to_csv(ids, snakemake.output['ids'], header=False, index = False)
-
-#pool.close() # to save memory
-#pool.join()

@@ -1,8 +1,8 @@
 ### HEADER ###
 # PROTEIN/TRANSCRIPT EMBEDDING FOR ML/DEEP LEARNING
 # description:  segment sequences into variable length fragments using byte-pair encoding algorithm
-# input:        dataset with sequences
-# output:       encoded sequences, tokens('words') for seq2vec
+# input:        dataset with sequences (have to contain the columns 'seqs' and 'Accession')
+# output:       encoded sequences, tokens('words') for Seq2Vec
 # author:       HR
 
 print("### TOKENIZATION OF PROTEOME USING BYTE-PAIR ENCODING ALGORITHM ###")
@@ -16,13 +16,9 @@ library(seqinr)
 library(berryFunctions)
 library(tokenizers.bpe)
 
-library(foreach)
-library(doParallel)
-library(doMC)
-
 
 ### INPUT ###
-# load sequence datasets
+# load sequence dataset
 params = read.csv(snakemake@input[["params"]], stringsAsFactors = F, header = T)
 sequences = read.csv(file = params[which(params$parameter == "Seqinput"), "value"],
                      stringsAsFactors = F, header = T)
@@ -33,21 +29,18 @@ threads = as.numeric(params[which(params$parameter == "threads"), "value"])
 
 bpeModel = bpe_load_model(snakemake@input[["BPE_model"]],
                           threads = threads)
+
+# store byte-pair encoding vocabulary
 ModelVocab = bpeModel$vocabulary
 ModelVocab = tibble::as_tibble(ModelVocab)
-
-# multiprocessing
-#cl <- makeCluster(as.numeric(params[which(params$parameter == "threads"), "value"]))
-#registerDoParallel(cl)
-#registerDoMC(as.numeric(params[which(params$parameter == "threads"), "value"]))
 
 
 ### MAIN PART ###
 print("BYTE-PAIR ENCODING")
-# peptide pair encoding
-progressBar = txtProgressBar(min = 0, max = nrow(sequences), style = 3)
 
 sequences.Encoded.list = list()
+
+progressBar = txtProgressBar(min = 0, max = nrow(sequences), style = 3)
 
 for(n in 1:nrow(sequences)){
   setTxtProgressBar(progressBar, n)
@@ -68,17 +61,17 @@ for(n in 1:nrow(sequences)){
 sequences.Encoded = as.data.frame(ldply(sequences.Encoded.list, rbind))
 colnames(sequences.Encoded) = c(colnames(sequences), "segmented_seq")
 
-print("FORMAT OUTPUT")
-#sequences.Encoded = na.omit(sequences.Encoded)
 
+print("CONCATENATE TOKENS")
 
 # format words: table with Accession and corresponding tokens separated by space
-sequences.Encoded.split = split.data.frame(sequences.Encoded, sequences.Encoded$Accession)
-words = matrix(ncol = 2, nrow = length(sequences.Encoded.split))
+words = matrix(ncol = 2, nrow = length(sequences.Encoded.list))
 
-for (i in 1:length(sequences.Encoded.split)) {
-  words[i, 1] = as.character(sequences.Encoded.split[[i]][1, "Accession"])
-  words[i, 2] = paste(sequences.Encoded.split[[i]][, "segmented_seq"], sep = "", collapse = " ")
+for (i in 1:length(sequences.Encoded.list)) {
+  # pick accession
+  words[i, 1] = as.character(sequences.Encoded.list[[i]][1, 1])
+  # pick tokens
+  words[i, 2] = paste(sequences.Encoded.list[[i]][, 3], sep = "", collapse = " ")
 }
 colnames(words) = c("Accession", "tokens")
 words = as.data.frame(words)
@@ -96,7 +89,7 @@ if (length(which(sort <= 1)) > 0) {
   words = words[-which(sort <= 1),]
 }
 
-print("randomize sequence order")
+print("RANDOMIZE SEQUENCE ORDER")
 # randomly shuffle sequences to make downstream model training more robust
 words = words[sample(nrow(words)), ]
 

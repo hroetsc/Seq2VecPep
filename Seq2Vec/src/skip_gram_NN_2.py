@@ -59,11 +59,27 @@ epochs = int(params[params['parameter'] == 'epochs']['value'])
 valSplit = float(params[params['parameter'] == 'valSplit']['value'])
 batchSize = int(params[params['parameter'] == 'batchSize']['value'])
 
-seqtype = params[params['parameter'] == 'Seqtype']['value']
+seqtype = str(params[params['parameter'] == 'Seqtype']['value'])
 
+# this is still not really working, but can be postponed
+if seqtype == 'AA':
+    learning_rate = 0.0026
+    adam_decay = 0.0014
+    units = 95
+    
+elif seqtype == 'RNA':
+    learning_rate = 0.0017
+    adam_decay = 0.0008
+    units = 47
 
-learning_rate = 0.004
-adam_decay = 1e-06
+# take default embedding dimensions if not specified
+if embeddingDim == 0:
+    if seqtype == 'AA':
+        embeddingDim = 239
+        
+    elif seqtype == 'RNA':
+        embeddingDim = 500
+        
 
 # =============================================================================
 # split skip-grams into target, context and label np.array()
@@ -85,6 +101,7 @@ Y = Y.reshape(Y.shape[0],)
 Y = np.where(Y == 0, -1, Y)
 print(Y)
 
+# get vocabulary size
 vocab_size = len(ids.index) + 1
 print("vocabulary size (number of target word IDs + 1): {}".format(vocab_size))
 
@@ -115,16 +132,20 @@ dot_product = dot([target, context], axes = 1, normalize = True, name = 'dot_pro
 dot_product = Reshape((1,))(dot_product)
 
 # add dense layers
-output = Dense(64, activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(dot_product)
-output = Dropout(0.5)(output)
-output = Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='2nd_dense')(output)
+x = Dense(64, activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(dot_product)
+x = Dropout(0.5)(x)
+output = Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='2nd_dense')(x)
 
 
 # create the primary training model
 model = Model(inputs=[input_target, input_context], outputs=output)
 
-adam = Adam(lr=learning_rate, decay=adam_decay)
-model.compile(loss='squared_hinge', optimizer=adam, metrics=['accuracy'])
+# this is still not properly figured out
+#adam = Adam(lr=learning_rate, decay=adam_decay)
+#model.compile(loss='squared_hinge', optimizer=adam, metrics=['accuracy'])
+
+# for testing, do not specify adam decay and learning rate
+model.compile(loss='squared_hinge', optimizer = 'adam', metrics=['accuracy'])
 
 # view model summary
 print(model.summary())
@@ -172,7 +193,7 @@ fit = model.fit_generator(generator = train_generator,
                     validation_data = test_generator,
                     epochs = epochs,
                     initial_epoch = 0,
-                    verbose=2,
+                    verbose = 2,
                     max_queue_size = 1,
                     workers = workers,
                     use_multiprocessing = False,
@@ -202,5 +223,6 @@ m = open(snakemake.output['metrics'], 'w')
 m.write("accuracy \t {} \n val_accuracy \t {} \n loss \t {} \n val_loss \t {}".format(fit.history['accuracy'], fit.history['val_accuracy'], fit.history['loss'], fit.history['val_loss']))
 m.close()
 
+# clear session
 K.clear_session()
 tf.compat.v1.reset_default_graph()

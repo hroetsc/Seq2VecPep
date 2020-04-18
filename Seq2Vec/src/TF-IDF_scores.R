@@ -15,10 +15,13 @@ words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header
 
 ### MAIN PART ###
 print("using tidytext approach")
+
+
 print("calculating term frequency - number of occurences of each token in each protein")
 words = unnest_tokens(tbl = words, output = token, input = tokens) %>% # split data frame so that every token gets one row
   count(Accession, token, sort = F) %>% # count how often every token occurs in the same protein (term frequency)
   ungroup() # print it line by line
+
 
 print("calculating document frequency - in how many proteins does each token occur?")
 doc_freq = words %>%
@@ -28,6 +31,7 @@ doc_freq = words %>%
 words = left_join(words, doc_freq)
 # 'words' has the structure one-row-per-token-per-protein
 # n are protein token (document term) counts
+
 
 print("calculating term frequency - document inverse frequency")
 TF_IDF = words %>% bind_tf_idf(term = token, document = Accession, n)

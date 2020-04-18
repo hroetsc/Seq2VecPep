@@ -1,12 +1,12 @@
 parameter,value
 threads,16
 Seqtype,AA
-Seqinput,data/red_proteome_mouse.csv
+Seqinput,data/opt_proteome_mouse.csv
 BPEinput,data/SwissProt_canonical.fasta
 BPEvocab,5000
-keep,0.5
-negSkipgrams,0.7
-windowSize,10
+keep,1
+negSkipgrams,1
+windowSize,15
 embedding,100
 epochs,100
 valSplit,0.2
