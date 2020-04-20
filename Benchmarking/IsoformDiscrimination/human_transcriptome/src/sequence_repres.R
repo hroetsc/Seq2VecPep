@@ -32,6 +32,15 @@ TF_IDF = read.csv(file = snakemake@input[["TF_IDF"]], stringsAsFactors = F, head
 # tokens
 words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header = T)
 
+### tmp for old words.csv formation ###
+for (w in 1:nrow(words)){
+  tmp = str_split(words$tokens[w], coll("("), simplify = T)[,2]
+  tmp = str_split(tmp, coll(")"), simplify = T)[,1]
+  tmp = t(str_split(tmp, coll(","), simplify = T))
+  tmp = paste(str_split_fixed(tmp, coll('"'), Inf)[,2], collapse = " ")
+  words$tokens[w] = tmp
+}
+
 ### MAIN PART ###
 input = snakemake@input[["weights"]]
 
@@ -114,7 +123,11 @@ foreach(i = 1:length(input)) %dopar% {
     
     # build temporary table that contains all tokens and weights for the current sequences
     current_tokens = tokens[i,] %>% as.vector() %>% na.omit()
-    current_tokens = current_tokens[-which(current_tokens == "")]
+    if(!ncol(current_tokens[-which(current_tokens == "")]) == 0){
+      current_tokens = current_tokens[-which(current_tokens == "")]
+      
+    }
+    
     
     tmp = as.data.frame(matrix(ncol = ncol(weights)-2, nrow = length(current_tokens)))
     tmp[, "token"] = t(current_tokens)

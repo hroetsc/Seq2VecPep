@@ -114,7 +114,10 @@ sequence.repres = foreach (i = 1:nrow(sequences.master), .combine = "rbind") %do
   
   # build temporary table that contains all tokens and weights for the current sequences
   current_tokens = tokens[i,] %>% as.vector() %>% na.omit()
-  current_tokens = current_tokens[-which(current_tokens == "")]
+  if(!ncol(current_tokens[-which(current_tokens == "")]) == 0){
+    current_tokens = current_tokens[-which(current_tokens == "")]
+    
+  }
   
   tmp = as.data.frame(matrix(ncol = ncol(weights)-2, nrow = length(current_tokens)))
   tmp[, "token"] = t(current_tokens)
