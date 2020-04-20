@@ -1,0 +1,28 @@
+shell.executable("/bin/bash")
+
+singularity: "docker://continuumio/miniconda3:4.5.4"
+
+import pandas as pd
+import os, multiprocessing
+import yaml
+from snakemake import utils
+from snakemake.utils import min_version
+from snakemake import logging
+
+min_version("5.0")
+shell.prefix("set -euo pipefail;")
+
+features = yaml.load(open("features.yaml", "r+"), Loader=yaml.FullLoader)
+
+snakefiles = "src/"
+include: snakefiles + "tokens.py"
+include: snakefiles + "seq2vec.py"
+include: snakefiles + "compare.py"
+
+rule all:
+    input:
+        sequence_repres = expand('results/sequence_repres_{sample}.csv',
+                                sample = features["params"]),
+        syntax = features["data"]["true_syntax"],
+        similarity = expand('results/similarity_{sample}.csv',
+                                sample = features["params"])

@@ -1,0 +1,42 @@
+shell.executable("/bin/bash")
+
+singularity: "docker://continuumio/miniconda3:4.5.4"
+
+import pandas as pd
+import os, multiprocessing
+import yaml
+from snakemake import utils
+from snakemake.utils import min_version
+from snakemake import logging
+
+min_version("5.0")
+shell.prefix("set -euo pipefail;")
+
+features = yaml.load(open("features.yaml", "r+"), Loader=yaml.FullLoader)
+
+snakefiles = "src/"
+include: snakefiles + "embedding.py"
+include: snakefiles + "postprocessing.py"
+include: snakefiles + "similarity.py"
+include: snakefiles + "evaluation.py"
+
+rule all:
+    input:
+        syntax_heatmap = expand('similarity/plots/{sample}_syntax.png',
+                            sample = features["final"]),
+        semantics_heatmap_MF = expand('similarity/plots/{sample}_semantics_MF.png',
+                            sample = features["final"]),
+        semantics_heatmap_BP = expand('similarity/plots/{sample}_semantics_BP.png',
+                            sample = features["final"]),
+        semantics_heatmap_CC = expand('similarity/plots/{sample}_semantics_CC.png',
+                            sample = features["final"]),
+        scores = expand('similarity/scores/{sample}.txt',
+                            sample = features["final"]),
+        syntax_diff = expand('similarity/matrices/{sample}_syntax.csv',
+                            sample = features["final"]),
+        semantics_diff_MF = expand('similarity/matrices/{sample}_semantics_MF.csv',
+                            sample = features["final"]),
+        semantics_diff_BP = expand('similarity/matrices/{sample}_semantics_BP.csv',
+                            sample = features["final"]),
+        semantics_diff_CC = expand('similarity/matrices/{sample}_semantics_CC.csv',
+                            sample = features["final"])
