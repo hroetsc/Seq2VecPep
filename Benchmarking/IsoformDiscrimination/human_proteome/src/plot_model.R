@@ -22,8 +22,8 @@ registerDoMC(detectCores())
 
 input = snakemake@input[["metrics"]]
 
-foreach(i = 1:length(input)) %dopar% {
-  metrics = read.table(snakemake@input[["metrics"]][i], stringsAsFactors = F)
+foreach(j = 1:length(input)) %dopar% {
+  metrics = read.table(snakemake@input[["metrics"]][j], stringsAsFactors = F)
   
   ### MAIN PART ###
   # clean input table
@@ -75,7 +75,7 @@ foreach(i = 1:length(input)) %dopar% {
   l
   
   ### OUTPUT ###
-  ggsave(filename = unlist(snakemake@output[["acc"]][i]), plot = a, device = "png", dpi = "retina")
-  ggsave(filename = unlist(snakemake@output[["loss"]][i]), plot = l, device = "png", dpi = "retina")
+  ggsave(filename = unlist(snakemake@output[["acc"]][j]), plot = a, device = "png", dpi = "retina")
+  ggsave(filename = unlist(snakemake@output[["loss"]][j]), plot = l, device = "png", dpi = "retina")
   
 }

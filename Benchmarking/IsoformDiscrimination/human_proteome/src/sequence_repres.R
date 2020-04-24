@@ -45,13 +45,14 @@ for (w in 1:nrow(words)){
 ### MAIN PART ###
 input = snakemake@input[["weights"]]
 
-foreach(i = 1:length(input)) %dopar% {
+foreach (j = 1:length(input)) %dopar% {
   ### INPUT ###
   # weight matrix
-  weight_matrix = read.csv(file = snakemake@input[["weights"]][i], stringsAsFactors = F, header = F)
+  weight_matrix = read.csv(file = snakemake@input[["weights"]][j], stringsAsFactors = F, header = F)
   # corresponding subwords
-  indices = read.csv(file = snakemake@input[["ids"]][i], stringsAsFactors = F, header = F)
+  indices = read.csv(file = snakemake@input[["ids"]][j], stringsAsFactors = F, header = F)
   
+  print(input[j])
   
   ### MAIN PART ###
   # assign tokens to weight matrix
@@ -167,7 +168,7 @@ foreach(i = 1:length(input)) %dopar% {
   
   ### OUTPUT ###
   # vector representation of sequences
-  write.csv(sequence.repres, file = unlist(snakemake@output[["sequence_repres"]][i]),
+  write.csv(sequence.repres, file = unlist(snakemake@output[["sequence_repres"]][j]),
             row.names = F)
   
 }

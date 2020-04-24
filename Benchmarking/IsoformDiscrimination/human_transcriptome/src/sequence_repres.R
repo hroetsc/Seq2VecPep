@@ -32,6 +32,7 @@ TF_IDF = read.csv(file = snakemake@input[["TF_IDF"]], stringsAsFactors = F, head
 # tokens
 words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header = T)
 
+
 ### tmp for old words.csv formation ###
 for (w in 1:nrow(words)){
   tmp = str_split(words$tokens[w], coll("("), simplify = T)[,2]
@@ -44,13 +45,14 @@ for (w in 1:nrow(words)){
 ### MAIN PART ###
 input = snakemake@input[["weights"]]
 
-foreach(i = 1:length(input)) %dopar% {
+foreach (j = 1:length(input)) %dopar% {
   ### INPUT ###
   # weight matrix
-  weight_matrix = read.csv(file = snakemake@input[["weights"]][i], stringsAsFactors = F, header = F)
+  weight_matrix = read.csv(file = snakemake@input[["weights"]][j], stringsAsFactors = F, header = F)
   # corresponding subwords
-  indices = read.csv(file = snakemake@input[["ids"]][i], stringsAsFactors = F, header = F)
+  indices = read.csv(file = snakemake@input[["ids"]][j], stringsAsFactors = F, header = F)
   
+  print(input[j])
   
   ### MAIN PART ###
   # assign tokens to weight matrix
@@ -112,7 +114,7 @@ foreach(i = 1:length(input)) %dopar% {
   # get number of dimensions
   dim_range = c(ncol(sequences.master)+1, ncol(sequences.master)+ncol(weights)-2)
   sequence.repres = matrix(nrow = nrow(sequences.master),
-                           ncol = length(c(dim_range[1], dim_range[2])))
+                           ncol = length(c(dim_range[1]:dim_range[2])))
   
   # split tokens into columns
   tokens = str_split_fixed(sequences.master$tokens, pattern = coll(" "), Inf) %>% as.data.frame()
@@ -123,11 +125,10 @@ foreach(i = 1:length(input)) %dopar% {
     
     # build temporary table that contains all tokens and weights for the current sequences
     current_tokens = tokens[i,] %>% as.vector() %>% na.omit()
-    if(!ncol(current_tokens[-which(current_tokens == "")]) == 0){
+    if(!ncol(current_tokens[which(current_tokens == "")]) == 0){
       current_tokens = current_tokens[-which(current_tokens == "")]
       
     }
-    
     
     tmp = as.data.frame(matrix(ncol = ncol(weights)-2, nrow = length(current_tokens)))
     tmp[, "token"] = t(current_tokens)
@@ -167,7 +168,7 @@ foreach(i = 1:length(input)) %dopar% {
   
   ### OUTPUT ###
   # vector representation of sequences
-  write.csv(sequence.repres, file = unlist(snakemake@output[["sequence_repres"]][i]),
+  write.csv(sequence.repres, file = unlist(snakemake@output[["sequence_repres"]][j]),
             row.names = F)
   
 }
