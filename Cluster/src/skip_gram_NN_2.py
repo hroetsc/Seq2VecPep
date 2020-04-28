@@ -19,7 +19,6 @@ import keras
 from keras.models import Model
 from keras.layers import Dense, Dropout
 from keras.optimizers import RMSprop
-from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.core import Dense, Reshape
 from keras.layers.embeddings import Embedding
 from keras.layers import Dot, concatenate, merge, dot
@@ -28,9 +27,12 @@ from keras.engine import input_layer
 
 from keras.callbacks.callbacks import EarlyStopping
 from keras.utils import Sequence
+# deprecated
+from keras.utils.training_utils import multi_gpu_model
 
 import tensorflow as tf
-from tensorflow.keras import layers
+from tf.keras import layers
+from tf.distribute import MirroredStrategy
 from keras import backend as K
 
 from sklearn.model_selection import train_test_split
@@ -42,7 +44,7 @@ gc.enable()
 # # INPUT
 # =============================================================================
 print("LOAD DATA")
-params = pd.read_csv(snakemake.input['params'], header = 0)
+
 skip_grams = pd.read_csv(snakemake.input['skip_grams'], sep = " ", header = None)
 ids = pd.read_csv(snakemake.input['ids'], header = None)
 
@@ -50,31 +52,13 @@ ids = pd.read_csv(snakemake.input['ids'], header = None)
 # # HYPERPARAMETERS
 # =============================================================================
 
-workers = int(params[params['parameter'] == 'threads']['value'])
+GPUs = 30
 
-embeddingDim = int(params[params['parameter'] == 'embedding']['value'])
-epochs = int(params[params['parameter'] == 'epochs']['value'])
+embeddingDim = 100
+epochs = 500
 
-valSplit = float(params[params['parameter'] == 'valSplit']['value'])
-batchSize = int(params[params['parameter'] == 'batchSize']['value'])
-
-seqtype = str(params[params['parameter'] == 'Seqtype']['value'])
-
-# this is still not really working, but can be postponed
-if seqtype == 'AA':
-    units = 95
-
-elif seqtype == 'RNA':
-    units = 47
-
-# take default embedding dimensions if not specified
-if embeddingDim == 0:
-    if seqtype == 'AA':
-        embeddingDim = 239
-
-    elif seqtype == 'RNA':
-        embeddingDim = 500
-
+valSplit = 0.1
+batchSize = 32
 
 # =============================================================================
 # split skip-grams into target, context and label np.array()
@@ -135,11 +119,18 @@ output = Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='
 # create the primary training model
 model = Model(inputs=[input_target, input_context], outputs=output)
 
-# for testing, do not specify adam decay and learning rate
+### train on GPUs
+model = multi_gpu_model(model, gpus = GPUs)
+
+
+# do not specify adam decay and learning rate
 model.compile(loss='squared_hinge', optimizer = 'adam', metrics=['accuracy'])
 
 # view model summary
 print(model.summary())
+
+
+
 
 # =============================================================================
 # # TRAINING
@@ -178,15 +169,15 @@ print("generating batches for model training")
 train_generator = BatchGenerator(target_train, context_train, Y_train, batchSize)
 test_generator = BatchGenerator(target_test, context_test, Y_test, batchSize)
 
-# fit model
-print("fit the model")
-
 # early stopping if model is already converged
 es = EarlyStopping(monitor = 'accuracy',
                     mode = 'max',
                     patience = 10,
                     min_delta = 0.005,
                     verbose = 1)
+
+# fit model
+print("fit the model")
 
 fit = model.fit_generator(generator = train_generator,
                     validation_data = test_generator,

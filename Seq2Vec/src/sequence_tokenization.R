@@ -71,7 +71,8 @@ for (i in 1:length(sequences.Encoded.list)) {
   # pick accession
   words[i, 1] = as.character(sequences.Encoded.list[[i]][1, 1])
   # pick tokens
-  words[i, 2] = sequences.Encoded.list[[i]]$V3 %>% as.vector() %>% paste(collapse = " ", sep = " ")
+  df = as.data.frame(sequences.Encoded.list[[i]])
+  words[i, 2] = df[,ncol(sequences.Encoded)] %>% as.vector() %>% paste(collapse = " ", sep = " ")
 }
 colnames(words) = c("Accession", "tokens")
 words = as.data.frame(words)

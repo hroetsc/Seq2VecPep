@@ -27,6 +27,9 @@ from keras.layers.embeddings import Embedding
 from keras.layers import Dot, concatenate, merge, dot
 from keras.layers import *
 from keras.engine import input_layer
+
+from keras.callbacks.callbacks import EarlyStopping
+
 import tensorflow as tf
 from tensorflow.keras import layers
 from keras import backend as K
@@ -54,7 +57,9 @@ batchSize = 32
 
 input = snakemake.input['skip_grams']
 
+
 for i in range(len(input)):
+    print(input[i])
     # =============================================================================
     # # INPUT
     # =============================================================================
@@ -144,6 +149,7 @@ for i in range(len(input)):
          def __init__(self, target, context, Y, batch_size):
              self.target, self.context, self.Y = target, context, Y
              self.batch_size = batch_size
+             self.indices = np.arange(self.target.shape[0])
 
          def __len__(self):
              return int(np.ceil(len(self.target) / float(self.batch_size)))
@@ -157,7 +163,7 @@ for i in range(len(input)):
              return [batch_target, batch_context], batch_Y
 
          def on_epoch_end(self):
-             pass
+             np.random.shuffle(self.indices)
 
     # apply batch generator
     print("generating batches for model training")
@@ -167,17 +173,23 @@ for i in range(len(input)):
     # fit model
     print("fit the model")
 
+    # early stopping if model is already converged
+    es = EarlyStopping(monitor = 'val_accuracy',
+                        mode = 'max',
+                        patience = 5,
+                        min_delta = 0.005,
+                        verbose = 1)
+
     fit = model.fit_generator(generator = train_generator,
                         validation_data = test_generator,
                         epochs = epochs,
+                        callbacks = [es],
                         initial_epoch = 0,
                         verbose = 2,
                         max_queue_size = 1,
                         workers = workers,
                         use_multiprocessing = False,
-                        shuffle = False)
-
-    # shuffle has to be false bc BatchBenerator can't cope with shuffled data!
+                        shuffle = True)
 
     # =============================================================================
     # ### OUTPUT ###

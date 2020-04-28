@@ -1,0 +1,26 @@
+shell.executable("/bin/bash")
+
+#singularity: "docker://continuumio/miniconda3:4.5.4"
+
+import pandas as pd
+import os, multiprocessing
+import yaml
+from snakemake import utils
+from snakemake.utils import min_version
+from snakemake import logging
+
+min_version("5.0")
+shell.prefix("set -euo pipefail;")
+
+features = yaml.load(open("features.yaml", "r+"), Loader=yaml.FullLoader)
+config = yaml.load(open("config.yaml", "r+"), Loader=yaml.FullLoader)
+
+snakefiles = "src/"
+include: snakefiles + "model.py"
+
+rule all:
+    input:
+        skip_grams = features["skip_grams"],
+        weights = features["weights"],
+        model = features["model"],
+        metrics = features["model_metrics"]

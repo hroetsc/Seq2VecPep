@@ -2,13 +2,13 @@
 params: hyperparams.csv
 
 data:
-    concatenated_UniProt: data/concatenated_UniProt.txt
+    concatenated_UniProt: data/concatenated_UniProt_hp.txt
 
 encoded_sequence:
-    BPE_model: results/encoded_sequence/BPE_model.bpe
-    model_vocab: results/encoded_sequence/model_vocab.csv
-    words: results/encoded_sequence/words.csv
-    TF_IDF: results/encoded_sequence/TF_IDF.csv
+    BPE_model: results/encoded_sequence/BPE_model_hp.bpe
+    model_vocab: results/encoded_sequence/model_vocab_hp.csv
+    words: results/encoded_sequence/words_hp.csv
+    TF_IDF: results/encoded_sequence/TF_IDF_hp.csv
 
 embedded_sequence:
     skip_grams: results/embedded_sequence/skipgrams.txt
