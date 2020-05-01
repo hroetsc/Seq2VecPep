@@ -28,11 +28,11 @@ from keras.engine import input_layer
 from keras.callbacks.callbacks import EarlyStopping
 from keras.utils import Sequence
 # deprecated
-from keras.utils.training_utils import multi_gpu_model
+from keras.utils import multi_gpu_model
 
 import tensorflow as tf
-from tf.keras import layers
-from tf.distribute import MirroredStrategy
+from tensorflow.keras import layers
+#from tensorflow.distribute import MirroredStrategy
 from keras import backend as K
 
 from sklearn.model_selection import train_test_split
@@ -53,6 +53,7 @@ ids = pd.read_csv(snakemake.input['ids'], header = None)
 # =============================================================================
 
 GPUs = 30
+workers = 200
 
 embeddingDim = 100
 epochs = 500
