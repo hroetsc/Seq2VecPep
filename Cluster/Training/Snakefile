@@ -13,7 +13,6 @@ min_version("5.0")
 shell.prefix("set -euo pipefail;")
 
 features = yaml.load(open("features.yaml", "r+"), Loader=yaml.FullLoader)
-config = yaml.load(open("config.yaml", "r+"), Loader=yaml.FullLoader)
 
 snakefiles = "src/"
 include: snakefiles + "model.py"
