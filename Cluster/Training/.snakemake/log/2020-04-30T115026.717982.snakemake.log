@@ -1,0 +1,5 @@
+Building DAG of jobs...
+MissingInputException in line 2 of /home/hanna/Documents/QuantSysBios/ProtTransEmbedding/Cluster/Training/src/model.py:
+Missing input files for rule training_w1:
+/scratch2/hroetsc/Seq2Vec/results/skipgrams_hp_w1.txt
+/scratch2/hroetsc/Seq2Vec/results/ids_hp_w1.csv

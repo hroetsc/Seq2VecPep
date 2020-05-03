@@ -13,12 +13,10 @@ rule training_w1:
                                 sample = features["params"]["w1"]),
     benchmark:
         "results/benchmarks/seq2vec_2.txt"
-    #singularity:
-    #    "docker://tensorflow/tensorflow:latest-gpu"
     conda:
         "environment_base.yml"
     script:
-        "skip_gram_NN_2.py"
+        "skip_gram_NN_2_v3.py"
 
 
 rule training_w3:
@@ -35,12 +33,10 @@ rule training_w3:
                                 sample = features["params"]["w3"]),
     benchmark:
         "results/benchmarks/seq2vec_2.txt"
-    #singularity:
-    #    "docker://tensorflow/tensorflow:latest-gpu"
     conda:
         "environment_base.yml"
     script:
-        "skip_gram_NN_2.py"
+        "skip_gram_NN_2_v3.py"
 
 
 rule training_w5:
@@ -57,12 +53,10 @@ rule training_w5:
                                 sample = features["params"]["w5"]),
     benchmark:
         "results/benchmarks/seq2vec_2.txt"
-    #singularity:
-    #    "docker://tensorflow/tensorflow:latest-gpu"
     conda:
         "environment_base.yml"
     script:
-        "skip_gram_NN_2.py"
+        "skip_gram_NN_2_v3.py"
 
 
 rule training_w10:
@@ -79,12 +73,10 @@ rule training_w10:
                                 sample = features["params"]["w10"]),
     benchmark:
         "results/benchmarks/seq2vec_2.txt"
-    #singularity:
-    #    "docker://tensorflow/tensorflow:latest-gpu"
     conda:
         "environment_base.yml"
     script:
-        "skip_gram_NN_2.py"
+        "skip_gram_NN_2_v3.py"
 
 
 rule training_w15:
@@ -101,9 +93,7 @@ rule training_w15:
                                 sample = features["params"]["w15"]),
     benchmark:
         "results/benchmarks/seq2vec_2.txt"
-    #singularity:
-    #    "docker://tensorflow/tensorflow:latest-gpu"
     conda:
         "environment_base.yml"
     script:
-        "skip_gram_NN_2.py"
+        "skip_gram_NN_2_v3.py"

@@ -77,4 +77,3 @@ dependencies:
     - yoctol-keras-layer-zoo==0.7.0
     - yoctol-utils==0.1.0
     - zarr==2.3.2
-prefix: /home/hanna/miniconda3

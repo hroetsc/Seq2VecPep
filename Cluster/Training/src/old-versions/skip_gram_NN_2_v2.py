@@ -266,7 +266,7 @@ for i in range(len(output)):
                         verbose = 2,
                         max_queue_size = 1,
                         workers = NUM_WORKERS,
-                        use_multiprocessing = False,
+                        use_multiprocessing = True,
                         shuffle = True)
 
     # =============================================================================
