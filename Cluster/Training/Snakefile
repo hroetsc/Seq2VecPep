@@ -19,13 +19,13 @@ include: snakefiles + "model.py"
 
 rule all:
     input:
-        w1 = expand('/scratch2/hroetsc/Seq2Vec/results/weights_{sample}.csv',
-                                sample = features["params"]["w1"]),
-        w3 = expand('/scratch2/hroetsc/Seq2Vec/results/weights_{sample}.csv',
-                                sample = features["params"]["w3"]),
         w5 = expand('/scratch2/hroetsc/Seq2Vec/results/weights_{sample}.csv',
-                                sample = features["params"]["w5"]),
-        w10 = expand('/scratch2/hroetsc/Seq2Vec/results/weights_{sample}.csv',
-                                sample = features["params"]["w10"]),
-        w15 = expand('/scratch2/hroetsc/Seq2Vec/results/weights_{sample}.csv',
-                                sample = features["params"]["w15"])
+                                sample = features["params"]["w5"])
+        #w1 = expand('/scratch2/hroetsc/Seq2Vec/results/weights_{sample}.csv',
+        #                        sample = features["params"]["w1"]),
+        #w3 = expand('/scratch2/hroetsc/Seq2Vec/results/weights_{sample}.csv',
+        #                        sample = features["params"]["w3"]),
+        #w10 = expand('/scratch2/hroetsc/Seq2Vec/results/weights_{sample}.csv',
+        #                        sample = features["params"]["w10"]),
+        #w15 = expand('/scratch2/hroetsc/Seq2Vec/results/weights_{sample}.csv',
+        #                        sample = features["params"]["w15"])

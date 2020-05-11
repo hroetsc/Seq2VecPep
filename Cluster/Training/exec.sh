@@ -2,15 +2,32 @@
 
 module purge
 
-module load conda/4.3.30
+module load python/3.8.2
+module load gcc/8.2.0
+module load openmpi/gcc/64/4.0.0
 
-source activate seq2vec
+cd horovod/
+source bin/activate
+cd ..
 
-module load cuda10.0/toolkit/10.0.130
-module load cudnn/10.0v7.6.3
+module load cuda10.1/toolkit/10.1.105
+module load cuda10.1/blas/10.1.105
+module load cuda10.1/fft/10.1.105
+module load cuda10.1/nsight/10.1.105
+module load cuda10.1/profiler/10.1.105
+module load cudnn/10.1v7.6.5
 
+
+salloc -p gpu -C scratch2 -N 6 --tasks-per-node=2 --gpus-per-task=1 --mem-per-gpu=50G -t 01-00:00:00 --mail-type=END --mail-user=hanna.roetschke@mpibpc.mpg.de --job-name='seq2vec'
+
+scontrol show hostnames $SLURM_JOB_NODELIST > nodes.txt
+scontrol show hostnames $SLURM_JOB_NODELIST
 
 snakemake --unlock
-snakemake --use-conda -j 64 --cluster "srun -A all -o hp_training-%J.out -p gpu -C scratch2 -N 10 -n 200 -G 20 -t 2-00:00:00 --mail-type=END --mail-user=hanna.roetschke@mpibpc.mpg.de"
+snakemake --use-conda --jobs 100000 --cores 100000 --cluster "srun --mpi=pmix -o hp_training-%J.out" --latency-wait 300
 
 source deactivate
+
+
+
+#HOROVOD_WITH_TENSORFLOW=1 pip install horovod[tensorflow]

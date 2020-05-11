@@ -1,4 +1,3 @@
-
 rule training_w1:
     input:
         skip_grams = '/scratch2/hroetsc/Seq2Vec/results/skipgrams_hp_w1.txt',
@@ -12,11 +11,9 @@ rule training_w1:
         metrics = expand('/scratch2/hroetsc/Seq2Vec/results/model_metrics_{sample}.txt',
                                 sample = features["params"]["w1"]),
     benchmark:
-        "results/benchmarks/seq2vec_2.txt"
-    conda:
-        "environment_base.yml"
+        "results/benchmarks/seq2vec_2_w1.txt"
     script:
-        "skip_gram_NN_2_v3.py"
+        "skip_gram_NN_2_v4.py"
 
 
 rule training_w3:
@@ -32,11 +29,9 @@ rule training_w3:
         metrics = expand('/scratch2/hroetsc/Seq2Vec/results/model_metrics_{sample}.txt',
                                 sample = features["params"]["w3"]),
     benchmark:
-        "results/benchmarks/seq2vec_2.txt"
-    conda:
-        "environment_base.yml"
+        "results/benchmarks/seq2vec_2_w3.txt"
     script:
-        "skip_gram_NN_2_v3.py"
+        "skip_gram_NN_2_v4.py"
 
 
 rule training_w5:
@@ -52,11 +47,9 @@ rule training_w5:
         metrics = expand('/scratch2/hroetsc/Seq2Vec/results/model_metrics_{sample}.txt',
                                 sample = features["params"]["w5"]),
     benchmark:
-        "results/benchmarks/seq2vec_2.txt"
-    conda:
-        "environment_base.yml"
+        "results/benchmarks/seq2vec_2_w5.txt"
     script:
-        "skip_gram_NN_2_v3.py"
+        "skip_gram_NN_2_v4.py"
 
 
 rule training_w10:
@@ -72,11 +65,9 @@ rule training_w10:
         metrics = expand('/scratch2/hroetsc/Seq2Vec/results/model_metrics_{sample}.txt',
                                 sample = features["params"]["w10"]),
     benchmark:
-        "results/benchmarks/seq2vec_2.txt"
-    conda:
-        "environment_base.yml"
+        "results/benchmarks/seq2vec_2_w10.txt"
     script:
-        "skip_gram_NN_2_v3.py"
+        "skip_gram_NN_2_v4.py"
 
 
 rule training_w15:
@@ -92,8 +83,6 @@ rule training_w15:
         metrics = expand('/scratch2/hroetsc/Seq2Vec/results/model_metrics_{sample}.txt',
                                 sample = features["params"]["w15"]),
     benchmark:
-        "results/benchmarks/seq2vec_2.txt"
-    conda:
-        "environment_base.yml"
+        "results/benchmarks/seq2vec_2_w15.txt"
     script:
-        "skip_gram_NN_2_v3.py"
+        "skip_gram_NN_2_v4.py"
