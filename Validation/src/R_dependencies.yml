@@ -1,0 +1,27 @@
+channels:
+  - conda-forge
+  - r
+  - bioconda
+
+dependencies:
+  - r-base
+  - r-tibble
+  - r-dplyr
+  - r-plyr
+  - r-tidyr
+  - r-data.table
+  - r-seqinr
+  - r-protr
+  - r-peptides
+  - r-readr
+  - r-stringr
+  - r-rlist
+  - r-reshape2
+  - r-foreach
+  - r-doparallel
+  - r-domc
+  - bioconductor-gosemsim
+  - bioconductor-annotationhub
+  - bioconductor-org.hs.eg.db
+  - r-wgcna
+  - r-future

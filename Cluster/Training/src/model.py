@@ -37,15 +37,11 @@ rule training_w3:
 rule training_w5:
     input:
         skip_grams = '/scratch2/hroetsc/Seq2Vec/results/skipgrams_hp_w5.txt',
-        ids = '/scratch2/hroetsc/Seq2Vec/results/ids_hp_w5.csv',
-        params = 'params.csv'
+        ids = '/scratch2/hroetsc/Seq2Vec/results/ids_hp_w5.csv'
     output:
-        weights = expand('/scratch2/hroetsc/Seq2Vec/results/weights_{sample}.csv',
-                                sample = features["params"]["w5"]),
-        model = expand('/scratch2/hroetsc/Seq2Vec/results/model_{sample}.h5',
-                                sample = features["params"]["w5"]),
-        metrics = expand('/scratch2/hroetsc/Seq2Vec/results/model_metrics_{sample}.txt',
-                                sample = features["params"]["w5"]),
+        weights = '/scratch2/hroetsc/Seq2Vec/results/weights_w5_d200.csv',
+        model = '/scratch2/hroetsc/Seq2Vec/results/model_w5_d200.h5',
+        metrics = '/scratch2/hroetsc/Seq2Vec/results/model_metrics_w5_d200.txt'
     benchmark:
         "results/benchmarks/seq2vec_2_w5.txt"
     script:
