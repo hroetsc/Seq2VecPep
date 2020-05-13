@@ -24,7 +24,6 @@ Note: The python scripts (`skip_gram_NN_1.py` and `skip_gram_NN_2.py` are execut
 - `Seqinput`: .csv file which must contain at least two columns: `Accession` and `seqs` (see file explanation)  
 - `BPEinput`: .fasta file which is used to train the BPE algorithm. The default is the whole reviewed UniProtKB (SwissProt). 
 - `BPEvocab`: vocab size for the byte-pair encoding algorithm.
-- `keep`: skip-grams are downsampled to reduce the complexity of the model / the training time. Specify the fraction of skip-grams you wish to keep per target word integer per protein. This strongly depends on the size of your dataset.  
 - `negSkipgrams`: relation of negative word pairs to positive pairs, e.g. 1 means 50 % negative and 50 % positive samples.  
 - `windowSize`: size of the frame in which a token is considered as context word. The context of a target word is: `[target - windowSize ; target + windowSize +1]`  
 - `embedding`: dimensionality of the vector representation  
