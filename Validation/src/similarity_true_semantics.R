@@ -73,6 +73,12 @@ GO_sim = function(ont = ""){
   alig = alig[-k,]
   alig = alig[,-k]
   
+  if (ncol(alig) == 0){
+    
+    print("!!!WARNING!!! NO GO TERM FOUND FOR ANY PROTEIN !!!")
+    
+  }
+  
   # add accessions
   res = matrix(ncol = ncol(alig)+1, nrow = nrow(alig))
   res[, 1] = acc
@@ -82,6 +88,7 @@ GO_sim = function(ont = ""){
   res = as.data.frame(res)
   
   return(res)
+  
 }
 
 

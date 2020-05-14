@@ -19,6 +19,8 @@ rule downstream:
     input:
         scores = expand('similarity/scores/{sample}.txt',
                             sample = features["final"])
+    output:
+        final = touch('mytask.done')
     conda:
         "R_dependencies.yml"
     script:
