@@ -25,4 +25,4 @@ rule all:
     input:
         scores = expand('similarity/scores/{sample}.txt',
                             sample = features["final"]),
-        result = features["results"]["scores"]
+        final = touch('mytask.done')

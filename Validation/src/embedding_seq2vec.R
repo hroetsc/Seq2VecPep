@@ -34,14 +34,6 @@ weight_matrix = read.csv(snakemake@input[["weights"]], stringsAsFactors = F, hea
 indices = read.csv(snakemake@input[["ids"]], stringsAsFactors = F, header = F)
 
 
-##############################################################################################################
-### weight matrix looks strange ###
-
-tr = seq(0,nrow(indices))
-faulty = weight_matrix[which(!weight_matrix$V1 %in% tr),]
-
-##############################################################################################################
-
 
 ### MAIN PART ###
 if (ncol(indices) == 3){

@@ -88,7 +88,11 @@ compare = function(true = "", predicted = "", prot_pred = "", prot_true = ""){
     true = true[l, ]
     
   }
-
+  
+  # normalize by sum
+  predicted = predicted / sum(predicted)
+  true = true / sum(true)
+  
   # z-transformation
   predicted = (predicted - mean(predicted)) / sd(predicted)
   true = (true - mean(true)) / sd(true)

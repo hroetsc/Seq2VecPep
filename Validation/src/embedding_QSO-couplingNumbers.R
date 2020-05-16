@@ -38,6 +38,14 @@ QSO = matrix(ncol = 40+ 2*lag + 2, nrow = nrow(sequences))
 QSO[, 1] = sequences$Accession
 QSO[, 2] = sequences$seqs
 
+# protcheck 
+# clean sequences
+QSO[,2] = as.character(QSO[,2])
+a = sapply(toupper(QSO[,2]), protcheck)
+names(a) = NULL
+print(paste0("found ",length(which(a==F)) , " proteins that are failing the protcheck() and is removing them"))
+QSO = QSO[which(a == T), ]
+
 
 progressBar = txtProgressBar(min = 0, max = nrow(QSO), style = 3)
 for (q in 1:nrow(QSO)) {

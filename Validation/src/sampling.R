@@ -18,7 +18,7 @@ words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header
 sequences = sequences[-which(! sequences$Accession %in% words$Accession),]
 
 # sample
-k = sample(nrow(sequences), 100)
+k = sample(nrow(sequences), 300)
 
 sequences = sequences[k,]
 words =  words[which(words$Accession %in% sequences$Accession),]

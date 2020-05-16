@@ -4,7 +4,7 @@ data:
     sequence_batch: data/current_sequences.csv
     words: data/words_hp.csv
     word_batch: data/current_words.csv
-    weights: data/weights_w5_d100.csv
+    weights: data/w5_d100_embedding.csv
     indices: data/ids_hp_w5.csv
     TF-IDF: data/TF_IDF.csv
 
@@ -65,8 +65,9 @@ final:
     - random_TFIDF_CCR
     - random_SIF
     - random_SIF_CCR
-    - QSO
-    - QSO_CCR
+    #- QSO
+    #- QSO_CCR
     - termfreq
     - termfreq_CCR
+
 ...
