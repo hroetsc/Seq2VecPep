@@ -24,6 +24,10 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
+
+tf.keras.backend.clear_session()
+
+
 import horovod.tensorflow as hvd
 
 # clean
@@ -78,10 +82,15 @@ print("-------------------------------------------------------------------------
 print("SET HYPERPARAMETERS")
 
 # epochs need to be adjusted by number of GPUs
+
 # early stopping does not work at the moment
 # Error: Error occurred when finalizing GeneratorDataset iterator: Failed precondition: Python interpreter state is not initialized. The process may be terminated.
 #         [[{{node PyFunc}}]]
-epochs = 200
+
+#tmp!!
+#epochs = int(hvd.size())
+
+epochs = 300
 epochs = int(np.ceil(epochs/hvd.size()))
 print('number of epochs, adjusted by number of GPUs: ', epochs)
 
@@ -92,6 +101,15 @@ NUM_WORKERS = num_nodes
 PER_WORKER_BATCH_SIZE = 64
 
 print('per worker batch size: ', PER_WORKER_BATCH_SIZE)
+
+### output - this is not ideal ...
+checkpoints = '/scratch2/hroetsc/Seq2Vec/results/model_w10_d100/ckpts'
+weights_path = '/scratch2/hroetsc/Seq2Vec/results/model_w10_d100/weights.h5'
+model_path = '/scratch2/hroetsc/Seq2Vec/results/model_w10_d100/model'
+
+#target_layer = '/scratch2/hroetsc/Seq2Vec/results/w10_d100_target_layer.csv'
+#context_layer = '/scratch2/hroetsc/Seq2Vec/results/w10_d100_context_layer.csv'
+embedding_layer = '/scratch2/hroetsc/Seq2Vec/results/w10_d100_embedding.csv'
 
 
 print("-------------------------------------------------------------------------")
@@ -163,7 +181,9 @@ def build_and_compile_model():
     # add dense layers
     x = layers.Dense(128, activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(dot_product)
     x = layers.Dropout(0.5)(x)
-    output = layers.Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='2nd_dense')(x)
+    x = layers.Dense(64, activation = 'linear', kernel_initializer = 'he_uniform', name='2nd_dense')(x)
+    x = layers.Dropout(0.5)(x)
+    output = layers.Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='3rd_dense')(x)
 
 
     tf.print('concatenation')
@@ -172,12 +192,14 @@ def build_and_compile_model():
 
     tf.print('compile model')
     # wrap optimizer
-    opt = tf.optimizers.Adam(learning_rate= 0.001 * hvd.size())
+    #opt = keras.optimizers.Adam(learning_rate= 0.001 * hvd.size())
+    #opt = optimizers.SGD(learning_rate=0.01 * hvd.size(), momentum=0.9, nesterov=True)
+    opt = tf.keras.optimizers.Adagrad(learning_rate = 0.001 * hvd.size())
     opt = hvd.DistributedOptimizer(opt)
 
-    model.compile(loss=keras.losses.SquaredHinge(),
+    model.compile(loss=keras.losses.MeanSquaredError(),
                     optimizer = opt,
-                    metrics=['mean_squared_error','accuracy', 'categorical_hinge'],
+                    metrics=['squared_hinge', 'categorical_hinge', 'mean_squared_error','accuracy'],
                     experimental_run_tf_function=False)
 
     tf.print('return model')
@@ -201,7 +223,7 @@ vocab_size = len(ids.index) + 1
 print("vocabulary size (number of target word IDs + 1): {}".format(vocab_size))
 
 
-embeddingDim = 200
+embeddingDim = 100
 
 print('-----------------------------------------------')
 print('-----------------------------------------------')
@@ -265,7 +287,7 @@ test_generator = BatchGenerator(target_test, context_test, Y_test, PER_WORKER_BA
 print('define callbacks')
 
 # early stopping if model is already converged
-es = tf.keras.callbacks.EarlyStopping(monitor = 'loss',
+es = tf.keras.callbacks.EarlyStopping(monitor = 'val_loss',
                                         mode = 'min',
                                         patience = epochs, # causes an error currently
                                         min_delta = 0.0005,
@@ -278,11 +300,12 @@ callbacks = [
 
 # save chackpoints only on worker 0
 if hvd.rank() == 0:
-    callbacks.append(tf.keras.callbacks.ModelCheckpoint(filepath = snakemake.output['model'],
-                                                monitor = 'loss',
+    callbacks.append(tf.keras.callbacks.ModelCheckpoint(filepath = checkpoints,
+                                                monitor = 'val_loss',
                                                 mode = 'min',
                                                 safe_best_only = False,
-                                                verbose = 1))
+                                                verbose = 1,
+                                                save_weights_only=True))
 
 
 # fit model
@@ -292,6 +315,9 @@ print("fit the model")
 steps = int(np.ceil(target_train.shape[0]/PER_WORKER_BATCH_SIZE))
 val_steps = int(np.ceil(target_test.shape[0]/PER_WORKER_BATCH_SIZE))
 
+#tmp !!
+#steps = 10000
+#val_steps = 1000
 
 # adjust by number of GPUs
 steps = int(np.ceil(steps / hvd.size()))
@@ -316,29 +342,45 @@ fit = model.fit_generator(generator = train_generator,
 # ### OUTPUT ###
 # =============================================================================
 
-print("SAVE WEIGHTS")
-# get word embedding
+print("OUTPUT")
 
-print("configuration of embedding layer:")
-print(model.layers[2].get_config())
-weights = model.layers[2].get_weights()[0] # weights of the embedding layer of target word
+if hvd.rank() == 0:
+    # save weights
+    model.save_weights(weights_path)
 
-# save weights of embedding matrix
-df = pd.DataFrame(weights)
-pd.DataFrame.to_csv(df, snakemake.output['weights'], header=False)
+    #save entire model
+    model.save(model_path)
+
+    # get layer weights
+    #tar = layers.Layer(name = 'target_embedding')
+    #tar_weights = tar.get_weights()
+    #tar_weights = pd.DataFrame(tar_weights)
+    #pd.DataFrame.to_csv(tar_weights, target_layer, header=False)
+
+    #con = layers.Layer(name = 'context_embedding')
+    #con_weights = con.get_weights()
+    #con_weights = pd.DataFrame(con_weights)
+    #pd.DataFrame.to_csv(con_weights, context_layer, header=False)
 
 
-# save metrics
-val = []
-name = list(fit.history.keys())
-for i, elem in enumerate(fit.history.keys()):
-    val.append(fit.history[elem])
+    # save weights of embedding matrix
+    weights = model.layers[2].get_weights()[0] # weights of the embedding layer of target word
+    df = pd.DataFrame(weights)
+    pd.DataFrame.to_csv(df, embedding_layer, header=False)
 
-m = list(zip(name, val))
-m = pd.DataFrame(m)
-pd.DataFrame.to_csv(m, snakemake.output['metrics'], header=False, index = False)
+
+    # save metrics
+    val = []
+    name = list(fit.history.keys())
+    for i, elem in enumerate(fit.history.keys()):
+        val.append(fit.history[elem])
+
+    m = list(zip(name, val))
+    m = pd.DataFrame(m)
+    pd.DataFrame.to_csv(m, snakemake.output['metrics'], header=False, index = False)
+
+
 
 
 # clear session
 tf.keras.backend.clear_session()
-tf.compat.v1.reset_default_graph()

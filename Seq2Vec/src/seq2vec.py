@@ -7,8 +7,6 @@ rule seq2vec_skipgrams:
     output:
         skip_grams = features["embedded_sequence"]["skip_grams"],
         ids = features["embedded_sequence"]["subword_ids"]
-    log:
-        "results/logs/seq2vec_1.log"
     benchmark:
         "results/benchmarks/seq2vec_1.txt"
     conda:
@@ -25,8 +23,6 @@ rule seq2vec_training:
         weights = features["embedded_sequence"]["subword_weights"],
         model = features["embedded_sequence"]["model"],
         metrics = features["embedded_sequence"]["model_metrics"]
-    log:
-        "results/logs/seq2vec_2.log"
     benchmark:
         "results/benchmarks/seq2vec_2.txt"
     conda:
@@ -37,9 +33,6 @@ rule seq2vec_training:
 rule model_metrics:
     input:
         metrics = features["embedded_sequence"]["model_metrics"]
-    output:
-        acc = "results/metrics/model_acc.png",
-        loss = "results/metrics/model_loss.png"
     conda:
         "R_dependencies.yml"
     script:
@@ -47,18 +40,34 @@ rule model_metrics:
 
 rule sequence_repres:
     input:
-        weights = features["embedded_sequence"]["subword_weights"],
-        ids=features["embedded_sequence"]["subword_ids"],
+        weights = features["embedded_sequence"]["model"],
+        ids = features["embedded_sequence"]["subword_ids"],
         params = features["params"],
         TF_IDF = features["encoded_sequence"]["TF_IDF"],
         words = features["encoded_sequence"]["words"]
     output:
-        sequence_repres = features["embedded_sequence"]["sequence_representation"],
-    log:
-        "results/logs/sequence_repres.log"
+        sequence_repres_seq2vec = features["embedded_sequence"]["sequence_repres_seq2vec"],
+        sequence_repres_seq2vec_TFIDF = features["embedded_sequence"]["sequence_repres_seq2vec_TFIDF"],
+        sequence_repres_seq2vec_SIF = features["embedded_sequence"]["sequence_repres_seq2vec_SIF"]
     benchmark:
         "results/benchmarks/sequence_repres.txt"
     conda:
         "R_dependencies.yml"
     script:
         "sequence_repres.R"
+
+rule CCR:
+    input:
+        sequence_repres_seq2vec = features["embedded_sequence"]["sequence_repres_seq2vec"],
+        sequence_repres_seq2vec_TFIDF = features["embedded_sequence"]["sequence_repres_seq2vec_TFIDF"],
+        sequence_repres_seq2vec_SIF = features["embedded_sequence"]["sequence_repres_seq2vec_SIF"]
+    output:
+        sequence_repres_seq2vec_CCR = features["embedded_sequence"]["sequence_repres_seq2vec_CCR"],
+        sequence_repres_seq2vec_TFIDF_CCR = features["embedded_sequence"]["sequence_repres_seq2vec_TFIDF_CCR"],
+        sequence_repres_seq2vec_SIF_CCR = features["embedded_sequence"]["sequence_repres_seq2vec_SIF_CCR"]
+    benchmark:
+        "results/benchmarks/CCR.txt"
+    conda:
+        "R_dependencies.yml"
+    script:
+        "CCR.R"

@@ -16,5 +16,10 @@ embedded_sequence:
     subword_ids: results/embedded_sequence/seq2vec_ids.csv
     model_metrics: results/embedded_sequence/model_metrics.txt
     model: results/embedded_sequence/model.h5
-    sequence_representation: results/embedded_sequence/sequence_repres.csv
+    sequence_repres_seq2vec: results/embedded_sequence/sequence_repres_seq2vec.csv
+    sequence_repres_seq2vec_TFIDF: results/embedded_sequence/sequence_repres_seq2vec-TFIDF.csv
+    sequence_repres_seq2vec_SIF: results/embedded_sequence/sequence_repres_seq2vec-SIF.csv
+    sequence_repres_seq2vec_CCR: results/embedded_sequence/sequence_repres_seq2vec_CCR.csv
+    sequence_repres_seq2vec_TFIDF_CCR: results/embedded_sequence/sequence_repres_seq2vec-TFIDF_CCR.csv
+    sequence_repres_seq2vec_SIF_CCR: results/embedded_sequence/sequence_repres_seq2vec-SIF_CCR.csv
 ...

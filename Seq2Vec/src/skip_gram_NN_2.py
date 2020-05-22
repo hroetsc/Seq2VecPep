@@ -1,3 +1,6 @@
+### THIS IS NOT THE MOST RECENT VERSION OF THE MODEL!!! ###
+# see Cluster/src/skip_gram_NN_2_v4.py!
+
 ### HEADER ###
 # PROTEIN/TRANSCRIPT EMBEDDING FOR ML/DEEP LEARNING
 # description:  convert tokens to numerical vectors using a skip-gram neural network
@@ -122,7 +125,7 @@ target = Reshape((embeddingDim,1), name='target_embedding')(target) # every indi
 context = embedding(input_context)
 context = Reshape((embeddingDim,1), name='context_embedding')(context)
 
-# dot product similarity - normalize to get value between 0 and 1!
+# dot product similarity - normalize to get value between -1 and 1!
 dot_product = dot([target, context], axes = 1, normalize = True, name = 'dot_product')
 dot_product = Reshape((1,))(dot_product)
 
@@ -184,8 +187,8 @@ print("fit the model")
 # early stopping if model is already converged
 es = EarlyStopping(monitor = 'accuracy',
                     mode = 'max',
-                    patience = 10,
-                    min_delta = 0.005,
+                    patience = 5,
+                    min_delta = 0.003,
                     verbose = 1)
 
 fit = model.fit_generator(generator = train_generator,
@@ -196,10 +199,8 @@ fit = model.fit_generator(generator = train_generator,
                     verbose = 2,
                     max_queue_size = 1,
                     workers = workers,
-                    use_multiprocessing = False,
+                    use_multiprocessing = True,
                     shuffle = True)
-
-# shuffle has to be false bc BatchBenerator can't cope with shuffled data!
 
 # =============================================================================
 # ### OUTPUT ###

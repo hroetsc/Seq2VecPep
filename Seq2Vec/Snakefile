@@ -12,7 +12,6 @@ from snakemake import logging
 min_version("5.0")
 shell.prefix("set -euo pipefail;")
 
-config = yaml.load(open("config.yml", "r"), Loader=yaml.FullLoader)
 features = yaml.load(open("features.yaml", "r+"), Loader=yaml.FullLoader)
 
 snakefiles = "src/"
@@ -22,6 +21,5 @@ include: snakefiles + "seq2vec.py"
 rule all:
     input:
         model = features["embedded_sequence"]["model"],
-        acc = "results/metrics/model_acc.png",
-        loss = "results/metrics/model_loss.png",
-        sequence_repres = features["embedded_sequence"]["sequence_representation"],
+        sequence_repres_seq2vec = features["embedded_sequence"]["sequence_repres_seq2vec"],
+        sequence_repres_seq2vec_CCR = features["embedded_sequence"]["sequence_repres_seq2vec_CCR"]

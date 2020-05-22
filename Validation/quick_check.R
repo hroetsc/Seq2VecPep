@@ -25,17 +25,26 @@ cleaning = function(tbl = ""){
 fs = list.files("similarity", ".csv", recursive = F, full.names = T)
 
 
+
 for (i in 1:length(fs)){
   tbl = read.csv(fs[i], stringsAsFactors = F)
   tbl = cleaning(tbl)
   
-  plot(density(tbl), main = fs[i])
   
-  tbl = tbl / mean(tbl)
+  tbl = (tbl - min(tbl)) / (max(tbl) - min(tbl))
+  
   tbl = (tbl - mean(tbl)) / sd(tbl)
   
+  
+  plot(density(tbl), main = fs[i])
+  tbl = pnorm(tbl)
   plot(density(tbl), main = fs[i])
   
+  
+  print(fs[i])
+  print(min(tbl))
+  print(max(tbl))
+  print(mean(tbl))
 }
 
 

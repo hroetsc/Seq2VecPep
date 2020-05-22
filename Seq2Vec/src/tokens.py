@@ -5,8 +5,6 @@ rule BPE_training1:
         params = features["params"]
     output:
         conc_UniProt = features["data"]["concatenated_UniProt"]
-    log:
-        "results/logs/train_BPE.log"
     benchmark:
         "results/benchmarks/BPE_training1.txt"
     conda:
@@ -20,8 +18,6 @@ rule BPE_training2:
         conc_UniProt = features["data"]["concatenated_UniProt"]
     output:
         BPE_model = features["encoded_sequence"]["BPE_model"]
-    log:
-        "results/logs/train_BPE2.log"
     benchmark:
         "results/benchmarks/BPE_training2.txt"
     conda:
@@ -38,8 +34,6 @@ rule generate_tokens:
     output:
         model_vocab = features["encoded_sequence"]["model_vocab"],
         words = features["encoded_sequence"]["words"]
-    log:
-        "results/logs/generate_tokens.log"
     benchmark:
         "results/benchmarks/generate_tokens.txt"
     conda:
@@ -54,8 +48,6 @@ rule TF_IDF:
         words = features["encoded_sequence"]["words"]
     output:
         TF_IDF = features["encoded_sequence"]["TF_IDF"]
-    log:
-        "results/logs/TF_IDF.log"
     benchmark:
         "results/benchmarks/TF_IDF.txt"
     conda:

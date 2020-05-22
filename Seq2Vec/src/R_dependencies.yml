@@ -29,3 +29,6 @@ dependencies:
   - r-foreach=1.5.0
   - r-doparallel=1.0.15
   - r-domc=1.3.6
+  - bioconductor-rhdf5
+  - r-wgcna
+  - r-future

@@ -2,6 +2,7 @@
 
 library(dplyr)
 library(tidyr)
+library(stringr)
 library(ggplot2)
 library(ggstatsplot)
 
@@ -17,13 +18,13 @@ for (f in 1:length(fs)){
     df = read.csv(fs[f], stringsAsFactors = F)
     
     # tmp!!!
-    df = df[c(((nrow(df)/2)+1):nrow(df)),]
+    df = df[c(((2*nrow(df)/3)+1):nrow(df)),]
     
   } else {
     
     tmp = read.csv(fs[f], stringsAsFactors = F)
     # tmp!!!
-    tmp = tmp[c(((nrow(tmp)/2)+1):nrow(tmp)),]
+    tmp = tmp[c(((2*nrow(tmp)/3)+1):nrow(tmp)),]
     
     tmp$iteration = rep(f, nrow(tmp)) # different assignement?
     
@@ -61,7 +62,8 @@ violin = function(score = ""){
     geom_violin(scale = "width", trim = F,
                 draw_quantiles = c(0.5),
                 aes(fill = factor(embedding))) +
-    geom_jitter(height = 0, width = 0.01)
+    geom_jitter(height = 0, width = 0.01) +
+    stat_summary(fun=mean, geom="point", size=1, color="red")
   
   p = p +
     ggtitle("comparison of true and predicted sequence similarity",
@@ -85,7 +87,7 @@ violin = function(score = ""){
   gs = ggstatsplot::ggbetweenstats(data = tbl,
                                x = embedding,
                                y = metric)
-  gs = gs + 
+  gs = gs +
     geom_violin(scale = "width", trim = F,
                 draw_quantiles = c(0.5)) +
     geom_jitter(height = 0, width = 0.01) +
@@ -96,17 +98,17 @@ violin = function(score = ""){
     theme_bw() +
     theme(axis.text.x = element_text(angle = 90),
           legend.position = "none")
-  
+
   gs
   ggsave(plot = gs, filename = paste0("results/", score, "_stats.png"), device = "png",
          dpi = "retina", height = 3.93*2, width = 5.56*2)
-  
+
 }
 
 
 ### OUTPUT ###
 
 for (i in 3:ncol(df)){
- violin(colnames(df)[i]) 
+ violin(score = colnames(df)[i]) 
 }
 

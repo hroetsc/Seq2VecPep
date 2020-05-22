@@ -89,22 +89,28 @@ compare = function(true = "", predicted = "", prot_pred = "", prot_true = ""){
     
   }
   
-  # normalize by sum
-  predicted = predicted / sum(predicted)
-  true = true / sum(true)
+  # scale between 0 and 1
+  predicted = (predicted - min(predicted)) / (max(predicted) - min(predicted))
+  true = (true - min(true)) / (max(true) - min(true))
   
   # z-transformation
   predicted = (predicted - mean(predicted)) / sd(predicted)
   true = (true - mean(true)) / sd(true)
-
+  
+  # transform into p-values
+  predicted = pnorm(predicted)
+  true = pnorm(true)
+  
+  
   # score: absolute squared difference between true and random
-  tbl = abs((predicted - true)^2)
+  tbl = (predicted - true)^2
 
-
+  
   # mean of difference between matrices and standard deviation
   diff = mean(tbl)
   SD = sd(tbl)
 
+  
   # pearson correlation between true and predicted similarity scores
   corr = cor(melt(true)$value, melt(predicted)$value, method = "spearman")
 
