@@ -14,7 +14,7 @@ print("### TRUE SYNTACTIC SIMILARITY")
 ### INPUT ###
 # formatted sequences
 sequences = read.csv(snakemake@input[["formatted_sequence"]], stringsAsFactors = F, header = T)
-# sequences = read.csv("proteome/data/red_formatted_proteome.csv", stringsAsFactors = F, header = T)
+# sequences = read.csv("data/current_sequences.csv", stringsAsFactors = F, header = T)
 
 
 ### MAIN PART ###
@@ -33,6 +33,10 @@ alig = parSeqSim(sequences$seqs,
                  gap.extension = -8,
                  submat = "BLOSUM50")
 
+for (p in 2:ncol(alig)){
+  alig[,p] = as.numeric(as.character(alig[,p]))
+}
+
 
 res = matrix(ncol = ncol(alig)+1, nrow = nrow(alig))
 res[, 1] = sequences$Accession
@@ -41,9 +45,6 @@ colnames(res) = c("Accession", seq(1, ncol(alig)))
 
 res = as.data.frame(res)
 
-for (p in 2:ncol(res)){
-  res[,p] = as.numeric(as.character(res[,p]))
-}
 
 ### OUTPUT ###
 write.csv(res, file = unlist(snakemake@output[["syntax"]]), row.names = T)

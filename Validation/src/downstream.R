@@ -10,31 +10,33 @@ library(plyr)
 library(dplyr)
 library(tidyr)
 
+
 print("### CONCATENATE SCORES ###")
+
 
 ### INPUT ###
 input = snakemake@input[["scores"]]
-output = "scores_w5_d100.csv"
+output = "scores.csv"
 
 # if output file alredy exists (not the 1st iteration) open it and append to it
 # else create empty data frame
 
 if(file.exists(output)){
-  
+
   df = read.csv(file = output, stringsAsFactors = F, header = T)
   idx = nrow(df) + 1
-  
+
 } else {
-  
+
   df = matrix(ncol = 14, nrow = length(input)) %>% as.data.frame()
   idx = 1
-  
+
   colnames(df) = c("iteration", "embedding",
                    "syntax_diff", "syntax_SD", "syntax_R2",
                    "MF_semantics_diff", "MF_semantics_SD", "MF_semantics_R2",
                    "BP_semantics_diff", "BP_semantics_SD", "BP_semantics_R2",
                    "CC_semantics_diff", "CC_semantics_SD", "CC_semantics_R2")
-  
+
 }
 
 

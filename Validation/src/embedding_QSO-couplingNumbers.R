@@ -19,7 +19,7 @@ print("### QUASI-SEQUENCE-ORDER EMBEDDINGS")
 
 ### INPUT ###
 # formatted sequences
-#sequences = read.csv("Benchmarking/data/red_formatted_proteome.csv", stringsAsFactors = F, header = T)
+# sequences = read.csv("downloads/1/current_sequences.csv", stringsAsFactors = F, header = T)
 sequences = read.csv(snakemake@input[["formatted_sequence"]], stringsAsFactors = F, header = T)
 
 ### MAIN PART ###

@@ -55,3 +55,21 @@ rule embedding_random:
         "R_dependencies.yml"
     script:
         "embedding_random.R"
+
+
+rule embedding_hybrid:
+    input:
+        words = features["data"]["word_batch"],
+        ids = features["data"]["indices"],
+        w3 = features["data"]["weights_w3"],
+        w5 = features["data"]["weights"],
+        sup = features["data"]["hybrid_sup"],
+        Props = features["data"]["PropMatrix"]
+    output:
+        hybrid_w3w5 = features["embeddings"]["hybrid_w3w5"],
+        hybrid_w3w5biophys = features["embeddings"]["hybrid_w3w5biophys"],
+        hybrid_sup = features["embeddings"]["hybrid_sup"]
+    conda:
+        "R_dependencies.yml"
+    script:
+        "embedding_hybridFeatures.R"

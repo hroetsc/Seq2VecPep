@@ -20,7 +20,8 @@ rule biophys_weighting:
         words = features["data"]["word_batch"],
         TF_IDF = features["data"]["TF-IDF"],
         ids = features["data"]["indices"],
-        weights = features["data"]["weights"]
+        weights = features["data"]["weights"],
+        Props = features["data"]["PropMatrix"]
     output:
         biophys_TFIDF = features["weighting"]["biophys_TFIDF"],
         biophys_SIF = features["weighting"]["biophys_SIF"]
