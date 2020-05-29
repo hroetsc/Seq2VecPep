@@ -18,13 +18,13 @@ for (f in 1:length(fs)){
     df = read.csv(fs[f], stringsAsFactors = F)
     
     # tmp!!!
-    df = df[c(((2*nrow(df)/3)+1):nrow(df)),]
+    #df = df[c(((2*nrow(df)/3)+1):nrow(df)),]
     
   } else {
     
     tmp = read.csv(fs[f], stringsAsFactors = F)
     # tmp!!!
-    tmp = tmp[c(((2*nrow(tmp)/3)+1):nrow(tmp)),]
+    #tmp = tmp[c(((2*nrow(tmp)/3)+1):nrow(tmp)),]
     
     tmp$iteration = rep(f, nrow(tmp)) # different assignement?
     
@@ -33,6 +33,8 @@ for (f in 1:length(fs)){
   
 }
 
+df = df[-which(df$embedding == "true_syntax"),]
+df$embedding = str_replace_all(df$embedding, coll("_"), coll(" "))
 
 
 ### MAIN PART ###
@@ -68,7 +70,7 @@ violin = function(score = ""){
   p = p +
     ggtitle("comparison of true and predicted sequence similarity",
             subtitle = paste0(str_replace_all(score, coll("_"), coll(" ")))) +
-    ylab(paste0(str_replace_all(score, coll("_"), coll(" ")))) +
+    ylab("mean squared error") +
     xlab("embedding") +
     #ylim(c(lower, upper)) +
     theme_bw() +
@@ -92,7 +94,7 @@ violin = function(score = ""){
                 draw_quantiles = c(0.5)) +
     geom_jitter(height = 0, width = 0.01) +
     ggtitle("comparison of true and predicted sequence similarity") +
-    ylab(paste0(str_replace_all(score, coll("_"), coll(" ")))) +
+    ylab("mean squared error") +
     xlab("embedding") +
     #ylim(c(lower, upper)) +
     theme_bw() +

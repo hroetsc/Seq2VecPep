@@ -1,3 +1,4 @@
+library(stringr)
 
 cleaning = function(tbl = ""){
   # sort in protein order
@@ -30,16 +31,24 @@ for (i in 1:length(fs)){
   tbl = read.csv(fs[i], stringsAsFactors = F)
   tbl = cleaning(tbl)
   
+  ti = str_split(fs[i], coll("/"), simplify = T)[,-1] %>% as.character()
+  ti = str_split(ti, coll("."), simplify = T)[,1]
+  
+  png(paste0("tmp/", ti, ".png"))
+  plot(density(tbl), main = ti)
+  dev.off()
   
   tbl = (tbl - min(tbl)) / (max(tbl) - min(tbl))
   
   tbl = (tbl - mean(tbl)) / sd(tbl)
   
   
-  plot(density(tbl), main = fs[i])
+  #plot(density(tbl), main = ti)
   tbl = pnorm(tbl)
-  plot(density(tbl), main = fs[i])
   
+  png(paste0("tmp/", ti, "_norm.png"))
+  plot(density(tbl), main = ti)
+  dev.off()
   
   print(fs[i])
   print(min(tbl))
