@@ -69,9 +69,11 @@ GO_sim = function(ont = ""){
   
   k = which(colSums(alig) == 0)
   
-  acc = acc[-k]
-  alig = alig[-k,]
-  alig = alig[,-k]
+  if (length(k) > 0){
+    acc = acc[-k]
+    alig = alig[-k,]
+    alig = alig[,-k]
+  }
   
   if (ncol(alig) == 0){
     

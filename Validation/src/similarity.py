@@ -25,10 +25,10 @@ rule true_similarity_semantics:
 rule similarity:
     input:
         embedding = expand('postprocessing/{sample}.csv',
-                            sample = features["final"])
+                            sample = features["sim"])
     output:
-        similarity = expand('similarity/{sample}.csv',
-                            sample = features["final"])
+        similarity = expand('postprocessing/similarity_{sample}.csv',
+                            sample = features["sim"])
     conda:
         "R_dependencies.yml"
     script:

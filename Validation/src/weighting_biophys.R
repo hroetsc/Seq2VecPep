@@ -26,14 +26,12 @@ sequences = read.csv(file = snakemake@input[["formatted_sequence"]],
                      stringsAsFactors = F, header = T)
 TF_IDF = read.csv(file = snakemake@input[["TF_IDF"]], stringsAsFactors = F, header = T)
 words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header = T)
-weight_matrix = read.csv(file = snakemake@input[["weights"]], stringsAsFactors = F, header = F)
 indices = read.csv(file = snakemake@input[["ids"]], stringsAsFactors = F, header = F)
 PropMatrix = read.csv(file = snakemake@input[["Props"]], stringsAsFactors = F, header = T)
 
 # sequences = read.csv("data/current_sequences.csv", stringsAsFactors = F, header = T)
 # TF_IDF = read.csv("data/TF_IDF.csv", stringsAsFactors = F, header = T)
 # words = read.csv("data/current_words.csv", stringsAsFactors = F, header = T)
-# weight_matrix = read.csv("data/w5_d100_embedding.csv", stringsAsFactors = F, header = F)
 # indices = read.csv("data/ids_hp_w5.csv", stringsAsFactors = F, header = F)
 # PropMatrix = read.csv(file = "data/PropMatrix.csv", stringsAsFactors = F, header = T)
 
@@ -46,14 +44,6 @@ if (ncol(indices) == 3){
 colnames(indices) = c("subword", "word_ID")
 indices$subword = toupper(indices$subword)
 
-
-# merge indices and weights
-colnames(weight_matrix)[1] = "word_ID"
-weight_matrix$word_ID = weight_matrix$word_ID + 1
-
-weights = full_join(weight_matrix, indices)
-weights = na.omit(weights)
-weights = unique(weights)
 
 # combine sequences table with tokens file
 sequences.master = left_join(sequences, words)

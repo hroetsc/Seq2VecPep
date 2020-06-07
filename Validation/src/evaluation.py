@@ -5,7 +5,7 @@ rule evaluation:
         true_semantics_MF = features["similarity"]["true_semantics_MF"],
         true_semantics_BP = features["similarity"]["true_semantics_BP"],
         true_semantics_CC = features["similarity"]["true_semantics_CC"],
-        predicted = expand('similarity/{sample}.csv',
+        predicted = expand('postprocessing/similarity_{sample}.csv',
                             sample = features["final"])
     output:
         scores = expand('similarity/scores/{sample}.txt',

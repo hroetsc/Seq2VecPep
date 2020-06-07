@@ -15,7 +15,9 @@ words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header
 
 ### MAIN PART ###
 # same proteins
-sequences = sequences[-which(! sequences$Accession %in% words$Accession),]
+if (nrow(sequences) != nrow(words)){
+  sequences = sequences[-which(! sequences$Accession %in% words$Accession),]
+}
 
 # sample
 k = sample(nrow(sequences), 100)

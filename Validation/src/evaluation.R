@@ -6,8 +6,8 @@
 # author:       HR
 
 library(stringr)
-library(dplyr)
 library(plyr)
+library(dplyr)
 library(tidyr)
 
 library(reshape2)

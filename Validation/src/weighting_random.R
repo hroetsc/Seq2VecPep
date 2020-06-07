@@ -18,8 +18,9 @@ sequences = read.csv(file = snakemake@input[["formatted_sequence"]],
                      stringsAsFactors = F, header = T)
 TF_IDF = read.csv(file = snakemake@input[["TF_IDF"]], stringsAsFactors = F, header = T)
 words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header = T)
-weight_matrix = read.csv(file = snakemake@input[["weights"]], stringsAsFactors = F, header = F)
 indices = read.csv(file = snakemake@input[["ids"]], stringsAsFactors = F, header = F)
+
+embeddingDim = 100
 
 ### MAIN PART ###
 TF_IDF$token = toupper(TF_IDF$token)
@@ -30,14 +31,6 @@ if (ncol(indices) == 3){
 colnames(indices) = c("subword", "word_ID")
 indices$subword = toupper(indices$subword)
 
-
-# merge indices and weights
-colnames(weight_matrix)[1] = "word_ID"
-weight_matrix$word_ID = weight_matrix$word_ID + 1
-
-weights = full_join(weight_matrix, indices)
-weights = na.omit(weights)
-weights = unique(weights)
 
 # combine sequences table with tokens file
 sequences.master = left_join(sequences, words)
@@ -82,16 +75,16 @@ find_SIF = function(tokens = "", sequence = "") {
 
 
 # matrix for TF-IDF weighting
-repres.TFIDF = as.data.frame(matrix(ncol = ncol(sequences.master)+ncol(weights)-2,
+repres.TFIDF = as.data.frame(matrix(ncol = ncol(sequences.master)+embeddingDim,
                                     nrow = nrow(sequences.master))) # contains vector representation for every sequence
-colnames(repres.TFIDF) = c(colnames(sequences.master), seq(1,ncol(weights)-2,1))
+colnames(repres.TFIDF) = c(colnames(sequences.master), seq(1,embeddingDim,1))
 dim_range = c(ncol(sequences.master)+1, ncol(repres.TFIDF))
 repres.TFIDF[, c(1:(dim_range[1]-1))] = sequences.master
 
 # matrix for SIF weighting
-repres.SIF = as.data.frame(matrix(ncol = ncol(sequences.master)+ncol(weights)-2,
+repres.SIF = as.data.frame(matrix(ncol = ncol(sequences.master)+embeddingDim,
                                   nrow = nrow(sequences.master))) # contains vector representation for every sequence
-colnames(repres.SIF) = c(colnames(sequences.master), seq(1,ncol(weights)-2,1))
+colnames(repres.SIF) = c(colnames(sequences.master), seq(1,embeddingDim,1))
 dim_range = c(ncol(sequences.master)+1, ncol(repres.SIF))
 repres.SIF[, c(1:(dim_range[1]-1))] = sequences.master
 
@@ -111,12 +104,12 @@ for (i in 1:nrow(sequences.master)) {
   # build temporary table that contains all tokens and weights for the current sequences
   current_tokens = t(str_split(sequences.master$tokens[i], pattern = " ", simplify = T))
   
-  tfidf = as.data.frame(matrix(ncol = ncol(weights)-2, nrow = nrow(current_tokens)))
+  tfidf = as.data.frame(matrix(ncol = embeddingDim, nrow = nrow(current_tokens)))
   tfidf[, "token"] = current_tokens
   
   # random embeddings for every token in tfidf
   for (r in 1:nrow(tfidf)) {
-    tfidf[r,c(1:(ncol(weights)-2))] = runif(length(c(1:(ncol(weights)-2))),
+    tfidf[r,c(1:embeddingDim)] = runif(length(c(1:embeddingDim)),
                                             min = -limit, max = limit)
   }
   
@@ -143,8 +136,8 @@ for (i in 1:nrow(sequences.master)) {
       tfidf[,c] = as.numeric(as.character(tfidf[,c]))
       sif[,c] = as.numeric(as.character(sif[,c]))
     }
-    repres.TFIDF[i, c(dim_range[1]:dim_range[2])] = colSums(tfidf[,c(1:(ncol(weights)-2))]) / nrow(tfidf)
-    repres.SIF[i, c(dim_range[1]:dim_range[2])] = colSums(sif[,c(1:(ncol(weights)-2))]) / nrow(sif)
+    repres.TFIDF[i, c(dim_range[1]:dim_range[2])] = colSums(tfidf[,c(1:embeddingDim)]) / nrow(tfidf)
+    repres.SIF[i, c(dim_range[1]:dim_range[2])] = colSums(sif[,c(1:embeddingDim)]) / nrow(sif)
     
   } else {
     repres.TFIDF[i, c(dim_range[1]:dim_range[2])] = rep(NA, length(c(dim_range[1]:dim_range[2])))

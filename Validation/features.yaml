@@ -4,12 +4,14 @@ data:
     sequence_batch: data/current_sequences.csv
     words: data/words_hp.csv
     word_batch: data/current_words.csv
-    weights: data/w5_d100_embedding.csv
-    weights_w3: data/w3_d100_embedding.csv
-    indices: data/ids_hp_w5.csv
+    indices: data/ids_hp_w5_new.csv
     TF-IDF: data/TF_IDF.csv
     hybrid_sup: data/u.sup.inv.3d.csv
     PropMatrix: data/PropMatrix.csv
+    PropMatrix_seqs: data/PropMatrix_seqs.csv
+    sequence_repres: data/hp_sequence_repres_w5_d100_seq2vec.csv
+    seq2vec_TFIDF: data/hp_sequence_repres_w5_d100_seq2vec.csv
+    seq2vec_SIF: data/hp_sequence_repres_w5_d100_seq2vec.csv
 
 embeddings:
     seq2vec: postprocessing/seq2vec.csv
@@ -17,9 +19,9 @@ embeddings:
     QSO: postprocessing/QSO.csv
     termfreq: postprocessing/termfreq.csv
     random: postprocessing/random.csv
-    hybrid_w3w5: postprocessing/hybrid_w3w5.csv
-    hybrid_w3w5biophys: postprocessing/hybrid_w3w5biophys.csv
-    hybrid_sup: postprocessing/hybrid_sup.csv
+    #hybrid_w3w5: postprocessing/hybrid_w3w5.csv
+    #hybrid_w3w5biophys: postprocessing/hybrid_w3w5biophys.csv
+    #hybrid_sup: postprocessing/hybrid_sup.csv
 
 
 weighting:
@@ -31,10 +33,10 @@ weighting:
     random_SIF: postprocessing/random_SIF.csv
 
 similarity:
-    true_syntax: postprocessing/true_syntax.csv
-    true_semantics_MF: postprocessing/true_semantics_MF.csv
-    true_semantics_BP: postprocessing/true_semantics_BP.csv
-    true_semantics_CC: postprocessing/true_semantics_CC.csv
+    true_syntax: postprocessing/similarity_true_syntax.csv
+    true_semantics_MF: postprocessing/similarity_true_semantics_MF.csv
+    true_semantics_BP: postprocessing/similarity_true_semantics_BP.csv
+    true_semantics_CC: postprocessing/similarity_true_semantics_CC.csv
 
 results:
     scores: scores_w5_d100.csv
@@ -51,8 +53,32 @@ CCR:
     - random_SIF
     - QSO
     - termfreq
-    - hybrid_w3w5
-    - hybrid_w3w5biophys
+    #- hybrid_w3w5
+    #- hybrid_w3w5biophys
+
+sim:
+    - seq2vec
+    - seq2vec_CCR
+    - seq2vec_TFIDF
+    - seq2vec_TFIDF_CCR
+    - seq2vec_SIF
+    - seq2vec_SIF_CCR
+    - biophys
+    - biophys_CCR
+    - biophys_TFIDF
+    - biophys_TFIDF_CCR
+    - biophys_SIF
+    - biophys_SIF_CCR
+    - random
+    - random_CCR
+    - random_TFIDF
+    - random_TFIDF_CCR
+    - random_SIF
+    - random_SIF_CCR
+    - QSO
+    - QSO_CCR
+    - termfreq
+    - termfreq_CCR
 
 
 final:
@@ -78,11 +104,11 @@ final:
     - QSO_CCR
     - termfreq
     - termfreq_CCR
-    - hybrid_w3w5
-    - hybrid_w3w5_CCR
-    - hybrid_w3w5biophys
-    - hybrid_w3w5biophys_CCR
-    - hybrid_sup
+    #- hybrid_w3w5
+    #- hybrid_w3w5_CCR
+    #- hybrid_w3w5biophys
+    #- hybrid_w3w5biophys_CCR
+    #- hybrid_sup
     - true_syntax
     - true_semantics_MF
     - true_semantics_BP

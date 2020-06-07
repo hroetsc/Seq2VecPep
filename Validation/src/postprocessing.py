@@ -1,10 +1,8 @@
 rule seq2vec_weighting:
     input:
         formatted_sequence = features["data"]["sequence_batch"],
-        words = features["data"]["word_batch"],
-        TF_IDF = features["data"]["TF-IDF"],
-        ids = features["data"]["indices"],
-        weights = features["data"]["weights"]
+        TFIDF = features["data"]["seq2vec_TFIDF"],
+        SIF = features["data"]["seq2vec_SIF"]
     output:
         seq2vec_TFIDF = features["weighting"]["seq2vec_TFIDF"],
         seq2vec_SIF = features["weighting"]["seq2vec_SIF"]
@@ -20,7 +18,6 @@ rule biophys_weighting:
         words = features["data"]["word_batch"],
         TF_IDF = features["data"]["TF-IDF"],
         ids = features["data"]["indices"],
-        weights = features["data"]["weights"],
         Props = features["data"]["PropMatrix"]
     output:
         biophys_TFIDF = features["weighting"]["biophys_TFIDF"],
@@ -36,8 +33,7 @@ rule random_weighting:
         formatted_sequence = features["data"]["sequence_batch"],
         words = features["data"]["word_batch"],
         TF_IDF = features["data"]["TF-IDF"],
-        ids = features["data"]["indices"],
-        weights = features["data"]["weights"]
+        ids = features["data"]["indices"]
     output:
         random_TFIDF = features["weighting"]["random_TFIDF"],
         random_SIF = features["weighting"]["random_SIF"]

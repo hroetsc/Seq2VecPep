@@ -22,6 +22,7 @@ dependencies:
   - r-domc
   - bioconductor-gosemsim
   - bioconductor-annotationhub
+  - bioconductor-biostrings
   - bioconductor-org.hs.eg.db
   - r-wgcna
   - r-future
