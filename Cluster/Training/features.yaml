@@ -1,30 +1,14 @@
 # files used in pipeline
 
 # nomenclature:
-# hp - human proteome, w3 - window size = 3, d100 - embedding size = 100
+# hm - human proteome, w3 - window size = 3, d100 - embedding size = 100
 
-words: /scratch2/hroetsc/Seq2Vec/data/words_hp.csv
+words: /scratch2/hroetsc/Seq2Vec/data/words_hum_sigtrans.csv
 
 params:
-  w1:
-    - hp_w1_d100
-    - hp_w1_d150
-    - hp_w1_d200
-  w3:
-    - hp_w3_d100
-    - hp_w3_d150
-    - hp_w3_d200
   w5:
     - hp_w5_d100
     - hp_w5_d150
     - hp_w5_d200
-  w10:
-    - hp_w10_d100
-    - hp_w10_d150
-    - hp_w10_d200
-  w15:
-    - hp_w15_d100
-    - hp_w15_d150
-    - hp_w15_d200
 
 ...

@@ -28,6 +28,8 @@ sequences = sequences[order(sequences$seqs), ]
 PropMatrix = Props[which(Props$seqs %in% sequences$seqs), ]
 PropMatrix = PropMatrix[order(PropMatrix$seqs), ]
 
+sequences = sequences[which(sequences$seqs %in% PropMatrix$seqs), ]
+
 PropMatrix = cbind(sequences$Accession, PropMatrix)
 colnames(PropMatrix)[1] = "Accession"
 PropMatrix$X = NULL

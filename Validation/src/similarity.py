@@ -1,17 +1,7 @@
-rule true_similarity_syntax:
-    input:
-        formatted_sequence = features["data"]["sequence_batch"]
-    output:
-        syntax = features["similarity"]["true_syntax"]
-    conda:
-        "R_dependencies.yml"
-    script:
-        "similarity_true_syntax.R"
-
-
 rule true_similarity_semantics:
     input:
-        formatted_sequence = features["data"]["sequence_batch"]
+        batch_sequence = features["data"]["sequence_batch"],
+        batch_accessions = features["data"]["acc_batch"]
     output:
         semantics_MF = features["similarity"]["true_semantics_MF"],
         semantics_BP = features["similarity"]["true_semantics_BP"],
@@ -25,7 +15,8 @@ rule true_similarity_semantics:
 rule similarity:
     input:
         embedding = expand('postprocessing/{sample}.csv',
-                            sample = features["sim"])
+                            sample = features["sim"]),
+        batch_accessions = features["data"]["acc_batch"]
     output:
         similarity = expand('postprocessing/similarity_{sample}.csv',
                             sample = features["sim"])

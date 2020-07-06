@@ -20,11 +20,19 @@ registerDoMC(availableCores())
 
 input = snakemake@input[["embedding"]]
 
+accessions = read.csv(snakemake@input[["batch_accessions"]], stringsAsFactors = F, header = T)
+
+
 # function that returns cosine of angle between two vectors
+matmult = function(v1 = "", v2 = ""){
+  return(as.numeric(v1) %*% as.numeric(v2))
+}
+
 dot_product = function(v1 = "", v2 = ""){
-  p = sum(v1 * v2)/(sqrt(sum(v1^2)) * sqrt(sum(v2^2)))
+  p = matmult(v1, v2)/(sqrt(matmult(v1, v1)) * sqrt(matmult(v2, v2)))
   return(p)
 }
+
 
 foreach(i = 1:length(input)) %dopar% {
   print(snakemake@input[["embedding"]][i])
@@ -37,41 +45,31 @@ foreach(i = 1:length(input)) %dopar% {
   proteins = emb$Accession
 
   # remove metainformation
-  emb$Accession = NULL
   emb$seqs = NULL
   if("tokens" %in% colnames(emb)){
     emb$tokens = NULL
   }
 
-  emb[, which(!is.finite(colSums(emb)))] = NULL
+  #emb[, which(!is.finite(colSums(emb)))] = NULL
 
-  # initialize matrix for similarity scores
-  sim = matrix(nrow = length(proteins), ncol = length(proteins))
-  colnames(sim) = proteins
-  rownames(sim) = proteins
-
-
-  progressBar = txtProgressBar(min = 0, max = length(proteins), style = 3)
-  for (s in 1:length(proteins)){
-    setTxtProgressBar(progressBar, s)
-
-    for (p in 1:length(proteins)){
-      sim[s,p] = dot_product(v1 = as.numeric(as.character(emb[s,])),
-                             v2 = as.numeric(as.character(emb[p,])))
-    }
+  sim = accessions %>% as.data.frame()
+  sim$similarity = NULL
+  
+  pb = txtProgressBar(min = 0, max = nrow(accessions), style = 3)
+  
+  for(a in 1:nrow(accessions)) {
+    setTxtProgressBar(pb, a)
+    
+    v1 = emb[which(emb$Accession == accessions$acc1[a]), c(2:ncol(emb))]
+    v2 = emb[which(emb$Accession == accessions$acc2[a]), c(2:ncol(emb))]
+    
+    sim$similarity[a] = dot_product(v1 = v1, v2 = v2)
+    
   }
 
 
-  # add protein information
-  res = matrix(ncol = ncol(sim)+1, nrow = nrow(sim))
-  res[, 1] = proteins
-  res[, c(2:ncol(res))] = sim
-  colnames(res) = c("Accession", seq(1, ncol(sim)))
-  
-  res = as.data.frame(res)
-  
   ### OUTPUT ###
   print(paste0("done with: ",snakemake@input[["embedding"]][i]))
-  write.csv(res, file = unlist(snakemake@output[["similarity"]][i]), row.names = T)
+  write.csv(sim, file = unlist(snakemake@output[["similarity"]][i]), row.names = F)
 
 }

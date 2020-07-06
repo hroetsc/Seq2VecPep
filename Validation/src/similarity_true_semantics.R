@@ -10,86 +10,58 @@ library(plyr)
 library(dplyr)
 library(stringr)
 library(GOSemSim)
-library(AnnotationHub)
+
 
 print("TRUE SEMANTIC SIMILARITY")
 
 ### INPUT ###
 # formatted sequences
-sequences = read.csv(snakemake@input[["formatted_sequence"]], stringsAsFactors = F, header = T)
+sequences = read.csv(snakemake@input[["batch_sequence"]], stringsAsFactors = F, header = T)
+accessions = read.csv(snakemake@input[["batch_accessions"]], stringsAsFactors = F, header = T)
 
 
 ### MAIN PART ###
-
-# order accessions alphabetically
-sequences = sequences[order(sequences$Accession), ]
-acc = sequences$Accession
 
 GO_sim = function(ont = ""){
   
   print(paste0("calculating semantic similarity for ", ont, " ontology"))
   
-  hsGO = godata('org.Hs.eg.db', keytype = "UNIPROT",ont = ont, computeIC = F)
+  hsGO = godata('org.Hs.eg.db', keytype = "UNIPROT", ont = ont, computeIC = F)
   annot = hsGO@geneAnno
   
-  alig = matrix(ncol = length(acc), nrow = length(acc))
+  alig = accessions %>% as.data.frame()
+  alig$similarity = NULL
   
-  pb = txtProgressBar(min = 0, max = length(acc), style = 3)
+  pb = txtProgressBar(min = 0, max = nrow(accessions), style = 3)
   
   rm = c()
   
-  for(a in 1:nrow(alig)) {
+  for(a in 1:nrow(accessions)) {
     
     setTxtProgressBar(pb, a)
     
-    for (b in 1:ncol(alig)){
+    # no isoform discrimination in GO terms!
+    prot1 = str_split(accessions$acc1[a], coll("-"), simplify = T)[,1]
+    prot2 = str_split(accessions$acc2[a], coll("-"), simplify = T)[,1]
+    
+    go1 = as.character(annot[which(annot$UNIPROT == prot1), "GO"])
+    go2 = as.character(annot[which(annot$UNIPROT == prot2), "GO"])
+    
+    if(length(go1) & length(go2)){
+      alig[a, "similarity"] = mgoSim(go1, go2,
+                                  semData = hsGO,measure="Wang", combine="BMA")
       
-      # no isoform discrimination in GO terms!
-      prot1 = str_split(acc[a], coll("-"), simplify = T)[,1]
-      prot2 = str_split(acc[b], coll("-"), simplify = T)[,1]
+    } else {
       
-      go1 = as.character(annot[which(annot$UNIPROT == prot1), "GO"])
-      go2 = as.character(annot[which(annot$UNIPROT == prot2), "GO"])
-      
-      if(length(go1) & length(go2)){
-        alig[a,b] = mgoSim(go1, go2,
-                           semData = hsGO,measure="Wang", combine="BMA")
-        
-      } else {
-        
-        alig[a,b] = 0
-  
-      }
+      alig[a, "similarity"] = 0
       
     }
     
   }
   
-  # remove all columns that don't have a GO term
+  alig = alig[-which(alig$similarity == 0), ]
   
-  k = which(colSums(alig) == 0)
-  
-  if (length(k) > 0){
-    acc = acc[-k]
-    alig = alig[-k,]
-    alig = alig[,-k]
-  }
-  
-  if (ncol(alig) == 0){
-    
-    print("!!!WARNING!!! NO GO TERM FOUND FOR ANY PROTEIN !!!")
-    
-  }
-  
-  # add accessions
-  res = matrix(ncol = ncol(alig)+1, nrow = nrow(alig))
-  res[, 1] = acc
-  res[, c(2:ncol(res))] = alig
-  colnames(res) = c("Accession", seq(1, ncol(alig)))
-  
-  res = as.data.frame(res)
-  
-  return(res)
+  return(alig)
   
 }
 
@@ -99,7 +71,13 @@ res_BP = GO_sim(ont = "BP")
 res_CC = GO_sim(ont = "CC")
 
 
+plot(density(res_MF$similarity))
+plot(density(res_BP$similarity))
+plot(density(res_CC$similarity))
+
+
 ### OUTPUT ###
-write.csv(res_MF, file = unlist(snakemake@output[["semantics_MF"]]), row.names = T)
-write.csv(res_BP, file = unlist(snakemake@output[["semantics_BP"]]), row.names = T)
-write.csv(res_CC, file = unlist(snakemake@output[["semantics_CC"]]), row.names = T)
+write.csv(res_MF, file = unlist(snakemake@output[["semantics_MF"]]), row.names = F)
+write.csv(res_BP, file = unlist(snakemake@output[["semantics_BP"]]), row.names = F)
+write.csv(res_CC, file = unlist(snakemake@output[["semantics_CC"]]), row.names = F)
+

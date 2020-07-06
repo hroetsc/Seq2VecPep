@@ -27,8 +27,8 @@ sequences = read.csv(snakemake@input[["formatted_sequence"]], stringsAsFactors =
 len = nchar(sequences$seqs)
 lag = min(len)-1
 
-if(lag >25){
-  lag = 25
+if(lag > 30){
+  lag = 30
 }
 
 print(paste0("lag: ", lag))
@@ -51,7 +51,7 @@ progressBar = txtProgressBar(min = 0, max = nrow(QSO), style = 3)
 for (q in 1:nrow(QSO)) {
   setTxtProgressBar(progressBar, q)
   
-  x = extractQSO(sequences$seqs[q], nlag = lag)
+  x = extractQSO(toupper(sequences$seqs[q]), nlag = lag)
   QSO[q, 3:(2+length(x))] = x
 }
 

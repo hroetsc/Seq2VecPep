@@ -101,7 +101,7 @@ valSplit = 0.1
 NUM_WORKERS = num_nodes
 BATCH_SIZE = 32*hvd.size()
 
-print('per worker batch size: ', PER_WORKER_BATCH_SIZE)
+print('per worker batch size: ', BATCH_SIZE)
 
 ### output - this is not ideal ...
 checkpoints = '/scratch2/hroetsc/Seq2Vec/results/hp_model_w5_d100/ckpts'
@@ -247,6 +247,10 @@ Y = np.array(skip_grams.iloc[:,2], dtype = 'int32')
 # shuffle skip-gram order
 print('randomly shuffle skip-grams')
 ind = np.random.randint(0, target_word.shape[0], target_word.shape[0])
+
+# tmp !!!
+#ind = np.random.randint(0, target_word.shape[0], 100000)
+
 target_word = target_word[ind]
 context_word = context_word[ind]
 Y = Y[ind]
@@ -285,8 +289,8 @@ target_train, target_test, context_train, context_test, Y_train, Y_test = train_
 # apply batch generator
 print("generating batches for model training")
 
-train_generator = BatchGenerator(target_train, context_train, Y_train, PER_WORKER_BATCH_SIZE)
-test_generator = BatchGenerator(target_test, context_test, Y_test, PER_WORKER_BATCH_SIZE)
+train_generator = BatchGenerator(target_train, context_train, Y_train, BATCH_SIZE)
+test_generator = BatchGenerator(target_test, context_test, Y_test, BATCH_SIZE)
 
 
 print('define callbacks')
@@ -341,7 +345,8 @@ fit = model.fit_generator(generator = train_generator,
                     epochs = epochs,
                     callbacks = callbacks,
                     initial_epoch = 0,
-                    verbose = 2 if hvd.rank() == 0 else 0,
+                    #verbose = 2 if hvd.rank() == 0 else 0,
+                    verbose = 2,
                     max_queue_size = 1,
                     shuffle = True)
 

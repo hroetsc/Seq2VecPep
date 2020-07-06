@@ -1,5 +1,6 @@
 # files used in pipeline
 data:
+    acc_batch: data/current_accessions.csv
     formatted_sequence: data/proteome_human.csv
     sequence_batch: data/current_sequences.csv
     words: data/words_hp.csv
@@ -19,10 +20,6 @@ embeddings:
     QSO: postprocessing/QSO.csv
     termfreq: postprocessing/termfreq.csv
     random: postprocessing/random.csv
-    #hybrid_w3w5: postprocessing/hybrid_w3w5.csv
-    #hybrid_w3w5biophys: postprocessing/hybrid_w3w5biophys.csv
-    #hybrid_sup: postprocessing/hybrid_sup.csv
-
 
 weighting:
     seq2vec_TFIDF: postprocessing/seq2vec_TFIDF.csv
@@ -51,10 +48,9 @@ CCR:
     - random
     - random_TFIDF
     - random_SIF
-    - QSO
+    #- QSO
     - termfreq
-    #- hybrid_w3w5
-    #- hybrid_w3w5biophys
+
 
 sim:
     - seq2vec
@@ -75,8 +71,8 @@ sim:
     - random_TFIDF_CCR
     - random_SIF
     - random_SIF_CCR
-    - QSO
-    - QSO_CCR
+    #- QSO
+    #- QSO_CCR
     - termfreq
     - termfreq_CCR
 
@@ -100,15 +96,10 @@ final:
     - random_TFIDF_CCR
     - random_SIF
     - random_SIF_CCR
-    - QSO
-    - QSO_CCR
+    #- QSO
+    #- QSO_CCR
     - termfreq
     - termfreq_CCR
-    #- hybrid_w3w5
-    #- hybrid_w3w5_CCR
-    #- hybrid_w3w5biophys
-    #- hybrid_w3w5biophys_CCR
-    #- hybrid_sup
     - true_syntax
     - true_semantics_MF
     - true_semantics_BP
