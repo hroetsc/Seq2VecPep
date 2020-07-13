@@ -20,6 +20,7 @@ dependencies:
   - r-foreach
   - r-doparallel
   - r-domc
+  #- r-emdist
   - bioconductor-gosemsim
   - bioconductor-annotationhub
   - bioconductor-biostrings

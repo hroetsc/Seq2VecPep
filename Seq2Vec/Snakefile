@@ -21,5 +21,6 @@ include: snakefiles + "seq2vec.py"
 rule all:
     input:
         model = features["embedded_sequence"]["model"],
+        plot = "model.plot.done",
         sequence_repres_seq2vec = features["embedded_sequence"]["sequence_repres_seq2vec"],
         sequence_repres_seq2vec_CCR = features["embedded_sequence"]["sequence_repres_seq2vec_CCR"]

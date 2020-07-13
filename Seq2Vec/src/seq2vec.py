@@ -33,6 +33,8 @@ rule seq2vec_training:
 rule model_metrics:
     input:
         metrics = features["embedded_sequence"]["model_metrics"]
+    output:
+        touch("model.plot.done")
     conda:
         "R_dependencies.yml"
     script:
@@ -48,26 +50,13 @@ rule sequence_repres:
     output:
         sequence_repres_seq2vec = features["embedded_sequence"]["sequence_repres_seq2vec"],
         sequence_repres_seq2vec_TFIDF = features["embedded_sequence"]["sequence_repres_seq2vec_TFIDF"],
-        sequence_repres_seq2vec_SIF = features["embedded_sequence"]["sequence_repres_seq2vec_SIF"]
+        sequence_repres_seq2vec_SIF = features["embedded_sequence"]["sequence_repres_seq2vec_SIF"],
+        sequence_repres_seq2vec_CCR = features["embedded_sequence"]["sequence_repres_seq2vec_CCR"],
+        sequence_repres_seq2vec_TFIDF_CCR = features["embedded_sequence"]["sequence_repres_seq2vec_TFIDF_CCR"],
+        sequence_repres_seq2vec_SIF_CCR = features["embedded_sequence"]["sequence_repres_seq2vec_SIF_CCR"]
     benchmark:
         "results/benchmarks/sequence_repres.txt"
     conda:
         "R_dependencies.yml"
     script:
         "sequence_repres.R"
-
-rule CCR:
-    input:
-        sequence_repres_seq2vec = features["embedded_sequence"]["sequence_repres_seq2vec"],
-        sequence_repres_seq2vec_TFIDF = features["embedded_sequence"]["sequence_repres_seq2vec_TFIDF"],
-        sequence_repres_seq2vec_SIF = features["embedded_sequence"]["sequence_repres_seq2vec_SIF"]
-    output:
-        sequence_repres_seq2vec_CCR = features["embedded_sequence"]["sequence_repres_seq2vec_CCR"],
-        sequence_repres_seq2vec_TFIDF_CCR = features["embedded_sequence"]["sequence_repres_seq2vec_TFIDF_CCR"],
-        sequence_repres_seq2vec_SIF_CCR = features["embedded_sequence"]["sequence_repres_seq2vec_SIF_CCR"]
-    benchmark:
-        "results/benchmarks/CCR.txt"
-    conda:
-        "R_dependencies.yml"
-    script:
-        "CCR.R"

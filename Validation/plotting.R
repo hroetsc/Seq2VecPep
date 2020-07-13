@@ -9,9 +9,9 @@ library(ggstatsplot)
 
 ### INPUT ###
 # get all score files
-fs_hp = list.files(path = "downloads", pattern = "scores_hp_new", recursive = T, full.names = T)
-fs_hst = list.files(path = "downloads", pattern = "scores_hst", recursive = T, full.names = T)
-fs_hm = list.files(path = "downloads", pattern = "scores_hm", recursive = T, full.names = T)
+fs_hp = list.files(path = "downloads", pattern = "scores_hp_200713", recursive = T, full.names = T)
+# fs_hst = list.files(path = "downloads", pattern = "scores_hst", recursive = T, full.names = T)
+# fs_hm = list.files(path = "downloads", pattern = "scores_hm", recursive = T, full.names = T)
 
 
 # merge them in a single df
@@ -35,8 +35,8 @@ merge_data = function(fs = ""){
   
   df$embedding = str_replace_all(df$embedding, coll("_"), coll(" "))
   
-  #df = df[, c("embedding","syntax_diff", "MF_semantics_diff", "BP_semantics_diff", "CC_semantics_diff")]
-  df = df[, c("embedding","syntax_R2", "MF_semantics_R2", "BP_semantics_R2", "CC_semantics_R2")]
+  df = df[, c("embedding","syntax_diff", "MF_semantics_diff", "BP_semantics_diff", "CC_semantics_diff")]
+  #df = df[, c("embedding","syntax_R2", "MF_semantics_R2", "BP_semantics_R2", "CC_semantics_R2")]
   
   colnames(df) = c("embedding", "syntax", "semantics MF", "semantics BP", "semantics CC")
   
@@ -94,7 +94,8 @@ violin = function(score = "", df = ""){
   p = p +
     ggtitle("comparison of true and predicted sequence similarity",
             subtitle = paste0("human proteome: ", score)) +
-    ylab("Spearman coefficient") +
+    #ylab("Spearman coefficient") +
+    ylab("mean squared error") +
     xlab("embedding") +
     #ylim(c(lower, upper)) +
     theme_bw() +
@@ -104,7 +105,7 @@ violin = function(score = "", df = ""){
   
   p
   ggsave(plot = p, filename = paste0("results/hp_", str_replace_all(score, coll(" "), coll("_")),
-                                     "_spearman.png"), device = "png",
+                                     "_mse.png"), device = "png",
          dpi = "retina", height = 3.93*2, width = 5.56*2)
   
   
@@ -118,7 +119,7 @@ violin = function(score = "", df = ""){
     geom_violin(scale = "width", trim = F,
                 draw_quantiles = c(0.5)) +
     geom_jitter(height = 0, width = 0.01) +
-    ggtitle("comparison of true and predicted sequence similarity") +
+    ggtitle("comparison of true and predicted sequence similarity (based on euclidean distance)") +
     ylab("mean squared error") +
     xlab("embedding") +
     #ylim(c(lower, upper)) +

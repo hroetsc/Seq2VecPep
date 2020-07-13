@@ -11,7 +11,15 @@ library(stringr)
 library(readr)
 library(data.table)
 
-print("### WEIIGHTING OF RANDOM EMBEDDINGS ###")
+library(WGCNA)
+
+library(foreach)
+library(doParallel)
+library(doMC)
+library(future)
+
+
+print("### RANDOM: EMBEDDING AND WEIGHTING ###")
 
 ### INPUT ###
 sequences = read.csv(file = snakemake@input[["formatted_sequence"]],
@@ -23,7 +31,14 @@ indices = read.csv(file = snakemake@input[["ids"]], stringsAsFactors = F, header
 embeddingDim = 100
 
 ### MAIN PART ###
-TF_IDF$token = toupper(TF_IDF$token)
+threads = 4
+
+cl = makeCluster(threads)
+registerDoParallel(cl)
+registerDoMC(threads)
+
+
+TF_IDF$token = toupper(TF_IDF$token) %>% as.character()
 
 if (ncol(indices) == 3){
   indices$V1 = NULL
@@ -33,8 +48,48 @@ indices$subword = toupper(indices$subword)
 
 
 # combine sequences table with tokens file
-sequences.master = left_join(sequences, words)
+sequences.master = left_join(sequences, words) %>% na.omit()
 sequences.master = sequences.master[order(sequences.master$Accession), ]
+
+
+# generate data frame with random token embeddings
+# he_uniform
+# fan_in equals input units to weight tensor (roughly 5000)
+fan_in = 5000
+# limit for uniform distribution
+limit = sqrt(6 / fan_in)
+
+RAND = matrix(nrow = nrow(indices), ncol = embeddingDim+1) %>% as.data.frame()
+RAND[,1] = indices$subword
+
+for (r in 1:nrow(RAND)){
+  RAND[r,c(2:ncol(RAND))] = runif(n = embeddingDim, min = -limit, max = limit)
+}
+
+colnames(RAND) = c("token", paste(seq(1,embeddingDim,1)))
+
+
+### FUNCTIONS ###
+# grep only the columns that contain actual weights in the RAND data frame
+grep_weights = function(df = ""){
+  c = str_count(df[2,], "\\d+\\.*\\d*")
+  return(as.logical(c))
+}
+
+embeddingDim = grep_weights(RAND) %>% sum()
+
+
+# define function that searches for tokens in weight matrix
+find_tokens = function(token = ""){
+  if (token %in% RAND$token) {
+    return(RAND[which(token == RAND$token)[1], grep_weights(RAND)][1, ])
+    
+  } else {
+    
+    print(paste0("no embedding found for token: ", token))
+    return(rep(NA, embeddingDim))
+  }
+}
 
 # define function that finds TF-IDF score for token in correct sequence
 find_TF.IDF = function(tokens = "", sequence = "") {
@@ -50,6 +105,7 @@ find_TF.IDF = function(tokens = "", sequence = "") {
   }
   return(scores)
 }
+
 
 # calculate smooth inverse frequency
 a = 0.001
@@ -69,91 +125,220 @@ find_SIF = function(tokens = "", sequence = "") {
   # smooth inverse frequency
   scores = a/(a + scores)
   scores[which(!is.finite(scores))] = 1
+  
   return(scores)
 }
 
 
-
-# matrix for TF-IDF weighting
-repres.TFIDF = as.data.frame(matrix(ncol = ncol(sequences.master)+embeddingDim,
-                                    nrow = nrow(sequences.master))) # contains vector representation for every sequence
-colnames(repres.TFIDF) = c(colnames(sequences.master), seq(1,embeddingDim,1))
-dim_range = c(ncol(sequences.master)+1, ncol(repres.TFIDF))
-repres.TFIDF[, c(1:(dim_range[1]-1))] = sequences.master
-
-# matrix for SIF weighting
-repres.SIF = as.data.frame(matrix(ncol = ncol(sequences.master)+embeddingDim,
-                                  nrow = nrow(sequences.master))) # contains vector representation for every sequence
-colnames(repres.SIF) = c(colnames(sequences.master), seq(1,embeddingDim,1))
-dim_range = c(ncol(sequences.master)+1, ncol(repres.SIF))
-repres.SIF[, c(1:(dim_range[1]-1))] = sequences.master
-
-
-# he_uniform
-# fan_in equals input units to weight tensor (roughly 5000)
-fan_in = 5000
-# calculate limit for uniform distribution
-limit = sqrt(6 / fan_in)
-
-
-# iterate sequences in master table to get their representation
-progressBar = txtProgressBar(min = 0, max = nrow(sequences.master), style = 3)
-for (i in 1:nrow(sequences.master)) {
-  setTxtProgressBar(progressBar, i)
+# write current sequence representation to file to prevent running OOM
+saveSeq = function(line = "", cols = "", outfile = "", PID = ""){
   
-  # build temporary table that contains all tokens and weights for the current sequences
-  current_tokens = t(str_split(sequences.master$tokens[i], pattern = " ", simplify = T))
+  path = paste0("random_tmp/",PID, "_", outfile)
   
-  tfidf = as.data.frame(matrix(ncol = embeddingDim, nrow = nrow(current_tokens)))
-  tfidf[, "token"] = current_tokens
-  
-  # random embeddings for every token in tfidf
-  for (r in 1:nrow(tfidf)) {
-    tfidf[r,c(1:embeddingDim)] = runif(length(c(1:embeddingDim)),
-                                            min = -limit, max = limit)
+  if (str_detect(outfile, "/")){
+    outfile = str_split(outfile, "/", simplify = T) %>% as.vector()
+    path = paste0("random_tmp/", PID, "_", outfile[1], "_", outfile[2])
   }
   
-  sif = tfidf
   
-  # extract TF-IDF scores for all tokens
-  tfidf[, "TF_IDF"] = find_TF.IDF(tokens = tfidf$token, sequence = sequences.master$Accession[i])
-  sif[, "SIF"] = find_SIF(tokens = sif$token, sequence = sequences.master$Accession[i])
-  
-  # multiply token embeddings by their TF-IDF scores
-  tfidf[, c(1:(ncol(tfidf)-2))] = tfidf[, c(1:(ncol(tfidf)-2))] * tfidf$TF_IDF
-  tfidf$TF_IDF = NULL
-  tfidf$token = NULL
-  
-  # multiply token embeddings by their SIF scores
-  sif[, c(1:(ncol(sif)-2))] = sif[, c(1:(ncol(sif)-2))] * sif$SIF
-  sif$SIF = NULL
-  sif$token = NULL
-  
-  # only proceed if embeddings for every token are found, otherwise discard sequence
-  if (!any(is.na(tfidf) & is.na(sif))) {
-    # calculate mean of every token dimension to get sequence dimension
-    for (c in 1:ncol(tfidf)) {
-      tfidf[,c] = as.numeric(as.character(tfidf[,c]))
-      sif[,c] = as.numeric(as.character(sif[,c]))
-    }
-    repres.TFIDF[i, c(dim_range[1]:dim_range[2])] = colSums(tfidf[,c(1:embeddingDim)]) / nrow(tfidf)
-    repres.SIF[i, c(dim_range[1]:dim_range[2])] = colSums(sif[,c(1:embeddingDim)]) / nrow(sif)
+  if(! file.exists(path)){
+    write(line, path, append = F, sep = ",", ncolumns = cols)
     
   } else {
-    repres.TFIDF[i, c(dim_range[1]:dim_range[2])] = rep(NA, length(c(dim_range[1]:dim_range[2])))
-    repres.SIF[i, c(dim_range[1]:dim_range[2])] = rep(NA, length(c(dim_range[1]:dim_range[2])))
+    write(line, path, append = T, sep = ",", ncolumns = cols)
   }
 }
 
-repres.TFIDF = na.omit(repres.TFIDF)
-repres.TFIDF = unique(repres.TFIDF)
-repres.TFIDF$tokens = NULL
 
-repres.SIF = na.omit(repres.SIF)
-repres.SIF = unique(repres.SIF)
-repres.SIF$tokens = NULL
+# iterate sequences in master table to get their representation
+print("RETRIEVING NUMERIC REPRESENTATION OF EVERY SEQUENCE")
+
+
+# convert weights into numeric
+if(! mode(RAND[,5]) == "numeric"){
+  for (c in grep_weights(RAND)){
+    RAND[,c] = RAND[,c] %>% as.character() %>% as.numeric()
+  }
+  
+}
+
+
+### outfiles ###
+out = unlist(snakemake@output[["random"]])
+out.tfidf = unlist(snakemake@output[["random_TFIDF"]])
+out.sif = unlist(snakemake@output[["random_SIF"]])
+
+out.ccr = unlist(snakemake@output[["random_CCR"]])
+out.tfidf.ccr = unlist(snakemake@output[["random_TFIDF_CCR"]])
+out.sif.ccr = unlist(snakemake@output[["random_SIF_CCR"]])
+
+
+# empty directory for tmp outfiles
+if(! dir.exists("./random_tmp")){
+  dir.create("./random_tmp")
+} else {
+  system("rm -rf random_tmp/")
+  dir.create("./random_tmp")
+}
+
+# iteration
+system.time(foreach (i = 1:nrow(sequences.master)) %dopar% {
+  
+  # build temporary table that contains all tokens and weights for the current sequences
+  current_tokens = str_split(sequences.master$tokens[i], coll(" "), simplify = T) %>% as.vector()
+  
+  tmp = as.data.frame(matrix(ncol = embeddingDim, nrow = length(current_tokens)))
+  tmp[, "token"] = current_tokens
+  
+  # find embeddings for every token in tmp
+  for (r in 1:nrow(tmp)) {
+    tmp[r,c(1:embeddingDim)] = find_tokens(paste(tmp[r, ncol(tmp)]))
+  }
+  
+  tmp.tfidf = tmp
+  tmp.sif = tmp
+  
+  # extract TF-IDF and SIF scores for all tokens
+  tmp.tfidf[, "TF_IDF"] = find_TF.IDF(tokens = tmp.tfidf$token, sequence = sequences.master$Accession[i])
+  tmp.sif[, "SIF"] = find_SIF(tokens = tmp.sif$token, sequence = sequences.master$Accession[i])
+  
+  # multiply token embeddings by their TF-IDF scores
+  tmp.tfidf[, c(1:embeddingDim)] = tmp.tfidf[, c(1:embeddingDim)] * tmp.tfidf$TF_IDF
+  tmp.tfidf$TF_IDF = NULL
+  tmp.tfidf$token = NULL
+  
+  # multiply token embeddings by their SIF scores
+  tmp.sif[, c(1:embeddingDim)] = tmp.sif[, c(1:embeddingDim)] * tmp.sif$SIF
+  tmp.sif$SIF = NULL
+  tmp.sif$token = NULL
+  
+  tmp$token = NULL
+  
+  ## common component removal
+  # remove mean
+  mu = colSums(tmp) / nrow(tmp)
+  mu.tfidf = colSums(tmp.tfidf) / nrow(tmp.tfidf)
+  mu.sif = colSums(tmp.sif) / nrow(tmp.sif)
+  
+  tmp.ccr = tmp
+  tmp.tfidf.ccr = tmp.tfidf
+  tmp.sif.ccr = tmp.sif
+  
+  for (l in 1:nrow(tmp.ccr)){
+    tmp.ccr[l,] = tmp.ccr[l, ] - mu
+    tmp.tfidf.ccr[l,] = tmp.tfidf.ccr[l, ] - mu.tfidf
+    tmp.sif.ccr[l,] = tmp.sif.ccr[l, ] - mu.sif
+  }
+  
+  # regression on 1st PC
+  tmp.ccr = removePrincipalComponents(x = as.matrix(tmp), n = 1)
+  tmp.tfidf.ccr = removePrincipalComponents(x = as.matrix(tmp.tfidf), n = 1)
+  tmp.sif.ccr = removePrincipalComponents(x = as.matrix(tmp.sif), n = 1)
+  
+  # only proceed if embeddings for every token are found, otherwise discard whole sequence
+  if (!any(is.na(tmp))) {
+    
+    # calculate mean of every token dimension to get sequence dimension
+    for (c in 1:ncol(tmp)) {
+      tmp[,c] = as.numeric(as.character(tmp[,c]))
+      tmp.tfidf[,c] = as.numeric(as.character(tmp.tfidf[,c]))
+      tmp.sif[,c] = as.numeric(as.character(tmp.sif[,c]))
+      
+      tmp.ccr[,c] = as.numeric(as.character(tmp.ccr[,c]))
+      tmp.tfidf.ccr[,c] = as.numeric(as.character(tmp.tfidf.ccr[,c]))
+      tmp.sif.ccr[,c] = as.numeric(as.character(tmp.sif.ccr[,c]))
+    }
+    
+    # calculate means
+    line = colSums(tmp) / nrow(tmp)
+    line.tfidf = colSums(tmp.tfidf) / nrow(tmp.tfidf)
+    line.sif = colSums(tmp.sif) / nrow(tmp.sif)
+    
+    line.ccr = colSums(tmp.ccr) / nrow(tmp.ccr)
+    line.tfidf.ccr = colSums(tmp.tfidf.ccr) / nrow(tmp.tfidf.ccr)
+    line.sif.ccr = colSums(tmp.sif.ccr) / nrow(tmp.sif.ccr)
+    
+  } else {
+    line = rep(NA, ncol(tmp))
+    line.tfidf = line
+    line.sif = line
+    
+    line.ccr = line
+    line.tfidf.ccr = line
+    line.sif.ccr = line
+  }
+  
+  # add current accession
+  acc = sequences.master$Accession[i]
+  
+  # write / append to file
+  saveSeq(line = c(acc, line), cols = embeddingDim + 1, outfile = out, PID = Sys.getpid())
+  saveSeq(line = c(acc, line.tfidf), cols = embeddingDim + 1, outfile = out.tfidf, PID = Sys.getpid())
+  saveSeq(line = c(acc, line.sif), cols = embeddingDim + 1, outfile = out.sif, PID = Sys.getpid())
+  
+  saveSeq(line = c(acc, line.ccr), cols = embeddingDim + 1, outfile = out.ccr, PID = Sys.getpid())
+  saveSeq(line = c(acc, line.tfidf.ccr), cols = embeddingDim + 1, outfile = out.tfidf.ccr, PID = Sys.getpid())
+  saveSeq(line = c(acc, line.sif.ccr), cols = embeddingDim + 1, outfile = out.sif.ccr, PID = Sys.getpid())
+  
+})[3]
+
+stopImplicitCluster()
+stopCluster(cl)
+
+print("DONE")
+
+
+# concatenating output from all threads
+# add metainformation to outfiles
+mergeOut = function(out = ""){
+  
+  if (str_detect(out, "/")){
+    out = str_replace(out, "/", "_")
+  }
+  
+  
+  fs = list.files(path = "random_tmp", pattern = out, full.names = T)
+  
+  for (i in 1:length(fs)){
+    if (i == 1){
+      
+      tbl = read.csv(fs[i], stringsAsFactors = F, header = F)
+      
+    } else {
+      
+      dat = read.csv(fs[i], stringsAsFactors = F, header = F)
+      tbl = rbind(tbl, dat)
+      
+    }
+  }
+  
+  colnames(tbl) = c("Accession", seq(1,embeddingDim))
+  
+  tbl = inner_join(sequences.master, tbl)
+  tbl = as.data.frame(tbl)
+  
+  tbl = na.omit(tbl)
+  tbl = unique(tbl)
+  
+  return(tbl)
+}
+
+
+repres = mergeOut(out = out)
+repres.tfidf = mergeOut(out = out.tfidf)
+repres.sif = mergeOut(out = out.sif)
+
+repres.ccr = mergeOut(out = out.ccr)
+repres.tfidf.ccr = mergeOut(out = out.tfidf.ccr)
+repres.sif.ccr = mergeOut(out = out.sif.ccr)
 
 
 ### OUTPUT ###
-write.csv(repres.TFIDF, file = unlist(snakemake@output[["random_TFIDF"]]), row.names = F)
-write.csv(repres.SIF, file = unlist(snakemake@output[["random_SIF"]]), row.names = F)
+write.csv(repres, file = out, row.names = F)
+write.csv(repres.tfidf, file = out.tfidf, row.names = F)
+write.csv(repres.sif, file = out.sif, row.names = F)
+
+write.csv(repres.ccr, file = out.ccr, row.names = F)
+write.csv(repres.tfidf.ccr, file = out.tfidf.ccr, row.names = F)
+write.csv(repres.sif.ccr, file = out.sif.ccr, row.names = F)
+

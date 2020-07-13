@@ -10,14 +10,13 @@ from snakemake.utils import min_version
 from snakemake import logging
 
 min_version("5.0")
-shell.prefix("set -euo pipefail;")
+#shell.prefix("set -euo pipefail;")
+shell.prefix("set +o pipefail;")
 
 features = yaml.load(open("features.yaml", "r+"), Loader=yaml.FullLoader)
 
 snakefiles = "src/"
 include: snakefiles + "embedding.py"
-include: snakefiles + "postprocessing.py"
-include: snakefiles + "similarity.py"
 include: snakefiles + "evaluation.py"
 include: snakefiles + "sampling.py"
 
@@ -25,4 +24,4 @@ rule all:
     input:
         scores = expand('similarity/scores/{sample}.txt',
                             sample = features["final"]),
-        final = touch('mytask.done')
+        final = 'mytask.done'

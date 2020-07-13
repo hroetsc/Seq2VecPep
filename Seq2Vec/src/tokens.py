@@ -22,8 +22,6 @@ rule BPE_training2:
         "results/benchmarks/BPE_training2.txt"
     conda:
         "R_dependencies.yml"
-    threads:
-        config["threads"]
     script:
         "train_BPE2.R"
 
@@ -38,8 +36,6 @@ rule generate_tokens:
         "results/benchmarks/generate_tokens.txt"
     conda:
         "R_dependencies.yml"
-    threads:
-        config["threads"]
     script:
         "sequence_tokenization.R"
 

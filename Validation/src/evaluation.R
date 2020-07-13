@@ -34,6 +34,8 @@ semantics_CC = read.csv(snakemake@input[["true_semantics_CC"]], stringsAsFactors
 # tmp !!!
 # syntax = read.csv("postprocessing/similarity_true_syntax.csv", stringsAsFactors = F, header = T)
 # semantics_MF = read.csv("postprocessing/similarity_true_semantics_MF.csv", stringsAsFactors = F, header = T)
+# semantics_BP = read.csv("postprocessing/similarity_true_semantics_BP.csv", stringsAsFactors = F, header = T)
+# semantics_CC = read.csv("postprocessing/similarity_true_semantics_CC.csv", stringsAsFactors = F, header = T)
 # pred = read.csv("postprocessing/similarity_seq2vec.csv", stringsAsFactors = F, header = T)
 
 
@@ -41,7 +43,17 @@ semantics_CC = read.csv(snakemake@input[["true_semantics_CC"]], stringsAsFactors
 # plot distributions
 dist_plot = function(df = "", name = "", state = ""){
   
-  png(filename = paste0(name, "_", state, "_dist.png"), type = "png")
+  if(str_detect(name, "/")){
+    name = str_split(name, "/", simplify = T)[,2] %>% 
+      as.vector() %>%
+      as.character()
+  }
+  
+  if(! dir.exists("tmp")){
+    dir.create("tmp")
+  }
+  
+  png(filename = paste0("tmp/",name, "_", state, ".png"))
   plot(density(df),
        main = name,
        sub = state)
@@ -50,76 +62,103 @@ dist_plot = function(df = "", name = "", state = ""){
 }
 
 # remove metainformation and transform into matrix
-cleaning = function(df = ""){
-  df$acc1 = NULL
-  df$acc2 = NULL
+cleaning = function(df = "", col = ""){
   
-  df = as.matrix(df)
+  df = df[, col] %>% as.character() %>% as.numeric() %>%
+    as.matrix() %>%
+    na.omit() 
   
   return(df)
 }
 
 # calculate scores
 compare = function(true = "", predicted = "", n_true = "", n_pred = ""){
-  # same proteins
-  if(!dim(true)[1] == dim(predicted)[1]){
-    k = which(predicted[, c("acc1", "acc2")] %in% true[, c("acc1", "acc2")])
+  
+  if(! (dim(true)[1] | dim(predicted)[1]) == 0){
+    # same proteins
+    if(!dim(true)[1] == dim(predicted)[1]){
+      
+      if("similarity" %in% colnames(predicted)){
+        colnames(predicted) = c("acc1", "acc2", "pred_similarity")
+        
+        tmp = inner_join(true, predicted)
+        
+        true = tmp[, c("acc1", "acc2", "similarity")]
+        
+        tmp$similarity = NULL
+        predicted = tmp
+        colnames(predicted) = c("acc1", "acc2", "similarity")
+        
+      } else {
+        
+        tmp = inner_join(true, predicted)
+        
+        true = tmp[, c("acc1", "acc2", "similarity")]
+        
+        tmp$similarity = NULL
+        predicted = tmp
+        
+      }
+      
+      
+    }
     
-    predicted = predicted[, k]
-    predicted = predicted[k, ]
+    true = cleaning(true, col = "similarity")
     
-    l = which(true[, c("acc1", "acc2")] %in% predicted[, c("acc1", "acc2")])
+    if("similarity" %in% colnames(predicted)){
+      col_name = "similarity"
+      
+    } else { col_name = "euclidean" }
     
-    true = true[, l]
-    true = true[l, ]
+    predicted = cleaning(df = predicted, col = col_name)
+    
+    ### plot
+    dist_plot(df = true, name = n_true, state = "pre")
+    dist_plot(df = predicted, name = n_pred, state = "pre")
+    
+    # scale between 0 and 1
+    predicted = (predicted - min(predicted)) / (max(predicted) - min(predicted))
+    true = (true - min(true)) / (max(true) - min(true))
+    
+    # z-transformation
+    predicted = (predicted - mean(predicted)) / sd(predicted)
+    true = (true - mean(true)) / sd(true)
+    
+    # transform into p-values
+    predicted = pnorm(predicted)
+    true = pnorm(true)
+    
+    # similarities on log scale
+    predicted = log(predicted)
+    true = log(true)
+    
+    ### plot again
+    dist_plot(df = true, name = n_true, state = "post")
+    dist_plot(df = predicted, name = n_pred, state = "post")
+    
+    
+    # score: absolute squared difference between true and predicted
+    tbl = (predicted - true)^2
+    
+    
+    # mean of difference between matrices and standard deviation
+    diff = mean(tbl)
+    SD = sd(tbl)
+    
+    
+    # pearson correlation between true and predicted similarity scores
+    corr = cor(melt(true)$value, melt(predicted)$value, method = "spearman")
+    
+    
+    return(c(diff, SD, corr))
+  
+  } else {
+    
+    return(c(rep(NA, 3)))
     
   }
   
-  true = cleaning(true)
-  predicted = cleaning(predicted)
-  
-  ### plot
-  dist_plot(df = true, name = n_true, state = "pre")
-  dist_plot(df = predicted, name = n_pred, state = "pre")
-  
-  # similarities on log scale
-  predicted = log(predicted)
-  true = log(true)
-  
-  # scale between 0 and 1
-  predicted = (predicted - min(predicted)) / (max(predicted) - min(predicted))
-  true = (true - min(true)) / (max(true) - min(true))
-  
-  # z-transformation
-  predicted = (predicted - mean(predicted)) / sd(predicted)
-  true = (true - mean(true)) / sd(true)
-  
-  # transform into p-values
-  predicted = pnorm(predicted)
-  true = pnorm(true)
-  
-  ### plot
-  dist_plot(df = true, name = n_true, state = "post")
-  dist_plot(df = predicted, name = n_pred, state = "post")
-  
-  
-  # score: absolute squared difference between true and predicted
-  tbl = (predicted - true)^2
-
-  
-  # mean of difference between matrices and standard deviation
-  diff = mean(tbl)
-  SD = sd(tbl)
-
-  
-  # pearson correlation between true and predicted similarity scores
-  corr = cor(melt(true)$value, melt(predicted)$value, method = "spearman")
-
-
-  return(c(diff, SD, corr))
 }
-
-
 
 # actually start computing
 
@@ -131,12 +170,16 @@ foreach(i = 1:length(input)) %dopar% {
 
   ### INPUT ###
   pred = read.csv(snakemake@input[["predicted"]][i], stringsAsFactors = F, header = T)
+  # pred = read.csv("postprocessing/similarity_QSO.csv", stringsAsFactors = F, header = T)
+  pred = as.data.frame(pred)
   
   
   ### MAIN PART ###
   
   nm = str_split(snakemake@input[["predicted"]][i], coll("."), simplify = T)[,1] %>% 
     as.character()
+  # nm = str_split("postprocessing/similarity_true_semantics_BP.csv", coll("."), simplify = T)[,1] %>%
+  #   as.character()
   
   # calculate scores
   syn = compare(true = syntax, predicted = pred,
@@ -163,3 +206,6 @@ foreach(i = 1:length(input)) %dopar% {
 
   print(paste0("done with ", snakemake@input[["predicted"]][i]))
 }
+
+stopImplicitCluster()
+stopCluster(cl)

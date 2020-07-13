@@ -104,7 +104,7 @@ if __name__ == "__main__":
                 ([[n, wids[n], windowSize, vocab_size, n_batches, snakemake.output['skip_grams'], keep, negSkipgrams] for n in range(n_batches)]) )
 print('done with generating skip-grams')
 
-
+pool.close()
 
 print("SAVE WORD-IDS")
 

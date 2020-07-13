@@ -22,8 +22,8 @@ print("### QUASI-SEQUENCE-ORDER EMBEDDINGS")
 # sequences = read.csv("downloads/1/current_sequences.csv", stringsAsFactors = F, header = T)
 sequences = read.csv(snakemake@input[["formatted_sequence"]], stringsAsFactors = F, header = T)
 
-### MAIN PART ###
 
+### MAIN PART ###
 len = nchar(sequences$seqs)
 lag = min(len)-1
 
@@ -40,8 +40,8 @@ QSO[, 2] = sequences$seqs
 
 # protcheck 
 # clean sequences
-QSO[,2] = as.character(QSO[,2])
-a = sapply(toupper(QSO[,2]), protcheck)
+QSO[,2] = as.character(QSO[,2]) %>% toupper()
+a = sapply(QSO[,2], protcheck)
 names(a) = NULL
 print(paste0("found ",length(which(a==F)) , " proteins that are failing the protcheck() and is removing them"))
 QSO = QSO[which(a == T), ]
@@ -51,7 +51,7 @@ progressBar = txtProgressBar(min = 0, max = nrow(QSO), style = 3)
 for (q in 1:nrow(QSO)) {
   setTxtProgressBar(progressBar, q)
   
-  x = extractQSO(toupper(sequences$seqs[q]), nlag = lag)
+  x = extractQSO(QSO[q,2], nlag = lag)
   QSO[q, 3:(2+length(x))] = x
 }
 
@@ -62,6 +62,7 @@ for (p in 3:ncol(QSO)){
 
 QSO = as.data.frame(QSO)
 colnames(QSO)[1:2] = c("Accession", "seqs")
+
 
 ### OUTPUT ###
 write.csv(x = QSO, file = unlist(snakemake@output[["embedding_QSO"]]), row.names = F)

@@ -1,4 +1,3 @@
-# files used in pipeline
 data:
     acc_batch: data/current_accessions.csv
     formatted_sequence: data/proteome_human.csv
@@ -7,27 +6,44 @@ data:
     word_batch: data/current_words.csv
     indices: data/ids_hp_w5_new.csv
     TF-IDF: data/TF_IDF.csv
-    hybrid_sup: data/u.sup.inv.3d.csv
+    #hybrid_sup: data/u.sup.inv.3d.csv
     PropMatrix: data/PropMatrix.csv
     PropMatrix_seqs: data/PropMatrix_seqs.csv
-    sequence_repres: data/hp_sequence_repres_w5_d100_seq2vec.csv
-    seq2vec_TFIDF: data/hp_sequence_repres_w5_d100_seq2vec.csv
-    seq2vec_SIF: data/hp_sequence_repres_w5_d100_seq2vec.csv
+    seq2vec: data/hp_sequence_repres_w5_d100_seq2vec.csv
+    seq2vec_TFIDF: data/hp_sequence_repres_w5_d100_seq2vec-TFIDF.csv
+    seq2vec_SIF: data/hp_sequence_repres_w5_d100_seq2vec-SIF.csv
+    seq2vec_CCR: data/hp_sequence_repres_w5_d100_seq2vec_CCR.csv
+    seq2vec_TFIDF_CCR: data/hp_sequence_repres_w5_d100_seq2vec-TFIDF_CCR.csv
+    seq2vec_SIF_CCR: data/hp_sequence_repres_w5_d100_seq2vec-SIF_CCR.csv
 
 embeddings:
-    seq2vec: postprocessing/seq2vec.csv
-    biophys: postprocessing/biophys.csv
     QSO: postprocessing/QSO.csv
     termfreq: postprocessing/termfreq.csv
-    random: postprocessing/random.csv
 
-weighting:
+seq2vec:
+    seq2vec: postprocessing/seq2vec.csv
     seq2vec_TFIDF: postprocessing/seq2vec_TFIDF.csv
-    biophys_TFIDF: postprocessing/biophys_TFIDF.csv
-    random_TFIDF: postprocessing/random_TFIDF.csv
     seq2vec_SIF: postprocessing/seq2vec_SIF.csv
+    seq2vec_CCR: postprocessing/seq2vec_CCR.csv
+    seq2vec_TFIDF_CCR: postprocessing/seq2vec_TFIDF_CCR.csv
+    seq2vec_SIF_CCR: postprocessing/seq2vec_SIF_CCR.csv
+
+biophys:
+    biophys: postprocessing/biophys.csv
+    biophys_TFIDF: postprocessing/biophys_TFIDF.csv
     biophys_SIF: postprocessing/biophys_SIF.csv
+    biophys_CCR: postprocessing/biophys_CCR.csv
+    biophys_TFIDF_CCR: postprocessing/biophys_TFIDF_CCR.csv
+    biophys_SIF_CCR: postprocessing/biophys_SIF_CCR.csv
+
+random:
+    random: postprocessing/random.csv
+    random_TFIDF: postprocessing/random_TFIDF.csv
     random_SIF: postprocessing/random_SIF.csv
+    random_CCR: postprocessing/random_CCR.csv
+    random_TFIDF_CCR: postprocessing/random_TFIDF_CCR.csv
+    random_SIF_CCR: postprocessing/random_SIF_CCR.csv
+
 
 similarity:
     true_syntax: postprocessing/similarity_true_syntax.csv
@@ -35,20 +51,12 @@ similarity:
     true_semantics_BP: postprocessing/similarity_true_semantics_BP.csv
     true_semantics_CC: postprocessing/similarity_true_semantics_CC.csv
 
+
 results:
     scores: scores_w5_d100.csv
 
 CCR:
-    - seq2vec
-    - seq2vec_TFIDF
-    - seq2vec_SIF
-    - biophys
-    - biophys_TFIDF
-    - biophys_SIF
-    - random
-    - random_TFIDF
-    - random_SIF
-    #- QSO
+    - QSO
     - termfreq
 
 
@@ -71,8 +79,8 @@ sim:
     - random_TFIDF_CCR
     - random_SIF
     - random_SIF_CCR
-    #- QSO
-    #- QSO_CCR
+    - QSO
+    - QSO_CCR
     - termfreq
     - termfreq_CCR
 
@@ -96,8 +104,8 @@ final:
     - random_TFIDF_CCR
     - random_SIF
     - random_SIF_CCR
-    #- QSO
-    #- QSO_CCR
+    - QSO
+    - QSO_CCR
     - termfreq
     - termfreq_CCR
     - true_syntax

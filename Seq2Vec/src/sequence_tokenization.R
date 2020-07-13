@@ -15,6 +15,7 @@ library(stringr)
 library(seqinr)
 library(berryFunctions)
 library(tokenizers.bpe)
+library(future)
 
 
 ### INPUT ###
@@ -93,6 +94,7 @@ if (length(which(sort <= 1)) > 0) {
 print("RANDOMIZE SEQUENCE ORDER")
 # randomly shuffle sequences to make downstream model training more robust
 words = words[sample(nrow(words)), ]
+
 
 ### OUTPUT ###
 # save model vocabulary

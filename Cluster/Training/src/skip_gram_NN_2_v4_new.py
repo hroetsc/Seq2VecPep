@@ -65,6 +65,18 @@ print(len(tf.config.experimental.list_physical_devices('GPU')))
 
 print("-------------------------------------------------------------------------")
 
+print('HOROVOD CONFIGURATION')
+
+print('number of Horovod processes on current node: ', hvd.local_size())
+print('rank of the current process: ', hvd.rank()) # node
+print('local rank of the current process: ', hvd.local_rank()) # process on node
+print('Is MPI multi-threading supported? ', hvd.mpi_threads_supported())
+print('Is MPI enabled? ', hvd.mpi_enabled())
+print('Is Horovod compiled with MPI? ', hvd.mpi_built())
+print('Is Horovod compiled with NCCL? ', hvd.nccl_built())
+
+print("-------------------------------------------------------------------------")
+
 print('GPU CONFIGURATION')
 
 # pin GPUs (each GPU gets single process)
@@ -88,18 +100,15 @@ print("SET HYPERPARAMETERS")
 # Error: Error occurred when finalizing GeneratorDataset iterator: Failed precondition: Python interpreter state is not initialized. The process may be terminated.
 #         [[{{node PyFunc}}]]
 
-#tmp!!
-#epochs = int(hvd.size())
 
 epochs = 300
 epochs = int(np.ceil(epochs/hvd.size()))
 print('number of epochs, adjusted by number of GPUs: ', epochs)
 
-valSplit = 0.1
-
+valSplit = 0.2
 
 NUM_WORKERS = num_nodes
-BATCH_SIZE = 32*hvd.size()
+BATCH_SIZE = 8*hvd.size()
 
 print('per worker batch size: ', BATCH_SIZE)
 
@@ -174,17 +183,18 @@ def build_and_compile_model():
     dot_product = layers.dot([target, context], axes = 1, normalize = True, name = 'dot_product')
     dot_product = layers.Reshape((1,))(dot_product)
 
-    tf.print('batch normalisation')
+    # batch normalise before passing to dense layer
     norm = layers.BatchNormalization(trainable = True)(dot_product)
 
-    tf.print('dense layers')
+    tf.print('dense layers with batch normalisation')
     # add dense layers
-    x = layers.Dense(128, activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(norm)
+    #x = layers.Dense(128, activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(norm)
+    x = layers.Dense(64, activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(norm)
     x = layers.Dropout(0.5)(x)
 
-    x = layers.BatchNormalization(trainable = True)(x)
-    x = layers.Dense(64, activation = 'linear', kernel_initializer = 'he_uniform', name='2nd_dense')(x)
-    x = layers.Dropout(0.5)(x)
+    #x = layers.BatchNormalization(trainable = True)(x)
+    #x = layers.Dense(64, activation = 'linear', kernel_initializer = 'he_uniform', name='2nd_dense')(x)
+    #x = layers.Dropout(0.5)(x)
 
     x = layers.BatchNormalization(trainable = True)(x)
     output = layers.Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='3rd_dense')(x)
@@ -197,9 +207,8 @@ def build_and_compile_model():
     tf.print('compile model')
 
     # wrap optimizer
-    opt = keras.optimizers.Adam(learning_rate= 0.01 * hvd.size()) # increased learning rate
-    #opt = optimizers.SGD(learning_rate=0.01 * hvd.size(), momentum=0.9, nesterov=True)
-    #opt = tf.keras.optimizers.Adagrad(learning_rate = 0.001 * hvd.size())
+    opt = keras.optimizers.Adam(learning_rate= 0.00001 * hvd.size()) # increased learning rate
+
     opt = hvd.DistributedOptimizer(opt)
 
     model.compile(loss=keras.losses.MeanSquaredError(),
@@ -249,7 +258,7 @@ print('randomly shuffle skip-grams')
 ind = np.random.randint(0, target_word.shape[0], target_word.shape[0])
 
 # tmp !!!
-#ind = np.random.randint(0, target_word.shape[0], 100000)
+#ind = np.random.randint(0, target_word.shape[0], 500000)
 
 target_word = target_word[ind]
 context_word = context_word[ind]

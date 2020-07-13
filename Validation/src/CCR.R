@@ -18,6 +18,7 @@ for (i in 1:length(input)){
   ### INPUT ###
   emb = read.csv(snakemake@input[["embedding"]][i], stringsAsFactors = F, header = T)
   
+  
   ### MAIN PART ###
   emb = emb[order(emb$Accession), ]
   proteins = emb$Accession
@@ -53,6 +54,6 @@ for (i in 1:length(input)){
   colnames(res) = c("Accession", seq(1, ncol(emb)))
   
   ### OUTPUT ###
-  write.csv(res, file = unlist(snakemake@output[["CCR_emb"]][i]), row.names = T)
+  write.csv(res, file = unlist(snakemake@output[["CCR_emb"]][i]), row.names = F)
 }
 

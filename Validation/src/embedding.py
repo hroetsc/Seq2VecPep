@@ -1,28 +1,65 @@
-rule embedding_seq2vec:
+rule seq2vec:
     input:
         formatted_sequence = features["data"]["sequence_batch"],
-        SEQ = features["data"]["sequence_repres"]
+        seq2vec = features["data"]["seq2vec"],
+        seq2vec_TFIDF = features["data"]["seq2vec_TFIDF"],
+        seq2vec_SIF = features["data"]["seq2vec_SIF"],
+        seq2vec_CCR = features["data"]["seq2vec_CCR"],
+        seq2vec_TFIDF_CCR = features["data"]["seq2vec_TFIDF_CCR"],
+        seq2vec_SIF_CCR = features["data"]["seq2vec_SIF_CCR"]
     output:
-        embedding_seq2vec = features["embeddings"]["seq2vec"]
+        seq2vec = features["seq2vec"]["seq2vec"],
+        seq2vec_TFIDF = features["seq2vec"]["seq2vec_TFIDF"],
+        seq2vec_SIF = features["seq2vec"]["seq2vec_SIF"],
+        seq2vec_CCR = features["seq2vec"]["seq2vec_CCR"],
+        seq2vec_TFIDF_CCR = features["seq2vec"]["seq2vec_TFIDF_CCR"],
+        seq2vec_SIF_CCR = features["seq2vec"]["seq2vec_SIF_CCR"]
     conda:
         "R_dependencies.yml"
     script:
-        "embedding_seq2vec.R"
+        "weighting_seq2vec.R"
 
 
-rule embedding_biophys:
+rule biophys:
     input:
         formatted_sequence = features["data"]["sequence_batch"],
-        seq_props = features["data"]["PropMatrix_seqs"]
+        words = features["data"]["word_batch"],
+        TF_IDF = features["data"]["TF-IDF"],
+        ids = features["data"]["indices"],
+        Props = features["data"]["PropMatrix"]
     output:
-        embedding_biophys = features["embeddings"]["biophys"]
+        biophys = features["biophys"]["biophys"],
+        biophys_TFIDF = features["biophys"]["biophys_TFIDF"],
+        biophys_SIF = features["biophys"]["biophys_SIF"],
+        biophys_CCR = features["biophys"]["biophys_CCR"],
+        biophys_TFIDF_CCR = features["biophys"]["biophys_TFIDF_CCR"],
+        biophys_SIF_CCR = features["biophys"]["biophys_SIF_CCR"]
     conda:
         "R_dependencies.yml"
     script:
-        "embedding_biophysProps.R"
+        "weighting_biophys.R"
 
 
-rule embedding_QSO:
+rule random:
+    input:
+        formatted_sequence = features["data"]["sequence_batch"],
+        words = features["data"]["word_batch"],
+        TF_IDF = features["data"]["TF-IDF"],
+        ids = features["data"]["indices"]
+    output:
+        random = features["random"]["random"],
+        random_TFIDF = features["random"]["random_TFIDF"],
+        random_SIF = features["random"]["random_SIF"],
+        random_CCR = features["random"]["random_CCR"],
+        random_TFIDF_CCR = features["random"]["random_TFIDF_CCR"],
+        random_SIF_CCR = features["random"]["random_SIF_CCR"]
+    conda:
+        "R_dependencies.yml"
+    script:
+        "weighting_random.R"
+
+
+rule QSO:
     input:
         formatted_sequence = features["data"]["sequence_batch"]
     output:
@@ -33,7 +70,7 @@ rule embedding_QSO:
         "embedding_QSO-couplingNumbers.R"
 
 
-rule embedding_termfreq:
+rule termfreq:
     input:
         formatted_sequence = features["data"]["sequence_batch"],
         words = features["data"]["word_batch"]
@@ -45,15 +82,17 @@ rule embedding_termfreq:
         "embedding_termFreq.R"
 
 
-rule embedding_random:
+rule CCR:
     input:
-        formatted_sequence = features["data"]["sequence_batch"]
+        embedding = expand('postprocessing/{sample}.csv',
+                    sample = features["CCR"])
     output:
-        embedding_random = features["embeddings"]["random"]
+        CCR_emb = expand('postprocessing/{sample}_CCR.csv',
+                    sample = features["CCR"])
     conda:
         "R_dependencies.yml"
     script:
-        "embedding_random.R"
+        "CCR.R"
 
 
 #rule embedding_hybrid:

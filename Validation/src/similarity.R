@@ -11,6 +11,11 @@ library(doMC)
 library(future)
 library(plyr)
 
+#library(emdist)
+
+library(plyr)
+library(dplyr)
+
 print("### CALCULATE PAIRWISE EMBEDDING SIMILARITIES ###")
 
 # parallel computing
@@ -39,6 +44,7 @@ foreach(i = 1:length(input)) %dopar% {
 
   ### INPUT ###
   emb = read.csv(snakemake@input[["embedding"]][i], stringsAsFactors = F, header = T)
+  # emb = read.csv("postprocessing/QSO.csv", stringsAsFactors = F, header = T)
   
   ### MAIN PART ###
   emb = emb[order(emb$Accession), ]
@@ -60,11 +66,15 @@ foreach(i = 1:length(input)) %dopar% {
   for(a in 1:nrow(accessions)) {
     setTxtProgressBar(pb, a)
     
-    v1 = emb[which(emb$Accession == accessions$acc1[a]), c(2:ncol(emb))]
-    v2 = emb[which(emb$Accession == accessions$acc2[a]), c(2:ncol(emb))]
+    v1 = emb[which(emb$Accession == accessions$acc1[a]), c(2:ncol(emb))] %>% as.numeric()
+    v2 = emb[which(emb$Accession == accessions$acc2[a]), c(2:ncol(emb))] %>% as.numeric()
     
-    sim$similarity[a] = dot_product(v1 = v1, v2 = v2)
-    
+    # dot product similarity
+    sim[a, "dot"] = dot_product(v1 = v1, v2 = v2)
+    #euclidean distance
+    sim[a, "euclidean"] = dist(rbind(v1,v2), method = "euclidean")
+    # earth mover's distance
+    # sim[a, "emd"] = emd2d(as.matrix(v1), as.matrix(v2))
   }
 
 

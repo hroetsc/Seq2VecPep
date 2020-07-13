@@ -14,8 +14,7 @@ library(dplyr)
 metrics = read.table(snakemake@input[["metrics"]], stringsAsFactors = F)
 
 # tmp!
-# setwd("/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/HumanProteome/results")
-# metrics = read.table("model_metrics_w3_d100.txt", sep = ",", stringsAsFactors = F)
+metrics = read.table("hp_model_metrics_w5_d100.txt", sep = ",", stringsAsFactors = F)
 
 ### MAIN PART ###
 # clean input table
@@ -63,8 +62,8 @@ plotting = function(col1 = "", col2 = "", name = "", path = "results/model_metri
          pch = 1,
          cex = 1,
          col = "green")
-  legend("bottomleft", cex = 1,
-         legend = c("train", "test/validation"),
+  legend("bottomright", cex = 1,
+         legend = c("train", "validation"),
          col = c("blue", "green"),
          pch = c(20, 1),
          box.lty = 1,
@@ -81,6 +80,6 @@ for (i in 1:(ncol(metrics)/2)){
   plotting(col1 = metrics[,i],
            col2 = metrics[, (i + (ncol(metrics)/2))],
            name = colnames(metrics)[i],
-           path = "../metrics/model_metrics_hp_w3_d100_") # remove path in future!!
+           path = "../metrics/model_metrics_hp_w5_d100_") # remove path in future!!
 }
 
