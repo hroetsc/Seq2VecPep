@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 ### HEADER ###
 # PROTEIN/TRANSCRIPT EMBEDDING FOR ML/DEEP LEARNING
 # description:  convert tokens to numerical vectors using a skip-gram neural network
@@ -8,9 +7,7 @@
 # output:       embedded tokens (weights and their IDs)
 # author:       HR
 
-
 print("### PROTEOME EMBEDDING USING SKIP-GRAM NEURAL NETWORK - 2 ###")
-
 
 import os
 import gc
@@ -23,13 +20,12 @@ import tensorflow as tf
 
 from tensorflow import keras
 from tensorflow.keras import layers
-
+import tensorflow_addons as tfa
 
 tf.keras.backend.clear_session()
 
 
 import horovod.tensorflow.keras as hvd
-#import horovod.tensorflow as hvd
 
 # clean
 gc.enable()
@@ -108,7 +104,7 @@ print('number of epochs, adjusted by number of GPUs: ', epochs)
 valSplit = 0.2
 
 NUM_WORKERS = num_nodes
-BATCH_SIZE = 8*hvd.size()
+BATCH_SIZE = 4*hvd.size()
 
 print('per worker batch size: ', BATCH_SIZE)
 
@@ -161,8 +157,10 @@ def build_and_compile_model():
 
     tf.print('input')
 
-    input_target = keras.Input(((1,)), name='target_word')
-    input_context = keras.Input(((1,)), name='context_word')
+    input_target = keras.Input(shape = (1,),
+                                name='target_word')
+    input_context = keras.Input(shape = (1,),
+                                name='context_word')
 
     tf.print('embedding')
     # embed input layers
@@ -174,44 +172,49 @@ def build_and_compile_model():
 
     # apply embedding
     target = embedding(input_target)
-    target = layers.Reshape((embeddingDim,1), name='target_embedding')(target) # every individual skip-gram has dimension embedding x 1
     context = embedding(input_context)
-    context = layers.Reshape((embeddingDim,1), name='context_embedding')(context)
 
     tf.print('dot product')
-    # dot product similarity - normalize to get value between -1 and 1!
-    dot_product = layers.dot([target, context], axes = 1, normalize = True, name = 'dot_product')
-    dot_product = layers.Reshape((1,))(dot_product)
+    # dot product similarity - normalize to get value between -1 and 1! - ??
+    dot_product = layers.dot([target, context], axes = 2, normalize = False, name = 'dot_product')
+    dot_product = layers.Flatten()(dot_product)
 
     # batch normalise before passing to dense layer
     norm = layers.BatchNormalization(trainable = True)(dot_product)
 
-    tf.print('dense layers with batch normalisation')
-    # add dense layers
-    #x = layers.Dense(128, activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(norm)
-    x = layers.Dense(64, activation = 'tanh', kernel_initializer = 'he_uniform', name='1st_dense')(norm)
-    x = layers.Dropout(0.5)(x)
+    tf.print('dense layer with batch normalisation')
 
-    #x = layers.BatchNormalization(trainable = True)(x)
-    #x = layers.Dense(64, activation = 'linear', kernel_initializer = 'he_uniform', name='2nd_dense')(x)
-    #x = layers.Dropout(0.5)(x)
+    output = layers.Dense(1, activation = 'sigmoid', kernel_initializer = 'he_uniform', name='dense')(norm)
 
-    x = layers.BatchNormalization(trainable = True)(x)
-    output = layers.Dense(1, activation = 'tanh', kernel_initializer = 'he_uniform', name='3rd_dense')(x)
-
-
+    
     tf.print('concatenation')
     # create the primary training model
     model = keras.Model(inputs=[input_target, input_context], outputs=output)
 
+
     tf.print('compile model')
+    # standard optimizer: Adam
+    opt = keras.optimizers.Adam(learning_rate= 0.001 * 2 * hvd.size(),
+                                name = 'Adam')
 
-    # wrap optimizer
-    opt = keras.optimizers.Adam(learning_rate= 0.00001 * hvd.size()) # increased learning rate
+    # wrap it into stochastic weight averaging framework
+    # does not work with Horovod's DistributedOptimizer
 
-    opt = hvd.DistributedOptimizer(opt)
+    opt = tfa.optimizers.SWA(opt,
+                            start_averaging = 0,
+                            average_period= int(np.ceil(epochs/10)),
+                            name = 'SWA')
 
-    model.compile(loss=keras.losses.MeanSquaredError(),
+    #opt = tfa.optimizers.Triangular2CyclicalLearningRate(initial_learning_rate = 0.001 * 2 * hvd.size(),
+    #                                                maximal_learning_rate = 0.1,
+    #                                                step_size = int(np.ceil(epochs/20)),
+    #                                                scale_mode = 'cycle',
+    #                                                name = 'CyclicalLearningRate')
+
+    # wrap it into Horovod framework
+    #opt = hvd.DistributedOptimizer(opt, name = 'DistributedOpt')
+
+    model.compile(loss=keras.losses.BinaryCrossentropy(),
                     optimizer = opt,
                     metrics=['squared_hinge', 'categorical_hinge', 'mean_squared_error','accuracy'],
                     experimental_run_tf_function=False)
@@ -236,8 +239,8 @@ ids = pd.read_csv(snakemake.input['ids'], header = None)
 vocab_size = len(ids.index) + 1
 print("vocabulary size (number of target word IDs + 1): {}".format(vocab_size))
 
-
 embeddingDim = 100
+
 
 print('-----------------------------------------------')
 print('-----------------------------------------------')
@@ -273,10 +276,10 @@ print('context word vector')
 context_word = context_word.reshape(context_word.shape[0],)
 print(context_word)
 
-print('label vector (converted 0 to -1)')
+print('label vector')
 Y = Y.reshape(Y.shape[0],)
 # replace 0 by -1
-Y = np.where(Y == 0, -1, Y)
+# Y = np.where(Y == 0, -1, Y)
 print(Y)
 
 
@@ -333,11 +336,6 @@ print("fit the model")
 # one epoch: one complete iteration over dataset
 steps = int(np.ceil(target_train.shape[0]/BATCH_SIZE))
 val_steps = int(np.ceil(target_test.shape[0]/BATCH_SIZE))
-
-# prevent deadlock due to asynchronous training
-#steps = int(np.ceil(steps*0.1))
-#val_steps = int(np.ceil(val_steps*0.1))
-#epochs = int(epochs*10)
 
 
 # adjust by number of GPUs

@@ -3,7 +3,7 @@
 # nomenclature:
 # hm - human proteome, w3 - window size = 3, d100 - embedding size = 100
 
-words: /scratch2/hroetsc/Seq2Vec/data/words_hum_sigtrans.csv
+words: /scratch2/hroetsc/Seq2Vec/data/words_hp.csv
 
 params:
   w5:

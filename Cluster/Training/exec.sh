@@ -18,7 +18,7 @@ module load cuda10.1/nsight/10.1.105
 module load cuda10.1/profiler/10.1.105
 module load cudnn/10.1v7.6.5
 
-salloc -p gpu -C scratch2 -N 20 -n 20 --tasks-per-node 1 --gpus-per-task=1 --mem-per-gpu=30G -t 01-06:00:00 --mail-type=END --mail-user=hanna.roetschke@mpibpc.mpg.de --job-name='seq2vec'
+salloc -p gpu -C scratch2 -N 20 -n 20 --tasks-per-node 1 --gpus-per-task=1 --mem-per-gpu=10G -t 01-00:00:00 --mail-type=END --mail-user=hanna.roetschke@mpibpc.mpg.de --job-name='seq2vec'
 
 scontrol show hostnames $SLURM_JOB_NODELIST > nodes.txt
 scontrol show hostnames $SLURM_JOB_NODELIST
