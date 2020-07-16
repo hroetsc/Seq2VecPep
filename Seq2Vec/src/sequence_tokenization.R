@@ -25,11 +25,21 @@ sequences = read.csv(file = params[which(params$parameter == "Seqinput"), "value
                      stringsAsFactors = F, header = T)
 sequences = as.data.frame(sequences)
 
+# setwd("Documents/QuantSysBios/ProtTransEmbedding/")
+# sequences = read.csv("files/ProteasomeDB.csv", stringsAsFactors = F)
+
+# sequences = read.csv("files/proteome_human.csv", stringsAsFactors = F)
+# sequences = sequences[which(sequences$Accession == "H7C241"), ]
+
 # load the model
 threads = as.numeric(params[which(params$parameter == "threads"), "value"])
 
 bpeModel = bpe_load_model(snakemake@input[["BPE_model"]],
                           threads = threads)
+
+# threads = future::availableCores()
+# bpeModel = bpe_load_model("Seq2Vec/results/encoded_sequence/BPE_model_hp.bpe")
+
 
 # store byte-pair encoding vocabulary
 ModelVocab = bpeModel$vocabulary
@@ -59,7 +69,7 @@ for(n in 1:nrow(sequences)){
   sequences.Encoded.list[[n]] = currentPeptide
 }
 
-sequences.Encoded = as.data.frame(ldply(sequences.Encoded.list, rbind))
+sequences.Encoded = ldply(sequences.Encoded.list, rbind) %>% as.data.frame()
 colnames(sequences.Encoded) = c(colnames(sequences), "segmented_seq")
 
 
@@ -101,3 +111,7 @@ words = words[sample(nrow(words)), ]
 write.csv(ModelVocab, file = unlist(snakemake@output[["model_vocab"]]), row.names = F)
 # save words
 write.csv(words, file = unlist(snakemake@output[["words"]]), row.names = F)
+
+
+# write.csv(ModelVocab, file = "Seq2Vec/results/encoded_sequence/model_vocab_singleProtein.csv", row.names = F)
+# write.csv(words, file = "Seq2Vec/results/encoded_sequence/words_singleProtein.csv", row.names = F)

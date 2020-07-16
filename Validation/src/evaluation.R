@@ -55,8 +55,8 @@ dist_plot = function(df = "", name = "", state = ""){
   
   png(filename = paste0("tmp/",name, "_", state, ".png"))
   plot(density(df),
-       main = name,
-       sub = state)
+       main = str_replace_all(name, "_", " "),
+       sub = paste0(state, " normalisation"))
   dev.off()
   
 }
@@ -108,7 +108,7 @@ compare = function(true = "", predicted = "", n_true = "", n_pred = ""){
     if("similarity" %in% colnames(predicted)){
       col_name = "similarity"
       
-    } else { col_name = "euclidean" }
+    } else { col_name = "dot" }
     
     predicted = cleaning(df = predicted, col = col_name)
     
@@ -128,16 +128,12 @@ compare = function(true = "", predicted = "", n_true = "", n_pred = ""){
     predicted = pnorm(predicted)
     true = pnorm(true)
     
-    # similarities on log scale
-    predicted = log(predicted)
-    true = log(true)
-    
     ### plot again
     dist_plot(df = true, name = n_true, state = "post")
     dist_plot(df = predicted, name = n_pred, state = "post")
     
     
-    # score: absolute squared difference between true and predicted
+    # score: squared difference between true and predicted
     tbl = (predicted - true)^2
     
     
@@ -146,7 +142,7 @@ compare = function(true = "", predicted = "", n_true = "", n_pred = ""){
     SD = sd(tbl)
     
     
-    # pearson correlation between true and predicted similarity scores
+    # spearman correlation between true and predicted similarity scores
     corr = cor(melt(true)$value, melt(predicted)$value, method = "spearman")
     
     

@@ -31,7 +31,7 @@ indices = read.csv(file = snakemake@input[["ids"]], stringsAsFactors = F, header
 embeddingDim = 100
 
 ### MAIN PART ###
-threads = 4
+threads = 8
 
 cl = makeCluster(threads)
 registerDoParallel(cl)
@@ -55,7 +55,7 @@ sequences.master = sequences.master[order(sequences.master$Accession), ]
 # generate data frame with random token embeddings
 # he_uniform
 # fan_in equals input units to weight tensor (roughly 5000)
-fan_in = 5000
+fan_in = 100
 # limit for uniform distribution
 limit = sqrt(6 / fan_in)
 

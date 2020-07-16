@@ -23,6 +23,10 @@ trainFASTA = read.fasta(params[which(params$parameter == "BPEinput"), "value"],
                         seqtype = "AA",
                         whole.header = T)
 
+# trainFASTA = read.fasta("files/SwissProt_canonicalAndIsoforms.fasta",
+#                         seqtype = "AA",
+#                         whole.header = T)
+
 
 ### MAIN PART ###
 seqs = rep(NA, length(trainFASTA))
@@ -37,5 +41,11 @@ for (e in 1:length(trainFASTA)) {
 # merge all sequences in the fasta file
 seqs = paste(seqs, sep = "", collapse = "")
 
+
+### OUTPUT ###
+
 write.table(seqs, file = unlist(snakemake@output[["conc_UniProt"]]), sep = "\t",
             row.names = T, col.names = T)
+
+# write.table(seqs, file = "Seq2Vec/data/concatenated_UniProt_hp.txt", sep = "\t",
+#             row.names = T, col.names = T)

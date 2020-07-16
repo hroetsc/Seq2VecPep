@@ -11,6 +11,16 @@ rule true_similarity_semantics:
     script:
         "similarity_true_semantics.R"
 
+rule true_similarity_syntax:
+    input:
+        batch_sequence = features["data"]["sequence_batch"],
+        batch_accessions = features["data"]["acc_batch"]
+    output:
+        syntax = features["similarity"]["true_syntax"]
+    conda:
+        "R_dependencies.yml"
+    script:
+        "similarity_true_syntax.R"
 
 rule similarity:
     input:

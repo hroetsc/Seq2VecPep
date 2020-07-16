@@ -53,13 +53,13 @@ GO_sim = function(ont = ""){
       
     } else {
       
-      alig[a, "similarity"] = 0
+      alig[a, "similarity"] = NA
       
     }
     
   }
   
-  alig = alig[-which(alig$similarity == 0), ]
+  alig = na.omit(alig)
   
   return(alig)
   

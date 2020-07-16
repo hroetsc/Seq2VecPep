@@ -16,7 +16,7 @@ print("### CONCATENATE SCORES ###")
 
 ### INPUT ###
 input = snakemake@input[["scores"]]
-output = "scores_hp_200713_euclidean.csv"
+output = "scores_hp_200716_dot.csv"
 
 # if output file alredy exists (not the 1st iteration) open it and append to it
 # else create empty data frame

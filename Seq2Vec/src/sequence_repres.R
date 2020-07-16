@@ -43,13 +43,19 @@ weight_matrix = h5read(snakemake@input[["weights"]], "/embedding/embedding")
 indices = read.csv(file = snakemake@input[["ids"]], stringsAsFactors = F, header = F)
 
 # tmp!!
-# setwd("/home/hanna/Documents/QuantSysBios/ProtTransEmbedding/RUNS/HumanProteome/results/")
 sequences = read.csv("../proteome_human.csv", stringsAsFactors = F, header = T)
 TF_IDF = read.csv("../TF_IDF.csv", stringsAsFactors = F, header = T)
 words = read.csv("../words_hp.csv", stringsAsFactors = F, header = T)
 indices = read.csv("../ids_hp_w5_new.csv", stringsAsFactors = F, header = F)
-
 weight_matrix = h5read("hp_model_w5_d100/weights.h5", "/embedding/embedding")
+
+# sequences = read.csv("../../../files/ProteasomeDB.csv", stringsAsFactors = F, header = T)
+# TF_IDF = read.csv("../TF_IDF_ProteasomeDB.csv", stringsAsFactors = F, header = T)
+# words = read.csv("../words_ProteasomeDB.csv", stringsAsFactors = F, header = T)
+# words$Accession = str_replace_all(words$tokens, " ", "")
+# indices = read.csv("../ids_ProteasomeDB_w5.csv", stringsAsFactors = F, header = F)
+# weight_matrix = h5read("ProteasomeDB_model_w5_d100/weights.h5", "/embedding/embedding")
+
 
 ### MAIN PART ###
 # multiprocessing

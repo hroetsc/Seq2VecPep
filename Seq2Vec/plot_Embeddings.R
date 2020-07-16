@@ -8,6 +8,7 @@
 
 library(seqinr)
 library(protr)
+library(UniProt.ws)
 library(Peptides)
 library(plyr)
 library(dplyr)
@@ -20,7 +21,7 @@ library(paletteer)
 
 
 ### INPUT ###
-fs = list.files(path = "new_run/", pattern = "hp_sequence_repres", full.names = T)
+fs = list.files(path = "word2vec_model", pattern = "hp_sequence_repres", full.names = T)
 
 f1 = read.csv(fs[1], stringsAsFactors = F, header = T)
 Prots = f1$Accession
@@ -282,10 +283,16 @@ master$EC_number = str_split_fixed(master$EC_number, coll("."), Inf)[,1]
 master[which(master$EC_number == ""), "EC_number"] = "0"
 
 
-########## SCOP: structural claffification of proteins ##########
+########## SCOP: structural clafssification of proteins ##########
 # Load SCOP classification
-scop <- readr::read_delim("../../files/scop_cla_latest.txt", skip = 5, delim = " ")
-scop_class <- scop$`SF-UNIREG` %>%
+scop <- readr::read_delim("../../files/scop_cla_latest.txt",skip = 5, delim = " ")
+header = colnames(scop)
+header = header[-1]
+
+scop$SCOPCLA = NULL
+colnames(scop) = header
+
+scop_class <- scop$SCOPCLA %>%
   str_remove_all(pattern = "TP=") %>%
   str_remove_all(pattern = "CL=") %>%
   str_remove_all(pattern = "CF=") %>%
@@ -293,14 +300,54 @@ scop_class <- scop$`SF-UNIREG` %>%
   str_remove_all(pattern = "FA=") %>% 
   str_split_fixed(pattern = ",", Inf)
 scop_class <- as_tibble(scop_class) %>% as.data.frame()
-scop_class = cbind(scop$`FA-PDBREG`, scop_class)
+scop_class = cbind(scop$`FA-UNIID`, scop_class)
 colnames(scop_class) <- c("Accession","TP", "CL", "CF", "SF", "FA")
 # TP=protein type, CL=protein class, CF=fold, SF=superfamily, FA=family
-
 
 # SCOP node descriptions
 scop_des <- readr::read_delim("../../files/scop_des_latest.txt", delim = " ")
 
+# convert headers into UniProt identifiers
+Prots = str_split_fixed(Prots, coll("-"), Inf)[,1]
+intersect(scop_class$Accession, Prots) %>% length()
+
+# load matching table between primary and secondary accession number
+# acc <- readr::read_delim("../../files/sec_ac.txt", delim = " ", skip = 30)
+# 
+# colnames(acc) = c("sec_AC", "prim_AC")
+# acc$sec_AC = as.vector(as.character(acc$sec_AC))
+# acc$prim_AC = as.vector(as.character(acc$prim_AC))
+# 
+# # in sequence representation primary accession number
+# intersect(acc$prim_AC, scop_class$Accession) %>% length()
+# 
+# length(which(scop_class$Accession %in% acc$prim_AC))
+
+# up <- UniProt.ws(taxId=9606)
+# View(keytypes(up))
+# 
+# key.type = "UNIPROTKB"
+# columns = c("REFSEQ_PROTEIN")
+# 
+# scop_refSeq = UniProt.ws::select(x = up, keys = scop_class$Accession,
+#                                  columns = columns, keytype = key.type)
+# proteome_refSeq = UniProt.ws::select(x = up, keys = Prots,
+#                                  columns = columns, keytype = key.type)
+# 
+# intersect(unique(scop_refSeq$REFSEQ_PROTEIN), unique(proteome_refSeq$REFSEQ_PROTEIN)) %>% length()
+# 
+# Prots = as.data.frame(Prots)
+# colnames(Prots) = "Accession"
+# 
+# colnames(proteome_refSeq)[1] = "Accession"
+# Prots.master = left_join(Prots, proteome_refSeq)
+# 
+# refSeq = inner_join(Prots.master, scop_refSeq)
+# which(!refSeq$Accession == refSeq$UNIPROTKB) %>% length()
+
+# meta = readr::read_delim("../../files/SwissProt_Human_canonicalAndIsoforms_meta.tab",
+#                          delim = "\t")
+# intersect(scop_class$Accession, meta$Entry) %>% length()
 
 
 ########## plotting ##########
@@ -395,7 +442,6 @@ for (i in 1:length(fs)){
   #   f = f[which(a == T), ]
   # }
   
-  setwd("new_run/")
   
   f = f[order(f$Accession), ]
   f$Accession = str_split_fixed(f$Accession, coll("-"), Inf)[,1]
@@ -407,7 +453,7 @@ for (i in 1:length(fs)){
   table(f$EC_number)
 
   # join with SCOP
-  f = left_join(f, scop_class)
+  f = left_join(f, scop_class) %>% unique()
   scop_tbl = f[, c(1,(ncol(f)-ncol(scop_class)+2):ncol(f))]
   scop_tbl[is.na(scop_tbl)] = 0
   
@@ -421,6 +467,12 @@ for (i in 1:length(fs)){
   x = str_locate(fs[i], "seq2vec")
   nm = str_sub(fs[i], start = x[1])
   nm = str_split(nm, coll("."), simplify = T)[1]
+  
+  setwd("word2vec_model/")
+  
+  if(!dir.exists("plots")){
+    dir.create("plots")
+  }
   
   plotting_EC(tbl = um, prop = "EC_number", nm = nm,
             col_by = f$EC_number)

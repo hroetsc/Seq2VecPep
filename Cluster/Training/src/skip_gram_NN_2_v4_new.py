@@ -186,7 +186,7 @@ def build_and_compile_model():
 
     output = layers.Dense(1, activation = 'sigmoid', kernel_initializer = 'he_uniform', name='dense')(norm)
 
-    
+
     tf.print('concatenation')
     # create the primary training model
     model = keras.Model(inputs=[input_target, input_context], outputs=output)
@@ -200,10 +200,10 @@ def build_and_compile_model():
     # wrap it into stochastic weight averaging framework
     # does not work with Horovod's DistributedOptimizer
 
-    opt = tfa.optimizers.SWA(opt,
-                            start_averaging = 0,
-                            average_period= int(np.ceil(epochs/10)),
-                            name = 'SWA')
+    #opt = tfa.optimizers.SWA(opt,
+    #                        start_averaging = 0,
+    #                        average_period= int(np.ceil(epochs/10)),
+    #                        name = 'SWA')
 
     #opt = tfa.optimizers.Triangular2CyclicalLearningRate(initial_learning_rate = 0.001 * 2 * hvd.size(),
     #                                                maximal_learning_rate = 0.1,
@@ -212,7 +212,7 @@ def build_and_compile_model():
     #                                                name = 'CyclicalLearningRate')
 
     # wrap it into Horovod framework
-    #opt = hvd.DistributedOptimizer(opt, name = 'DistributedOpt')
+    opt = hvd.DistributedOptimizer(opt, name = 'DistributedOpt')
 
     model.compile(loss=keras.losses.BinaryCrossentropy(),
                     optimizer = opt,

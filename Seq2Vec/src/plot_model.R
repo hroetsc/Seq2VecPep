@@ -41,6 +41,12 @@ for (c in 1:ncol(metrics)){
 # plotting function
 plotting = function(col1 = "", col2 = "", name = "", path = "results/model_metrics_"){
   
+  out.path = str_split(path, coll("/"), simplify = T)[,1]
+  
+  if(! dir.exists(out.path)){
+    dir.create(out.path)
+  }
+  
   if (max(col1, col2) <=1){
     upper = 1
   } else {
@@ -51,20 +57,20 @@ plotting = function(col1 = "", col2 = "", name = "", path = "results/model_metri
       width = 2000, height = 2000, res = 300)
   
   plot(col1 ~ epochs,
-       main = paste0(name, " for train and test data set"),
+       main = paste0(str_replace_all(name, "_", " "), " for training and validation data set"),
        pch = 20,
        cex = 0.8,
-       col = "blue",
+       col = "darkblue",
        ylim = c(0, upper),
        xlab = "epoch",
-       ylab = name)
+       ylab = str_replace_all(name, "_", " "))
   points(col2 ~ epochs,
          pch = 1,
-         cex = 1,
-         col = "green")
+         cex = 0.8,
+         col = "firebrick")
   legend("bottomright", cex = 1,
-         legend = c("train", "validation"),
-         col = c("blue", "green"),
+         legend = c("training", "validation"),
+         col = c("darkblue", "firebrick"),
          pch = c(20, 1),
          box.lty = 1,
          pt.cex = 1)
@@ -80,6 +86,6 @@ for (i in 1:(ncol(metrics)/2)){
   plotting(col1 = metrics[,i],
            col2 = metrics[, (i + (ncol(metrics)/2))],
            name = colnames(metrics)[i],
-           path = "../metrics/model_metrics_hp_w5_d100_") # remove path in future!!
+           path = "metrics/model_metrics_hp_w5_d100_") # remove path in future!!
 }
 

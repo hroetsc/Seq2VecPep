@@ -17,6 +17,9 @@ library(tokenizers.bpe)
 
 
 ### INPUT ###
+# vocab_size = 5000
+# threads = future::availableCores()
+
 # load arguments
 params = read.csv(snakemake@input[["params"]], stringsAsFactors = F, header = T)
 
@@ -38,3 +41,11 @@ bpeModel = bpe(snakemake@input[["conc_UniProt"]],
                vocab_size = vocab_size,
                threads = threads,
                model_path = unlist(snakemake@output[["BPE_model"]]))
+
+
+# bpeModel = bpe("Seq2Vec/data/concatenated_UniProt_hp.txt",
+#                coverage = 0.999,
+#                vocab_size = vocab_size,
+#                threads = threads,
+#                model_path = "Seq2Vec/results/encoded_sequence/BPE_model_hp.bpe")
+

@@ -44,7 +44,7 @@ PropMatrix = read.csv(file = snakemake@input[["Props"]], stringsAsFactors = F, h
 
 
 ### MAIN PART ###
-threads = 4
+threads = 8
 
 cl = makeCluster(threads)
 registerDoParallel(cl)

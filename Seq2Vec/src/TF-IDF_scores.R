@@ -12,21 +12,24 @@ library(tidytext)
 
 ### INPUT ###
 words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header = T)
+words = read.csv("Seq2Vec/results/encoded_sequence/words_ProteasomeDB.csv",
+                 stringsAsFactors = F)
+
 
 ### MAIN PART ###
 print("using tidytext approach")
 
 
 print("calculating term frequency - number of occurences of each token in each protein")
-words = unnest_tokens(tbl = words, output = token, input = tokens) %>% # split data frame so that every token gets one row
-  count(Accession, token, sort = F) %>% # count how often every token occurs in the same protein (term frequency)
-  ungroup() # print it line by line
+words = tidytext::unnest_tokens(tbl = words, output = token, input = tokens) %>% # split data frame so that every token gets one row
+  dplyr::count(Accession, token, sort = F) %>% # count how often every token occurs in the same protein (term frequency)
+  dplyr::ungroup() # print it line by line
 
 
 print("calculating document frequency - in how many proteins does each token occur?")
 doc_freq = words %>%
-  group_by(Accession) %>% # concatenate word table by Accession
-  summarize(total = sum(n)) # count how often every Accession occurs
+  dplyr::group_by(Accession) %>% # concatenate word table by Accession
+  dplyr::summarize(total = sum(n)) # count how often every Accession occurs
 
 words = left_join(words, doc_freq)
 # 'words' has the structure one-row-per-token-per-protein
@@ -39,3 +42,5 @@ TF_IDF = words %>% bind_tf_idf(term = token, document = Accession, n)
 
 ### OUTPUT ###
 write.csv(TF_IDF, file = unlist(snakemake@output[["TF_IDF"]]), row.names = F)
+
+# write.csv(TF_IDF, "Seq2Vec/results/encoded_sequence/TF_IDF_ProteasomeDB.csv")
