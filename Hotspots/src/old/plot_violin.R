@@ -63,7 +63,7 @@ violin_plots = function(input = "", output = "", name = ""){
 violin_plots(input = "RegionSimilarity/sim_w3_d100_seq2vec.csv",
              output = "RegionSimilarity/sim_w3_d100_seq2vec.png",
              name = "pure seq2vec")
-
+  
 violin_plots(input = "RegionSimilarity/sim_w3_d100_seq2vec_CCR.csv",
              output = "RegionSimilarity/sim_w3_d100_seq2vec_CCR.png",
              name = "seq2vec + CCR")

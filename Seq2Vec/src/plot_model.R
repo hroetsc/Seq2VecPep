@@ -14,7 +14,7 @@ library(dplyr)
 metrics = read.table(snakemake@input[["metrics"]], stringsAsFactors = F)
 
 # tmp!
-metrics = read.table("hp_model_metrics_w5_d100.txt", sep = ",", stringsAsFactors = F)
+metrics = read.table("GENCODEml_model_metrics_w5_d100.txt", sep = ",", stringsAsFactors = F)
 
 ### MAIN PART ###
 # clean input table
@@ -86,6 +86,6 @@ for (i in 1:(ncol(metrics)/2)){
   plotting(col1 = metrics[,i],
            col2 = metrics[, (i + (ncol(metrics)/2))],
            name = colnames(metrics)[i],
-           path = "metrics/model_metrics_hp_w5_d100_") # remove path in future!!
+           path = "metrics/model_metrics_GENCODEml_w5_d100_") # remove path in future!!
 }
 

@@ -143,5 +143,5 @@ sub.ext = cleanup(sub.ext)
 sub.ext = unique(sub.ext)
 
 ### OUTPUT ###
-write.csv(sub.min, "RegionSimilarity/data/regions_min_substr.csv", row.names = F)
-write.csv(sub.ext, "RegionSimilarity/data/regions_ext_substr.csv", row.names = F)
+write.csv(sub.min, "data/regions_min_substr.csv", row.names = F)
+write.csv(sub.ext, "data/regions_ext_substr.csv", row.names = F)

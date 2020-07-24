@@ -17,6 +17,8 @@ library(doParallel)
 library(doMC)
 library(future)
 
+#library(philentropy)
+
 print("### COMPUTE SCORES ###")
 
 # parallel computing
@@ -64,9 +66,10 @@ dist_plot = function(df = "", name = "", state = ""){
 # remove metainformation and transform into matrix
 cleaning = function(df = "", col = ""){
   
-  df = df[, col] %>% as.character() %>% as.numeric() %>%
-    as.matrix() %>%
-    na.omit() 
+  df = df[, col] %>% as.matrix() %>%
+    as.character() %>%
+    as.numeric() %>%
+    na.omit()
   
   return(df)
 }
@@ -75,6 +78,7 @@ cleaning = function(df = "", col = ""){
 compare = function(true = "", predicted = "", n_true = "", n_pred = ""){
   
   if(! (dim(true)[1] | dim(predicted)[1]) == 0){
+    
     # same proteins
     if(!dim(true)[1] == dim(predicted)[1]){
       
@@ -113,24 +117,32 @@ compare = function(true = "", predicted = "", n_true = "", n_pred = ""){
     predicted = cleaning(df = predicted, col = col_name)
     
     ### plot
-    dist_plot(df = true, name = n_true, state = "pre")
-    dist_plot(df = predicted, name = n_pred, state = "pre")
+    dist_plot(df = true, name = n_true, state = "1_prior_to")
+    dist_plot(df = predicted, name = n_pred, state = "1_prior_to")
     
     # scale between 0 and 1
     predicted = (predicted - min(predicted)) / (max(predicted) - min(predicted))
     true = (true - min(true)) / (max(true) - min(true))
+
+    ### plot
+    dist_plot(df = true, name = n_true, state = "2_after_scaling")
+    dist_plot(df = predicted, name = n_pred, state = "2_after_scaling")
     
     # z-transformation
     predicted = (predicted - mean(predicted)) / sd(predicted)
     true = (true - mean(true)) / sd(true)
+    
+    ### plot
+    dist_plot(df = true, name = n_true, state = "3_after_ztransform")
+    dist_plot(df = predicted, name = n_pred, state = "3_after_ztransform")
     
     # transform into p-values
     predicted = pnorm(predicted)
     true = pnorm(true)
     
     ### plot again
-    dist_plot(df = true, name = n_true, state = "post")
-    dist_plot(df = predicted, name = n_pred, state = "post")
+    dist_plot(df = true, name = n_true, state = "4_after_pvalue")
+    dist_plot(df = predicted, name = n_pred, state = "4_after_pvalue")
     
     
     # score: squared difference between true and predicted
@@ -140,7 +152,6 @@ compare = function(true = "", predicted = "", n_true = "", n_pred = ""){
     # mean of difference between matrices and standard deviation
     diff = mean(tbl)
     SD = sd(tbl)
-    
     
     # spearman correlation between true and predicted similarity scores
     corr = cor(melt(true)$value, melt(predicted)$value, method = "spearman")
@@ -166,7 +177,6 @@ foreach(i = 1:length(input)) %dopar% {
 
   ### INPUT ###
   pred = read.csv(snakemake@input[["predicted"]][i], stringsAsFactors = F, header = T)
-  # pred = read.csv("postprocessing/similarity_QSO.csv", stringsAsFactors = F, header = T)
   pred = as.data.frame(pred)
   
   
@@ -174,7 +184,7 @@ foreach(i = 1:length(input)) %dopar% {
   
   nm = str_split(snakemake@input[["predicted"]][i], coll("."), simplify = T)[,1] %>% 
     as.character()
-  # nm = str_split("postprocessing/similarity_true_semantics_BP.csv", coll("."), simplify = T)[,1] %>%
+  # nm = str_split("postprocessing/similarity_seq2vec.csv", coll("."), simplify = T)[,1] %>%
   #   as.character()
   
   # calculate scores

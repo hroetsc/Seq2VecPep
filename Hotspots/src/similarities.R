@@ -10,41 +10,48 @@ library(doParallel)
 library(doMC)
 library(future)
 
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(stringr)
+
 threads = availableCores()
-cl = makeCluster(threads)
-registerDoMC(threads)
+registerDoParallel(threads)
 
 
 ### INPUT ###
 
-seq2vec = read.csv("repres_min_regions_w3_d100_seq2vec.csv",
+seq2vec = read.csv("ext_substr_w5_d100_seq2vec.csv",
                    stringsAsFactors = F, header = T)
-seq2vec.tfidf = read.csv("repres_min_regions_w3_d100_seq2vec-TFIDF.csv",
+seq2vec.tfidf = read.csv("ext_substr_w5_d100_seq2vec-TFIDF.csv",
                    stringsAsFactors = F, header = T)
-seq2vec.sif = read.csv("repres_min_regions_w3_d100_seq2vec-SIF.csv",
+seq2vec.sif = read.csv("ext_substr_w5_d100_seq2vec-SIF.csv",
                    stringsAsFactors = F, header = T)
-seq2vec.CCR = read.csv("repres_min_regions_w3_d100_seq2vec_CCR.csv",
+seq2vec.ccr = read.csv("ext_substr_w5_d100_seq2vec_CCR.csv",
                        stringsAsFactors = F, header = T)
-seq2vec.tfidf.CCR = read.csv("repres_min_regions_w3_d100_seq2vec-TFIDF_CCR.csv",
+seq2vec.tfidf.ccr = read.csv("ext_substr_w5_d100_seq2vec-TFIDF_CCR.csv",
                          stringsAsFactors = F, header = T)
-seq2vec.sif.CCR = read.csv("repres_min_regions_w3_d100_seq2vec-SIF_CCR.csv",
+seq2vec.sif.ccr = read.csv("ext_substr_w5_d100_seq2vec-SIF_CCR.csv",
                        stringsAsFactors = F, header = T)
 
 
 ### MAIN PART ###
 # function that returns cosine of angle between two vectors
+matmult = function(v1 = "", v2 = ""){
+  return(as.numeric(v1) %*% as.numeric(v2))
+}
+
 dot_product = function(v1 = "", v2 = ""){
-  p = sum(v1 * v2)/(sqrt(sum(v1^2)) * sqrt(sum(v2^2)))
+  p = matmult(v1, v2)/(sqrt(matmult(v1, v1)) * sqrt(matmult(v2, v2)))
   return(p)
 }
+
 
 rm_meta = function(tbl = ""){
   {
   tbl$Accession = NULL
   tbl$region = NULL
   tbl$label = NULL
-  tbl$start = NULL
-  tbl$end = NULL
   tbl$tokens = NULL
   }
   
@@ -75,16 +82,14 @@ sim = function(tbl1 = "", tbl2 = "", res = ""){
    
   }
   
-  # scale, transform, normalize
-  res = (res - min(res)) / (max(res) - min(res))
-  res = (res - mean(res)) / sd(res)
-  res = pnorm(res)
-  
   return(mean(res))
 }
 
 # function that calculates pairwise similarities
-calc = function(tbl = "", outfile = ""){
+calc = function(tbl = "", outfile = "", n_samples = 20){
+  
+  keep = sample(nrow(tbl), n_samples)
+  tbl = tbl[keep, ]
   
   tbl = tbl[order(tbl$Accession), ]
   
@@ -118,12 +123,61 @@ calc = function(tbl = "", outfile = ""){
 }
 
 
-### OUTPUT ###
-calc(tbl = seq2vec, outfile = "RegionSimilarity/sim_w3_d100_seq2vec.csv")
-calc(tbl = seq2vec.tfidf, outfile = "RegionSimilarity/sim_w3_d100_seq2vec-TFIDF.csv")
-calc(tbl = seq2vec.sif, outfile = "RegionSimilarity/sim_w3_d100_seq2vec-SIF.csv")
 
-calc(tbl = seq2vec.CCR, outfile = "RegionSimilarity/sim_w3_d100_seq2vec_CCR.csv")
-calc(tbl = seq2vec.tfidf.CCR, outfile = "RegionSimilarity/sim_w3_d100_seq2vec-TFIDF_CCR.csv")
-calc(tbl = seq2vec.sif.CCR, outfile = "RegionSimilarity/sim_w3_d100_seq2vec-SIF_CCR.csv")
+### OUTPUT ###
+for (i in 1:40){
+  calc(tbl = seq2vec, outfile = "RegionSimilarity/sim_w5_d100_seq2vec.csv")
+  calc(tbl = seq2vec.tfidf, outfile = "RegionSimilarity/sim_w5_d100_seq2vec-TFIDF.csv")
+  calc(tbl = seq2vec.sif, outfile = "RegionSimilarity/sim_w5_d100_seq2vec-SIF.csv")
+  
+  calc(tbl = seq2vec.ccr, outfile = "RegionSimilarity/sim_w5_d100_seq2vec_CCR.csv")
+  calc(tbl = seq2vec.tfidf.ccr, outfile = "RegionSimilarity/sim_w5_d100_seq2vec-TFIDF_CCR.csv")
+  calc(tbl = seq2vec.sif.ccr, outfile = "RegionSimilarity/sim_w5_d100_seq2vec-SIF_CCR.csv")
+}
+
+stopImplicitCluster()
+
+# plotting
+load_and_plot = function(infile = "", title = ""){
+  
+  tbl = read.csv(infile, header = F, stringsAsFactors = F) %>% na.omit()
+  
+  colnames(tbl) = c("hotspot-hotspot", "no hotspot - no hotspot",
+                    "hotspot - no hotspot")
+  
+  # tmp !!
+  # tbl = tbl[c(35:nrow(tbl)), ]
+  
+  tbl = tidyr::gather(tbl)
+  
+  means = aggregate(value ~ key, tbl, mean)
+  means$value = round(means$value, 4)
+  
+  p = ggplot(tbl, aes(x = key, y = value, fill = key)) +
+    geom_violin(scale = "width", trim = F,
+                draw_quantiles = c(0.5)) +
+    stat_summary(fun=mean, geom="point", size=1, color="red") +
+    geom_text(data = means, aes(label = value, y = max(tbl$value) + 0.1)) +
+    scale_fill_viridis_d(option = "viridis", direction = -1) +
+    ggtitle("comparison of hotspot and non-hotspot region similarity",
+            subtitle = paste0("embedded using ", title, " (window = 5, dim = 100)")) +
+    ylab("mean cosine similarity") +
+    xlab("regions") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 0),
+          legend.position = "none")
+  p
+  
+  out = str_split(infile, coll("."), simplify = T)[,1] %>% as.character()
+  ggsave(filename = paste0(out, ".png"), plot = p, dpi = "retina")
+  
+}
+
+load_and_plot(infile = "RegionSimilarity/sim_w5_d100_seq2vec.csv", title = "seq2vec")
+load_and_plot(infile = "RegionSimilarity/sim_w5_d100_seq2vec-TFIDF.csv", title = "seq2vec + TFIDF")
+load_and_plot(infile = "RegionSimilarity/sim_w5_d100_seq2vec-SIF.csv", title = "seq2vec + SIF")
+
+load_and_plot(infile = "RegionSimilarity/sim_w5_d100_seq2vec_CCR.csv", title = "seq2vec + CCR")
+load_and_plot(infile = "RegionSimilarity/sim_w5_d100_seq2vec-TFIDF_CCR.csv", title = "seq2vec + TFIDF + CCR")
+load_and_plot(infile = "RegionSimilarity/sim_w5_d100_seq2vec-SIF_CCR.csv", title = "seq2vec + SIF + CCR")
 

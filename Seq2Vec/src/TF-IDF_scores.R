@@ -12,9 +12,12 @@ library(tidytext)
 
 ### INPUT ###
 words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header = T)
-words = read.csv("Seq2Vec/results/encoded_sequence/words_ProteasomeDB.csv",
-                 stringsAsFactors = F)
-
+# words = read.csv("Seq2Vec/results/encoded_sequence/words_ProteasomeDB.csv",
+#                  stringsAsFactors = F)
+# words = ext_substr[, c("Accession", "tokens")]
+# words = min_substr[, c("Accession", "tokens")]
+# words = read.csv("../../Seq2Vec/results/encoded_sequence/words_GENCODEml.csv",
+#                  stringsAsFactors = F)
 
 ### MAIN PART ###
 print("using tidytext approach")
@@ -44,3 +47,6 @@ TF_IDF = words %>% bind_tf_idf(term = token, document = Accession, n)
 write.csv(TF_IDF, file = unlist(snakemake@output[["TF_IDF"]]), row.names = F)
 
 # write.csv(TF_IDF, "Seq2Vec/results/encoded_sequence/TF_IDF_ProteasomeDB.csv")
+# write.csv(TF_IDF, "data/ext_substr_TFIDF.csv", row.names = F)
+# write.csv(TF_IDF, "data/min_substr_TFIDF.csv", row.names = F)
+# write.csv(TF_IDF, "../../Seq2Vec/results/encoded_sequence/TF_IDF_GENCODEml.csv")

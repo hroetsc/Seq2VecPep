@@ -7,6 +7,7 @@
 #               - no weighting
 #               - weighting using TF-IDF
 #               - weighting using SIF
+#               - common component removal (CCR)
 # author:       HR
 
 print("### RETRIEVE SEQUENCE REPRESENATION ###")
@@ -43,11 +44,11 @@ weight_matrix = h5read(snakemake@input[["weights"]], "/embedding/embedding")
 indices = read.csv(file = snakemake@input[["ids"]], stringsAsFactors = F, header = F)
 
 # tmp!!
-sequences = read.csv("../proteome_human.csv", stringsAsFactors = F, header = T)
-TF_IDF = read.csv("../TF_IDF.csv", stringsAsFactors = F, header = T)
-words = read.csv("../words_hp.csv", stringsAsFactors = F, header = T)
-indices = read.csv("../ids_hp_w5_new.csv", stringsAsFactors = F, header = F)
-weight_matrix = h5read("hp_model_w5_d100/weights.h5", "/embedding/embedding")
+# sequences = read.csv("../proteome_human.csv", stringsAsFactors = F, header = T)
+# TF_IDF = read.csv("../TF_IDF.csv", stringsAsFactors = F, header = T)
+# words = read.csv("../words_hp.csv", stringsAsFactors = F, header = T)
+# indices = read.csv("../ids_hp_w5_new.csv", stringsAsFactors = F, header = F)
+# weight_matrix = h5read("hp_model_w5_d100/weights.h5", "/embedding/embedding")
 
 # sequences = read.csv("../../../files/ProteasomeDB.csv", stringsAsFactors = F, header = T)
 # TF_IDF = read.csv("../TF_IDF_ProteasomeDB.csv", stringsAsFactors = F, header = T)
@@ -57,17 +58,26 @@ weight_matrix = h5read("hp_model_w5_d100/weights.h5", "/embedding/embedding")
 # weight_matrix = h5read("ProteasomeDB_model_w5_d100/weights.h5", "/embedding/embedding")
 
 
+# indices = read.csv("../RUNS/HumanProteome/ids_hp_w5_new.csv", stringsAsFactors = F, header = F)
+# weight_matrix = h5read("../RUNS/HumanProteome/word2vec_model/hp_model_w5_d100/weights.h5", "/embedding/embedding")
+
+
+sequences = read.csv("DEEPml_proteome.csv", stringsAsFactors = F, header = T)
+TF_IDF = read.csv("TF_IDF_DEEPml.csv", stringsAsFactors = F, header = T)
+words = read.csv("words_DEEPml.csv", stringsAsFactors = F, header = T)
+indices = read.csv("ids_DEEPml_w5.csv", stringsAsFactors = F, header = F)
+weight_matrix = h5read("DEEPml_model_w5_d100/weights.h5", "/embedding/embedding")
+
+
 ### MAIN PART ###
 # multiprocessing
-#threads = as.numeric(params[which(params$parameter == "threads"), "value"])
-threads = availableCores()
-
-cl = makeCluster(threads)
-registerDoParallel(cl)
-registerDoMC(threads)
+threads = 10
+registerDoParallel(threads)
+cl = makeCluster(threads, type = "FORK")
 
 
 # assign tokens to weight matrix
+{
 if (ncol(indices) == 3){
   indices$V1 = NULL
 }
@@ -87,8 +97,9 @@ weight_matrix$word_ID = weight_matrix$word_ID + 1
 
 # merge indices and weights
 weights = full_join(weight_matrix, indices) %>% na.omit() %>% unique()
+}
 
-
+# do not execute if sequences.master is defined in another script
 # combine sequences table with tokens file
 sequences.master = left_join(sequences, words) %>% unique()
 
@@ -107,6 +118,7 @@ embeddingDim = length(grep_weights(weights))
 
 
 # define function that searches for tokens in weight matrix
+# make sure that weights do not contain factors !!!!!!!!!!!!
 find_tokens = function(token = ""){
   if (token %in% weights$subword) {
     return(weights[which(token == weights$subword)[1], grep_weights(weights)][1, ])
@@ -122,6 +134,12 @@ find_tokens = function(token = ""){
 TF_IDF$token = toupper(TF_IDF$token)
 # define function that finds TF-IDF score for token in correct sequence
 find_TF.IDF = function(tokens = "", sequence = "") {
+  
+  if(any(str_detect(sequence, coll("_")))) {
+    sequence = str_split_fixed(sequence, coll("_"), Inf)[, 1]
+  }
+  
+  
   scores = rep(NA, length(tokens))
   tmp = TF_IDF[which(TF_IDF$Accession == sequence), ]
   
@@ -139,6 +157,11 @@ find_TF.IDF = function(tokens = "", sequence = "") {
 # calculate smooth inverse frequency
 a = 0.001
 find_SIF = function(tokens = "", sequence = "") {
+  
+  if(any(str_detect(sequence, coll("_")))) {
+    sequence = str_split_fixed(sequence, coll("_"), Inf)[, 1]
+  }
+  
   scores = rep(NA, length(tokens))
   tmp = TF_IDF[which(TF_IDF$Accession == sequence), ]
   
@@ -150,7 +173,7 @@ find_SIF = function(tokens = "", sequence = "") {
     }
   }
   # get document frequency from inverse frequency
-  scores = exp(log(nrow(sequences), scores))
+  scores = exp(log(nrow(sequences.master), scores))
   # smooth inverse frequency
   scores = a/(a + scores)
   scores[which(!is.finite(scores))] = 1
@@ -191,12 +214,15 @@ out.tfidf.ccr = unlist(snakemake@output[["sequence_repres_seq2vec_TFIDF_CCR"]])
 out.sif.ccr = unlist(snakemake@output[["sequence_repres_seq2vec_SIF_CCR"]])
 
 # tmp !!
-# out = "hp_sequence_repres_w5_d100_seq2vec.csv"
-# out.tfidf = "hp_sequence_repres_w5_d100_seq2vec-TFIDF.csv"
-# out.sif = "hp_sequence_repres_w5_d100_seq2vec-SIF.csv"
-# out.ccr = "hp_sequence_repres_w5_d100_seq2vec_CCR.csv"
-# out.tfidf.ccr = "hp_sequence_repres_w5_d100_seq2vec-TFIDF_CCR.csv"
-# out.sif.ccr = "hp_sequence_repres_w5_d100_seq2vec-SIF_CCR.csv"
+# out = "DEEPml_sequence_repres_w5_d100_seq2vec.csv"
+# out.tfidf = "DEEPml_sequence_repres_w5_d100_seq2vec-TFIDF.csv"
+# out.sif = "DEEPml_sequence_repres_w5_d100_seq2vec-SIF.csv"
+# out.ccr = "DEEPml_sequence_repres_w5_d100_seq2vec_CCR.csv"
+# out.tfidf.ccr = "DEEPml_sequence_repres_w5_d100_seq2vec-TFIDF_CCR.csv"
+# out.sif.ccr = "DEEPml_sequence_repres_w5_d100_seq2vec-SIF_CCR.csv"
+
+# tmp in case of crash!
+# sequences.master = sequences.master[which(! sequences.master$Accession %in% seq2vec$Accession), ]
 
 
 # empty directory for tmp outfiles
@@ -207,103 +233,94 @@ if(! dir.exists("./tmp")){
   dir.create("./tmp")
 }
 
+
 # iteration
 system.time(foreach (i = 1:nrow(sequences.master)) %dopar% {
   
   # build temporary table that contains all tokens and weights for the current sequences
   current_tokens = str_split(sequences.master$tokens[i], coll(" "), simplify = T) %>% as.vector()
   
-  tmp = as.data.frame(matrix(ncol = embeddingDim, nrow = length(current_tokens)))
+  tmp = matrix(ncol = embeddingDim, nrow = length(current_tokens)) %>% as.data.frame()
   tmp[, "token"] = current_tokens
   
   # find embeddings for every token in tmp
   for (r in 1:nrow(tmp)) {
-    tmp[r,c(1:embeddingDim)] = find_tokens(paste(tmp[r, ncol(tmp)]))
-  }
-  
-  tmp.tfidf = tmp
-  tmp.sif = tmp
-  
-  # extract TF-IDF and SIF scores for all tokens
-  tmp.tfidf[, "TF_IDF"] = find_TF.IDF(tokens = tmp.tfidf$token, sequence = sequences.master$Accession[i])
-  tmp.sif[, "SIF"] = find_SIF(tokens = tmp.sif$token, sequence = sequences.master$Accession[i])
-  
-  # multiply token embeddings by their TF-IDF scores
-  tmp.tfidf[, c(1:embeddingDim)] = tmp.tfidf[, c(1:embeddingDim)] * tmp.tfidf$TF_IDF
-  tmp.tfidf$TF_IDF = NULL
-  tmp.tfidf$token = NULL
-  
-  # multiply token embeddings by their SIF scores
-  tmp.sif[, c(1:embeddingDim)] = tmp.sif[, c(1:embeddingDim)] * tmp.sif$SIF
-  tmp.sif$SIF = NULL
-  tmp.sif$token = NULL
-  
-  tmp$token = NULL
-  
-  ## common component removal
-  # remove mean
-  mu = colSums(tmp) / nrow(tmp)
-  mu.tfidf = colSums(tmp.tfidf) / nrow(tmp.tfidf)
-  mu.sif = colSums(tmp.sif) / nrow(tmp.sif)
-  
-  tmp.ccr = tmp
-  tmp.tfidf.ccr = tmp.tfidf
-  tmp.sif.ccr = tmp.sif
-  
-  for (l in 1:nrow(tmp.ccr)){
-    tmp.ccr[l,] = tmp.ccr[l, ] - mu
-    tmp.tfidf.ccr[l,] = tmp.tfidf.ccr[l, ] - mu.tfidf
-    tmp.sif.ccr[l,] = tmp.sif.ccr[l, ] - mu.sif
+    tmp[r, c(1:embeddingDim)] = find_tokens(tmp$token[r])
   }
   
   # only proceed if embeddings for every token are found, otherwise discard whole sequence
   if (!any(is.na(tmp))) {
     
-    # calculate mean of every token dimension to get sequence dimension
-    for (c in 1:ncol(tmp)) {
-      tmp[,c] = as.numeric(as.character(tmp[,c]))
-      tmp.tfidf[,c] = as.numeric(as.character(tmp.tfidf[,c]))
-      tmp.sif[,c] = as.numeric(as.character(tmp.sif[,c]))
-      
-      tmp.ccr[,c] = as.numeric(as.character(tmp.ccr[,c]))
-      tmp.tfidf.ccr[,c] = as.numeric(as.character(tmp.tfidf.ccr[,c]))
-      tmp.sif.ccr[,c] = as.numeric(as.character(tmp.sif.ccr[,c]))
-    }
+    tmp.tfidf = tmp
+    tmp.sif = tmp
     
-    # calculate means
-    line = colSums(tmp) / nrow(tmp)
-    line.tfidf = colSums(tmp.tfidf) / nrow(tmp.tfidf)
-    line.sif = colSums(tmp.sif) / nrow(tmp.sif)
+    # extract TF-IDF and SIF scores for all tokens
+    tmp.tfidf[, "TF_IDF"] = find_TF.IDF(tokens = tmp.tfidf$token, sequence = sequences.master$Accession[i])
+    tmp.sif[, "SIF"] = find_SIF(tokens = tmp.sif$token, sequence = sequences.master$Accession[i])
     
-    line.ccr = colSums(tmp.ccr) / nrow(tmp.ccr)
-    line.tfidf.ccr = colSums(tmp.tfidf.ccr) / nrow(tmp.tfidf.ccr)
-    line.sif.ccr = colSums(tmp.sif.ccr) / nrow(tmp.sif.ccr)
+    # multiply token embeddings by their TF-IDF scores
+    tmp.tfidf[, c(1:embeddingDim)] = tmp.tfidf[, c(1:embeddingDim)] * tmp.tfidf$TF_IDF
+    tmp.tfidf$TF_IDF = NULL
+    tmp.tfidf$token = NULL
     
-  } else {
-    line = rep(NA, ncol(tmp))
-    line.tfidf = line
-    line.sif = line
+    # multiply token embeddings by their SIF scores
+    tmp.sif[, c(1:embeddingDim)] = tmp.sif[, c(1:embeddingDim)] * tmp.sif$SIF
+    tmp.sif$SIF = NULL
+    tmp.sif$token = NULL
     
-    line.ccr = line
-    line.tfidf.ccr = line
-    line.sif.ccr = line
+    tmp$token = NULL
+    
+    ## common component removal
+    # get means
+    mu = colSums(tmp) / nrow(tmp)
+    mu.tfidf = colSums(tmp.tfidf) / nrow(tmp.tfidf)
+    mu.sif = colSums(tmp.sif) / nrow(tmp.sif)
+    
+    # data frames
+    tmp.ccr = tmp
+    tmp.tfidf.ccr = tmp.tfidf
+    tmp.sif.ccr = tmp.sif
+    
+    # remove means and apply CCR
+    tmp.ccr = t(apply(tmp.ccr, 1, function(x) x - mu)) %>%
+      removePrincipalComponents(n = 1) %>% as.data.frame()
+    
+    tmp.tfidf.ccr = t(apply(tmp.tfidf.ccr, 1, function(x) x - mu.tfidf)) %>%
+      removePrincipalComponents(n = 1) %>% as.data.frame()
+    
+    tmp.sif.ccr = t(apply(tmp.sif.ccr, 1, function(x) x - mu.sif)) %>%
+      removePrincipalComponents(n = 1) %>% as.data.frame()
+    
+    
+    # convert into numeric
+    tmp.ccr = mutate_if(tmp.ccr, is.factor, ~ as.numeric(levels(.x))[.x])
+    tmp.tfidf.ccr = mutate_if(tmp.tfidf.ccr, is.factor, ~ as.numeric(levels(.x))[.x])
+    tmp.sif.ccr = mutate_if(tmp.sif.ccr, is.factor, ~ as.numeric(levels(.x))[.x])
+    
+    
+    # calculate means of CCR df
+    mu.ccr = colSums(tmp.ccr) / nrow(tmp.ccr)
+    mu.tfidf.ccr = colSums(tmp.tfidf.ccr) / nrow(tmp.tfidf.ccr)
+    mu.sif.ccr = colSums(tmp.sif.ccr) / nrow(tmp.sif.ccr)
+    
+    # add current accession
+    acc = sequences.master$Accession[i]
+    
+    # write / append to file
+    saveSeq(line = c(acc, mu), cols = embeddingDim + 1, outfile = out, PID = Sys.getpid())
+    saveSeq(line = c(acc, mu.tfidf), cols = embeddingDim + 1, outfile = out.tfidf, PID = Sys.getpid())
+    saveSeq(line = c(acc, mu.sif), cols = embeddingDim + 1, outfile = out.sif, PID = Sys.getpid())
+    
+    saveSeq(line = c(acc, mu.ccr), cols = embeddingDim + 1, outfile = out.ccr, PID = Sys.getpid())
+    saveSeq(line = c(acc, mu.tfidf.ccr), cols = embeddingDim + 1, outfile = out.tfidf.ccr, PID = Sys.getpid())
+    saveSeq(line = c(acc, mu.sif.ccr), cols = embeddingDim + 1, outfile = out.sif.ccr, PID = Sys.getpid())
+    
   }
   
-  # add current accession
-  acc = sequences.master$Accession[i]
-  
-  # write / append to file
-  saveSeq(line = c(acc, line), cols = embeddingDim + 1, outfile = out, PID = Sys.getpid())
-  saveSeq(line = c(acc, line.tfidf), cols = embeddingDim + 1, outfile = out.tfidf, PID = Sys.getpid())
-  saveSeq(line = c(acc, line.sif), cols = embeddingDim + 1, outfile = out.sif, PID = Sys.getpid())
-  
-  saveSeq(line = c(acc, line.ccr), cols = embeddingDim + 1, outfile = out.ccr, PID = Sys.getpid())
-  saveSeq(line = c(acc, line.tfidf.ccr), cols = embeddingDim + 1, outfile = out.tfidf.ccr, PID = Sys.getpid())
-  saveSeq(line = c(acc, line.sif.ccr), cols = embeddingDim + 1, outfile = out.sif.ccr, PID = Sys.getpid())
+  # no else to save time (sequences are discarded anyways)
   
 })[3]
 
-stopImplicitCluster()
 stopCluster(cl)
 
 print("DONE")
@@ -320,21 +337,26 @@ mergeOut = function(out = ""){
       
       tbl = read.csv(fs[i], stringsAsFactors = F, header = F)
       
+      
     } else {
       
       dat = read.csv(fs[i], stringsAsFactors = F, header = F)
       tbl = rbind(tbl, dat)
+      
+      if(any(duplicated(tbl$Accession))) {
+        print("WARNING: data table contains duplicated accessions")
+      }
       
     }
   }
   
   colnames(tbl) = c("Accession", grep_weights(weights))
   
-  tbl = inner_join(sequences.master, tbl)
-  tbl = as.data.frame(tbl)
+  tbl = inner_join(sequences.master, tbl) %>%
+    as.data.frame() %>%
+    na.omit() %>%
+    unique()
   
-  tbl = na.omit(tbl)
-  tbl = unique(tbl)
   
   return(tbl)
 }
@@ -348,6 +370,7 @@ seq2vec.ccr = mergeOut(out = out.ccr)
 seq2vec.tfidf.ccr = mergeOut(out = out.tfidf.ccr)
 seq2vec.sif.ccr = mergeOut(out = out.sif.ccr)
 
+
 ### OUTPUT ###
 # vector representation of sequences
 write.csv(seq2vec, file = out, row.names = F)
@@ -357,3 +380,4 @@ write.csv(seq2vec.sif, file = out.sif, row.names = F)
 write.csv(seq2vec.ccr, file = out.ccr, row.names = F)
 write.csv(seq2vec.tfidf.ccr, file = out.tfidf.ccr, row.names = F)
 write.csv(seq2vec.sif.ccr, file = out.sif.ccr, row.names = F)
+

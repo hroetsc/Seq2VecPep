@@ -30,6 +30,7 @@ sequences = as.data.frame(sequences)
 
 # sequences = read.csv("files/proteome_human.csv", stringsAsFactors = F)
 # sequences = sequences[which(sequences$Accession == "H7C241"), ]
+# sequences = read.csv("GENCODEml_proteome.csv", stringsAsFactors = F)
 
 # load the model
 threads = as.numeric(params[which(params$parameter == "threads"), "value"])
@@ -38,7 +39,7 @@ bpeModel = bpe_load_model(snakemake@input[["BPE_model"]],
                           threads = threads)
 
 # threads = future::availableCores()
-# bpeModel = bpe_load_model("Seq2Vec/results/encoded_sequence/BPE_model_hp.bpe")
+bpeModel = bpe_load_model("../../Seq2Vec/results/encoded_sequence/BPE_model_hp.bpe")
 
 
 # store byte-pair encoding vocabulary
@@ -76,7 +77,7 @@ colnames(sequences.Encoded) = c(colnames(sequences), "segmented_seq")
 print("CONCATENATE TOKENS")
 
 # format words: table with Accession and corresponding tokens separated by space
-words = matrix(ncol = 2, nrow = length(sequences.Encoded.list))
+words = matrix(ncol = 2, nrow = length(sequences.Encoded.list)) %>% as.data.frame()
 
 for (i in 1:length(sequences.Encoded.list)) {
   # pick accession
@@ -86,7 +87,6 @@ for (i in 1:length(sequences.Encoded.list)) {
   words[i, 2] = df[,ncol(sequences.Encoded)] %>% as.vector() %>% paste(collapse = " ", sep = " ")
 }
 colnames(words) = c("Accession", "tokens")
-words = as.data.frame(words)
 
 # keep only sequences that are segmented into more than one token
 sort = rep(NA, nrow(words))
@@ -115,3 +115,6 @@ write.csv(words, file = unlist(snakemake@output[["words"]]), row.names = F)
 
 # write.csv(ModelVocab, file = "Seq2Vec/results/encoded_sequence/model_vocab_singleProtein.csv", row.names = F)
 # write.csv(words, file = "Seq2Vec/results/encoded_sequence/words_singleProtein.csv", row.names = F)
+
+# write.csv(ModelVocab, file = "../../Seq2Vec/results/encoded_sequence/model_vocab_GENCODEml.csv", row.names = F)
+# write.csv(words, file = "../../Seq2Vec/results/encoded_sequence/words_GENCODEml.csv", row.names = F)
