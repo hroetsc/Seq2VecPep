@@ -104,15 +104,15 @@ print('number of epochs, adjusted by number of GPUs: ', epochs)
 valSplit = 0.2
 
 NUM_WORKERS = num_nodes
-BATCH_SIZE = 4*hvd.size()
+BATCH_SIZE = 16*hvd.size()
 
 print('per worker batch size: ', BATCH_SIZE)
 
 ### output - this is not ideal ...
-checkpoints = '/scratch2/hroetsc/Seq2Vec/results/hp_model_w5_d100/ckpts'
-weights_path = '/scratch2/hroetsc/Seq2Vec/results/hp_model_w5_d100/weights.h5'
-model_path = '/scratch2/hroetsc/Seq2Vec/results/hp_model_w5_d100/model'
-embedding_layer = '/scratch2/hroetsc/Seq2Vec/results/hp_w5_d100_embedding.csv'
+checkpoints = '/scratch2/hroetsc/Seq2Vec/results/GENCODEml_model_w5_d100/ckpts'
+weights_path = '/scratch2/hroetsc/Seq2Vec/results/GENCODEml_model_w5_d100/weights.h5'
+model_path = '/scratch2/hroetsc/Seq2Vec/results/GENCODEml_model_w5_d100/model'
+embedding_layer = '/scratch2/hroetsc/Seq2Vec/results/GENCODEml_w5_d100_embedding.csv'
 
 
 print("-------------------------------------------------------------------------")
@@ -239,7 +239,7 @@ ids = pd.read_csv(snakemake.input['ids'], header = None)
 vocab_size = len(ids.index) + 1
 print("vocabulary size (number of target word IDs + 1): {}".format(vocab_size))
 
-embeddingDim = 100
+embeddingDim = 128
 
 
 print('-----------------------------------------------')
@@ -344,8 +344,11 @@ val_steps = int(np.ceil(val_steps / hvd.size()))
 
 print('train for {} steps, validate for {} steps per epoch'.format(steps, val_steps))
 
-fit = model.fit_generator(generator = train_generator,
-                    validation_data = test_generator,
+fit = model.fit(x = [target_word, context_word],
+                    y = Y,
+                    validation_split = valSplit,
+                    batch_size = BATCH_SIZE,
+                    validation_batch_size = BATCH_SIZE,
                     steps_per_epoch = steps,
                     validation_steps = val_steps,
                     validation_freq = 1,
@@ -354,8 +357,20 @@ fit = model.fit_generator(generator = train_generator,
                     initial_epoch = 0,
                     #verbose = 2 if hvd.rank() == 0 else 0,
                     verbose = 2,
-                    max_queue_size = 1,
                     shuffle = True)
+
+#fit = model.fit_generator(generator = train_generator,
+#                    validation_data = test_generator,
+#                    steps_per_epoch = steps,
+#                    validation_steps = val_steps,
+#                    validation_freq = 1,
+#                    epochs = epochs,
+#                    callbacks = callbacks,
+#                    initial_epoch = 0,
+#                    #verbose = 2 if hvd.rank() == 0 else 0,
+#                    verbose = 2,
+#                    max_queue_size = 1,
+#                    shuffle = True)
 
 
 # =============================================================================

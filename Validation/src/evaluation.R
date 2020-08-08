@@ -11,13 +11,14 @@ library(dplyr)
 library(tidyr)
 
 library(reshape2)
+library(philentropy)
+library(transport)
+library(distrEx)
 
 library(foreach)
 library(doParallel)
 library(doMC)
 library(future)
-
-#library(philentropy)
 
 print("### COMPUTE SCORES ###")
 
@@ -74,6 +75,36 @@ cleaning = function(df = "", col = ""){
   return(df)
 }
 
+# calculate a bunch statistics to get distance of distributions
+getDist = function(v1 = "", v2 = "") {
+  
+  v = rbind(v1, v2)
+  
+  # the smaller the more similar, i.e. the better : emd, bhatt, euc
+  # the higher the more similar, i.e. the better : ks, cosine, jensen-shannon
+  
+  # Wasserstein metric (earth mover's distance)
+  emd = wasserstein1d(v1, v2)
+  # Bhattacharyya (similar to Mahalanobis)
+  bhatt = distance(v, method = "bhattacharyya")
+  # euclidean distance
+  euc = distance(v, method = "euclidean")
+  
+  # KS test
+  ks = ks.test(v1, v2, alternative = "two.sided")$p.value
+  # cosine similarity
+  cos = distance(v, method = "cosine")
+  # Jensen-Shannon divergence
+  js_div = distance(v, method = "jensen-shannon")
+  
+  
+  out = c(emd, bhatt, euc, ks, cos, js_div)
+  names(out) = c("Wasserstein_metric","Bhattacharyya", "euclidean",
+                 "KS_pvalue", "cosine", "Jensen_Shannon_divergence")
+  
+  return(out)
+}
+
 # calculate scores
 compare = function(true = "", predicted = "", n_true = "", n_pred = ""){
   
@@ -120,48 +151,26 @@ compare = function(true = "", predicted = "", n_true = "", n_pred = ""){
     dist_plot(df = true, name = n_true, state = "1_prior_to")
     dist_plot(df = predicted, name = n_pred, state = "1_prior_to")
     
-    # scale between 0 and 1
-    predicted = (predicted - min(predicted)) / (max(predicted) - min(predicted))
-    true = (true - min(true)) / (max(true) - min(true))
-
-    ### plot
-    dist_plot(df = true, name = n_true, state = "2_after_scaling")
-    dist_plot(df = predicted, name = n_pred, state = "2_after_scaling")
+    scores_pre = getDist(v1 = true, v2 = predicted)
     
     # z-transformation
     predicted = (predicted - mean(predicted)) / sd(predicted)
     true = (true - mean(true)) / sd(true)
     
-    ### plot
-    dist_plot(df = true, name = n_true, state = "3_after_ztransform")
-    dist_plot(df = predicted, name = n_pred, state = "3_after_ztransform")
-    
-    # transform into p-values
-    predicted = pnorm(predicted)
-    true = pnorm(true)
+    scores_post = getDist(v1 = true, v2 = predicted)
     
     ### plot again
-    dist_plot(df = true, name = n_true, state = "4_after_pvalue")
-    dist_plot(df = predicted, name = n_pred, state = "4_after_pvalue")
+    dist_plot(df = true, name = n_true, state = "2_after_ztransform")
+    dist_plot(df = predicted, name = n_pred, state = "2_after_ztransform")
     
+    out = rbind(scores_pre, scores_post)
     
-    # score: squared difference between true and predicted
-    tbl = (predicted - true)^2
-    
-    
-    # mean of difference between matrices and standard deviation
-    diff = mean(tbl)
-    SD = sd(tbl)
-    
-    # spearman correlation between true and predicted similarity scores
-    corr = cor(melt(true)$value, melt(predicted)$value, method = "spearman")
-    
-    
-    return(c(diff, SD, corr))
+    return(out)
   
   } else {
     
-    return(c(rep(NA, 3)))
+    return(rbind(rep(NaN, 3),
+                 rep(NaN, 3)))
     
   }
   
@@ -186,7 +195,7 @@ foreach(i = 1:length(input)) %dopar% {
     as.character()
   # nm = str_split("postprocessing/similarity_seq2vec.csv", coll("."), simplify = T)[,1] %>%
   #   as.character()
-  
+
   # calculate scores
   syn = compare(true = syntax, predicted = pred,
                 n_true = "syntax", n_pred = nm)
@@ -201,14 +210,11 @@ foreach(i = 1:length(input)) %dopar% {
                    n_true = "semantics_CC", n_pred = nm)
   
   # concatenate scores
-  scores = data.frame(syntax = syn,
-                      semantics_MF = sem_MF,
-                      semantics_BP = sem_BP,
-                      semantics_CC = sem_CC)
-  
+  scores = list(syn, sem_MF, sem_BP, sem_CC)
+  names(scores) = c("syn", "sem_MF", "sem_BP", "sem_CC")
   
   ### OUTPUT ###
-  write.table(x = scores, file = unlist(snakemake@output[["scores"]][i]), sep = " ", row.names = F)
+  save(scores,file = unlist(snakemake@output[["scores"]][i]))
 
   print(paste0("done with ", snakemake@input[["predicted"]][i]))
 }

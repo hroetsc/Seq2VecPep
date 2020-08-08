@@ -18,6 +18,7 @@ words = read.csv(file = snakemake@input[["words"]], stringsAsFactors = F, header
 # words = min_substr[, c("Accession", "tokens")]
 # words = read.csv("../../Seq2Vec/results/encoded_sequence/words_GENCODEml.csv",
 #                  stringsAsFactors = F)
+# words = regions.t[, c("Accession", "tokens")]
 
 ### MAIN PART ###
 print("using tidytext approach")

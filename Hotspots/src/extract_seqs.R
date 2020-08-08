@@ -15,6 +15,7 @@ library(stringr)
 
 ### INPUT ###
 # accessions
+# setwd("Documents/QuantSysBios/ProtTransEmbedding/Hotspots/")
 load("HOTSPOTS/accU.RData")
 # hotspot positions
 load("HOTSPOTS/allHspot.RData")
@@ -145,3 +146,5 @@ sub.ext = unique(sub.ext)
 ### OUTPUT ###
 write.csv(sub.min, "data/regions_min_substr.csv", row.names = F)
 write.csv(sub.ext, "data/regions_ext_substr.csv", row.names = F)
+
+write.csv(master, "data/regions.csv", row.names = F)

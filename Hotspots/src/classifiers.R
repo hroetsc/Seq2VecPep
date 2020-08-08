@@ -35,7 +35,7 @@ registerDoParallel(cores=availableCores())
 
 ### INPUT ###
 
-dt = read.csv("ext_substr_w5_d100_seq2vec-TFIDF.csv", stringsAsFactors = F)
+dt = read.csv("data/ext_substr_w5_d100_seq2vec-TFIDF_CCR.csv", stringsAsFactors = F)
 
 
 ### MAIN PART ###
@@ -55,6 +55,8 @@ UMAP = function(tbl = ""){
   }
   
   tbl$Accession = NULL
+  
+  # tbl = tbl[- which(rowSums(tbl) == 0), ]
   
   coord = umap(tbl,
                n_neighbors = 5,
@@ -76,7 +78,8 @@ UMAP = function(tbl = ""){
   return(um)
 }
 
-um = UMAP(dt[, grep_weights(dt)])
+
+um = UMAP(tbl = dt[, grep_weights(dt)])
 
 
 
@@ -93,7 +96,7 @@ um = UMAP(dt[, grep_weights(dt)])
   }
 }
 
-png(filename = "seq2vec_TFIDF.png",
+png(filename = "seq2vec_TFIDF_CCR.png",
     width = 2000, height = 2000, res = 300)
 plot(um$UMAP1, um$UMAP2,
      col = rank,

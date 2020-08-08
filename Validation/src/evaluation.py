@@ -45,7 +45,7 @@ rule evaluation:
         predicted = expand('postprocessing/similarity_{sample}.csv',
                             sample = features["final"])
     output:
-        scores = expand('similarity/scores/{sample}.txt',
+        scores = expand('similarity/scores/{sample}.RData',
                             sample = features["final"])
     conda:
         "R_dependencies.yml"
@@ -55,7 +55,7 @@ rule evaluation:
 
 rule downstream:
     input:
-        scores = expand('similarity/scores/{sample}.txt',
+        scores = expand('similarity/scores/{sample}.RData',
                             sample = features["final"])
     output:
         final = touch('mytask.done')

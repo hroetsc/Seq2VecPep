@@ -25,21 +25,9 @@ from keras.preprocessing.sequence import skipgrams
 from keras.preprocessing import text
 from keras.preprocessing.text import *
 
-from keras.models import Sequential
-from keras.models import Model
-from keras.layers import Dense, Dropout
-from keras.optimizers import RMSprop
-from keras.layers.advanced_activations import LeakyReLU
-from keras.layers.core import Dense, Reshape
-from keras.layers.embeddings import Embedding
-from keras.layers import Dot, concatenate, merge, dot
-from keras.layers import *
-from keras.engine import input_layer
 import tensorflow as tf
 from tensorflow.keras import layers
 from keras import backend as K
-
-from sklearn.model_selection import train_test_split
 
 # import helper scripts
 import skip_gram_NN_helper
@@ -62,7 +50,7 @@ for i in range(len(output)):
     # # HYPERPARAMETERS
     # =============================================================================
 
-    keep = 1
+    keep = 0.7
     negSkipgrams = 1
 
     windowSize = int(params.iloc[i,0])

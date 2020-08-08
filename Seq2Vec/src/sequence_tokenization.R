@@ -29,7 +29,7 @@ sequences = as.data.frame(sequences)
 # sequences = read.csv("files/ProteasomeDB.csv", stringsAsFactors = F)
 
 # sequences = read.csv("files/proteome_human.csv", stringsAsFactors = F)
-# sequences = sequences[which(sequences$Accession == "H7C241"), ]
+# sequences = sequences[sample(nrow(sequences), 128), ]
 # sequences = read.csv("GENCODEml_proteome.csv", stringsAsFactors = F)
 
 # load the model
@@ -39,7 +39,7 @@ bpeModel = bpe_load_model(snakemake@input[["BPE_model"]],
                           threads = threads)
 
 # threads = future::availableCores()
-bpeModel = bpe_load_model("../../Seq2Vec/results/encoded_sequence/BPE_model_hp.bpe")
+bpeModel = bpe_load_model("Seq2Vec/results/encoded_sequence/BPE_model_hp.bpe")
 
 
 # store byte-pair encoding vocabulary
@@ -118,3 +118,5 @@ write.csv(words, file = unlist(snakemake@output[["words"]]), row.names = F)
 
 # write.csv(ModelVocab, file = "../../Seq2Vec/results/encoded_sequence/model_vocab_GENCODEml.csv", row.names = F)
 # write.csv(words, file = "../../Seq2Vec/results/encoded_sequence/words_GENCODEml.csv", row.names = F)
+
+# write.csv(words, file = "Seq2Vec/results/encoded_sequence/words_testSample.csv", row.names = F)

@@ -18,21 +18,29 @@ library(stringr)
 threads = availableCores()
 registerDoParallel(threads)
 
+# setwd("Documents/QuantSysBios/ProtTransEmbedding/Hotspots/")
 
 ### INPUT ###
 
-seq2vec = read.csv("ext_substr_w5_d100_seq2vec.csv",
+seq2vec = read.csv("data/ext_substr_w5_d100_seq2vec.csv",
                    stringsAsFactors = F, header = T)
-seq2vec.tfidf = read.csv("ext_substr_w5_d100_seq2vec-TFIDF.csv",
+seq2vec.tfidf = read.csv("data/ext_substr_w5_d100_seq2vec-TFIDF.csv",
                    stringsAsFactors = F, header = T)
-seq2vec.sif = read.csv("ext_substr_w5_d100_seq2vec-SIF.csv",
+seq2vec.sif = read.csv("data/ext_substr_w5_d100_seq2vec-SIF.csv",
                    stringsAsFactors = F, header = T)
-seq2vec.ccr = read.csv("ext_substr_w5_d100_seq2vec_CCR.csv",
+seq2vec.ccr = read.csv("data/ext_substr_w5_d100_seq2vec_CCR.csv",
                        stringsAsFactors = F, header = T)
-seq2vec.tfidf.ccr = read.csv("ext_substr_w5_d100_seq2vec-TFIDF_CCR.csv",
+seq2vec.tfidf.ccr = read.csv("data/ext_substr_w5_d100_seq2vec-TFIDF_CCR.csv",
                          stringsAsFactors = F, header = T)
-seq2vec.sif.ccr = read.csv("ext_substr_w5_d100_seq2vec-SIF_CCR.csv",
+seq2vec.sif.ccr = read.csv("data/ext_substr_w5_d100_seq2vec-SIF_CCR.csv",
                        stringsAsFactors = F, header = T)
+
+# for length-corrected data set
+# training = read.csv("data/classifier/training_DATA.csv", stringsAsFactors = F)
+# seq2vec.tfidf.ccr$Accession = str_split_fixed(seq2vec.tfidf.ccr$Accession, coll("_"), Inf)[,1]
+# training = inner_join(training, seq2vec.tfidf.ccr) %>% na.omit()
+# training$start = NULL
+# training$end = NULL
 
 
 ### MAIN PART ###
@@ -67,11 +75,7 @@ rm_meta = function(tbl = ""){
 
 sim = function(tbl1 = "", tbl2 = "", res = ""){
   
-  pb = txtProgressBar(min = 0, max = nrow(tbl1), style = 3)
-  
   res = foreach(a = 1:nrow(tbl1), .combine = "rbind") %dopar% {
-    
-    setTxtProgressBar(pb, a)
     
     res[a, ] = foreach (b = 1:nrow(tbl2), .combine = "cbind") %dopar% {
      
@@ -82,7 +86,7 @@ sim = function(tbl1 = "", tbl2 = "", res = ""){
    
   }
   
-  return(mean(res))
+  return(res[lower.tri(res)] %>% mean())
 }
 
 # function that calculates pairwise similarities
@@ -129,10 +133,12 @@ for (i in 1:40){
   calc(tbl = seq2vec, outfile = "RegionSimilarity/sim_w5_d100_seq2vec.csv")
   calc(tbl = seq2vec.tfidf, outfile = "RegionSimilarity/sim_w5_d100_seq2vec-TFIDF.csv")
   calc(tbl = seq2vec.sif, outfile = "RegionSimilarity/sim_w5_d100_seq2vec-SIF.csv")
-  
+
   calc(tbl = seq2vec.ccr, outfile = "RegionSimilarity/sim_w5_d100_seq2vec_CCR.csv")
   calc(tbl = seq2vec.tfidf.ccr, outfile = "RegionSimilarity/sim_w5_d100_seq2vec-TFIDF_CCR.csv")
   calc(tbl = seq2vec.sif.ccr, outfile = "RegionSimilarity/sim_w5_d100_seq2vec-SIF_CCR.csv")
+
+  calc(tbl = training, outfile = "RegionSimilarity/training_data.csv")
 }
 
 stopImplicitCluster()
@@ -181,3 +187,4 @@ load_and_plot(infile = "RegionSimilarity/sim_w5_d100_seq2vec_CCR.csv", title = "
 load_and_plot(infile = "RegionSimilarity/sim_w5_d100_seq2vec-TFIDF_CCR.csv", title = "seq2vec + TFIDF + CCR")
 load_and_plot(infile = "RegionSimilarity/sim_w5_d100_seq2vec-SIF_CCR.csv", title = "seq2vec + SIF + CCR")
 
+load_and_plot(infile = "RegionSimilarity/training_data.csv", title = "seq2vec + TFIDF + CCR (length-corrected training data)")

@@ -49,7 +49,7 @@ gc.enable()
 # =============================================================================
 # # INPUT
 # =============================================================================
-words = pd.read_csv('../results/encoded_sequence/words_GENCODEml.csv', header = 0)
+words = pd.read_csv('../results/encoded_sequence/words_testSample.csv', header = 0)
 
 
 # =============================================================================
@@ -57,7 +57,7 @@ words = pd.read_csv('../results/encoded_sequence/words_GENCODEml.csv', header = 
 # =============================================================================
 
 workers = 16
-keep = 1
+keep = 0.7
 negSkipgrams = 1
 windowSize = 5
 
@@ -93,6 +93,10 @@ print('GENERATE SKIP-GRAMS')
 n_batches = no_of_sequences
 print("skip-grams are calculated in batches (equivalent to sequences)")
 
+# single core
+#for n in range(n_batches):
+#    skip_gram_NN_helper.parallel_processing(n, wids[n], windowSize, vocab_size, n_batches, '../results/embedded_sequence/skipgrams_testSample-single2_w5.txt', keep, negSkipgrams)
+
 
 # parallel processing
 # generate skip-grams for every sequence independently
@@ -100,7 +104,7 @@ pool = multiprocessing.Pool(workers)
 
 if __name__ == "__main__":
     pool.starmap( skip_gram_NN_helper.parallel_processing,
-                ([[n, wids[n], windowSize, vocab_size, n_batches, '../results/embedded_sequence/skipgrams_GENCODEml_w5.txt', keep, negSkipgrams] for n in range(n_batches)]) )
+                ([[n, wids[n], windowSize, vocab_size, n_batches, '../results/embedded_sequence/skipgrams_testSample-parallel_w5.txt', keep, negSkipgrams] for n in range(n_batches)]) )
 print('done with generating skip-grams')
 
 pool.close()
@@ -109,4 +113,4 @@ print("SAVE WORD-IDS")
 
 # save corresponding IDs
 ids = pd.DataFrame(word2id.items())
-pd.DataFrame.to_csv(ids, '../results/embedded_sequence/ids_GENCODEml_w5.csv', header=False, index = False)
+pd.DataFrame.to_csv(ids, '../results/embedded_sequence/ids_testSample-single2_w5.csv', header=False, index = False)

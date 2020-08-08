@@ -1,4 +1,4 @@
-for ITER in `seq 20`
+for ITER in `seq 6`
 do
-        snakemake --use-conda --cores 16 -R data_gen
+        snakemake --cores 16 -R data_gen
 done

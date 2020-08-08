@@ -22,6 +22,6 @@ include: snakefiles + "sampling.py"
 
 rule all:
     input:
-        scores = expand('similarity/scores/{sample}.txt',
+        scores = expand('similarity/scores/{sample}.RData',
                             sample = features["final"]),
         final = 'mytask.done'

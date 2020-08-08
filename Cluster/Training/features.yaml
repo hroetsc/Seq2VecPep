@@ -3,12 +3,12 @@
 # nomenclature:
 # hm - human proteome, w3 - window size = 3, d100 - embedding size = 100
 
-words: /scratch2/hroetsc/Seq2Vec/data/words_hp.csv
+words: /scratch2/hroetsc/Seq2Vec/data/words_GENCODEml.csv
 
 params:
   w5:
-    - hp_w5_d100
-    - hp_w5_d150
-    - hp_w5_d200
+    - GENCODEml_w5_d100
+    - GENCODEml_w5_d150
+    - GENCODEml_w5_d200
 
 ...

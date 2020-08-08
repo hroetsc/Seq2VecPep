@@ -44,12 +44,14 @@ weight_matrix = h5read(snakemake@input[["weights"]], "/embedding/embedding")
 indices = read.csv(file = snakemake@input[["ids"]], stringsAsFactors = F, header = F)
 
 # tmp!!
+# human proteome
 # sequences = read.csv("../proteome_human.csv", stringsAsFactors = F, header = T)
 # TF_IDF = read.csv("../TF_IDF.csv", stringsAsFactors = F, header = T)
 # words = read.csv("../words_hp.csv", stringsAsFactors = F, header = T)
 # indices = read.csv("../ids_hp_w5_new.csv", stringsAsFactors = F, header = F)
 # weight_matrix = h5read("hp_model_w5_d100/weights.h5", "/embedding/embedding")
 
+# proteasome DB
 # sequences = read.csv("../../../files/ProteasomeDB.csv", stringsAsFactors = F, header = T)
 # TF_IDF = read.csv("../TF_IDF_ProteasomeDB.csv", stringsAsFactors = F, header = T)
 # words = read.csv("../words_ProteasomeDB.csv", stringsAsFactors = F, header = T)
@@ -57,24 +59,25 @@ indices = read.csv(file = snakemake@input[["ids"]], stringsAsFactors = F, header
 # indices = read.csv("../ids_ProteasomeDB_w5.csv", stringsAsFactors = F, header = F)
 # weight_matrix = h5read("ProteasomeDB_model_w5_d100/weights.h5", "/embedding/embedding")
 
+# hotspot regions
+indices = read.csv("../RUNS/HumanProteome/ids_hp_w5_new.csv", stringsAsFactors = F, header = F)
+weight_matrix = h5read("../RUNS/HumanProteome/word2vec_model/hp_model_w5_d100/weights.h5", "/embedding/embedding")
 
-# indices = read.csv("../RUNS/HumanProteome/ids_hp_w5_new.csv", stringsAsFactors = F, header = F)
-# weight_matrix = h5read("../RUNS/HumanProteome/word2vec_model/hp_model_w5_d100/weights.h5", "/embedding/embedding")
-
-
-sequences = read.csv("DEEPml_proteome.csv", stringsAsFactors = F, header = T)
-TF_IDF = read.csv("TF_IDF_DEEPml.csv", stringsAsFactors = F, header = T)
-words = read.csv("words_DEEPml.csv", stringsAsFactors = F, header = T)
-indices = read.csv("ids_DEEPml_w5.csv", stringsAsFactors = F, header = F)
-weight_matrix = h5read("DEEPml_model_w5_d100/weights.h5", "/embedding/embedding")
+# mouse lymphoma
+# setwd("Documents/QuantSysBios/ProtTransEmbedding/RUNS/MouseLymphoma/DEEPml/")
+# sequences = read.csv("DEEPml_proteome.csv", stringsAsFactors = F, header = T)
+# TF_IDF = read.csv("TF_IDF_DEEPml.csv", stringsAsFactors = F, header = T)
+# words = read.csv("words_DEEPml.csv", stringsAsFactors = F, header = T)
+# indices = read.csv("ids_DEEPml_w5.csv", stringsAsFactors = F, header = F)
+# weight_matrix = h5read("DEEPml_model_w5_d100/weights.h5", "/embedding/embedding")
 
 
 ### MAIN PART ###
 # multiprocessing
-threads = 10
-registerDoParallel(threads)
+threads = availableCores()
 cl = makeCluster(threads, type = "FORK")
-
+registerDoParallel(threads)
+registerDoMC(threads)
 
 # assign tokens to weight matrix
 {
@@ -222,6 +225,7 @@ out.sif.ccr = unlist(snakemake@output[["sequence_repres_seq2vec_SIF_CCR"]])
 # out.sif.ccr = "DEEPml_sequence_repres_w5_d100_seq2vec-SIF_CCR.csv"
 
 # tmp in case of crash!
+# seq2vec = read.csv(out, stringsAsFactors = F)
 # sequences.master = sequences.master[which(! sequences.master$Accession %in% seq2vec$Accession), ]
 
 
@@ -322,6 +326,7 @@ system.time(foreach (i = 1:nrow(sequences.master)) %dopar% {
 })[3]
 
 stopCluster(cl)
+stopImplicitCluster()
 
 print("DONE")
 
@@ -332,33 +337,45 @@ mergeOut = function(out = ""){
   
   fs = list.files(path = "tmp", pattern = out, full.names = T)
   
-  for (i in 1:length(fs)){
-    if (i == 1){
-      
-      tbl = read.csv(fs[i], stringsAsFactors = F, header = F)
-      
-      
-    } else {
-      
-      dat = read.csv(fs[i], stringsAsFactors = F, header = F)
-      tbl = rbind(tbl, dat)
-      
-      if(any(duplicated(tbl$Accession))) {
-        print("WARNING: data table contains duplicated accessions")
+  if (length(fs) > 0) {
+    
+    for (i in 1:length(fs)){
+      if (i == 1){
+        
+        tbl = read.csv(fs[i], stringsAsFactors = F, header = F)
+        
+        
+      } else {
+        
+        dat = read.csv(fs[i], stringsAsFactors = F, header = F)
+        tbl = rbind(tbl, dat)
+        
       }
-      
     }
+    
+    colnames(tbl) = c("Accession", grep_weights(weights))
+    
+    tbl = inner_join(sequences.master, tbl) %>%
+      as.data.frame() %>%
+      na.omit() %>%
+      unique()
+    
+    # tmp !!! combine with existing file
+    
+    if (file.exists(out)) {
+      ex = read.csv(out, stringsAsFactors = F, header = T)
+      tbl = rbind(ex, tbl) %>% unique()
+    }
+    
+    
+    return(tbl)
+    
+  } else {
+    
+    return(NA)
+    
   }
   
-  colnames(tbl) = c("Accession", grep_weights(weights))
-  
-  tbl = inner_join(sequences.master, tbl) %>%
-    as.data.frame() %>%
-    na.omit() %>%
-    unique()
-  
-  
-  return(tbl)
 }
 
 
@@ -369,6 +386,7 @@ seq2vec.sif = mergeOut(out = out.sif)
 seq2vec.ccr = mergeOut(out = out.ccr)
 seq2vec.tfidf.ccr = mergeOut(out = out.tfidf.ccr)
 seq2vec.sif.ccr = mergeOut(out = out.sif.ccr)
+
 
 
 ### OUTPUT ###
