@@ -45,11 +45,12 @@ indices = read.csv(file = snakemake@input[["ids"]], stringsAsFactors = F, header
 
 # tmp!!
 # human proteome
-# sequences = read.csv("../proteome_human.csv", stringsAsFactors = F, header = T)
-# TF_IDF = read.csv("../TF_IDF.csv", stringsAsFactors = F, header = T)
-# words = read.csv("../words_hp.csv", stringsAsFactors = F, header = T)
-# indices = read.csv("../ids_hp_w5_new.csv", stringsAsFactors = F, header = F)
-# weight_matrix = h5read("hp_model_w5_d100/weights.h5", "/embedding/embedding")
+setwd("Documents/QuantSysBios/ProtTransEmbedding/RUNS/HumanProteome/v_50k/")
+sequences = read.csv("../proteome_human.csv", stringsAsFactors = F, header = T)
+TF_IDF = read.csv("TF_IDF_hp_v50k.csv", stringsAsFactors = F, header = T)
+words = read.csv("words_hp_v50k.csv", stringsAsFactors = F, header = T)
+indices = read.csv("ids_hp_v50k_w5.csv", stringsAsFactors = F, header = F)
+weight_matrix = h5read("hp_v50k_model_w5_d128/weights.h5", "/embedding/embedding")
 
 # proteasome DB
 # sequences = read.csv("../../../files/ProteasomeDB.csv", stringsAsFactors = F, header = T)
@@ -60,24 +61,22 @@ indices = read.csv(file = snakemake@input[["ids"]], stringsAsFactors = F, header
 # weight_matrix = h5read("ProteasomeDB_model_w5_d100/weights.h5", "/embedding/embedding")
 
 # hotspot regions
-indices = read.csv("../RUNS/HumanProteome/ids_hp_w5_new.csv", stringsAsFactors = F, header = F)
-weight_matrix = h5read("../RUNS/HumanProteome/word2vec_model/hp_model_w5_d100/weights.h5", "/embedding/embedding")
+# indices = read.csv("../RUNS/HumanProteome/ids_hp_w5_new.csv", stringsAsFactors = F, header = F)
+# weight_matrix = h5read("../RUNS/HumanProteome/word2vec_model/hp_model_w5_d100/weights.h5", "/embedding/embedding")
 
 # mouse lymphoma
-# setwd("Documents/QuantSysBios/ProtTransEmbedding/RUNS/MouseLymphoma/DEEPml/")
-# sequences = read.csv("DEEPml_proteome.csv", stringsAsFactors = F, header = T)
-# TF_IDF = read.csv("TF_IDF_DEEPml.csv", stringsAsFactors = F, header = T)
-# words = read.csv("words_DEEPml.csv", stringsAsFactors = F, header = T)
-# indices = read.csv("ids_DEEPml_w5.csv", stringsAsFactors = F, header = F)
-# weight_matrix = h5read("DEEPml_model_w5_d100/weights.h5", "/embedding/embedding")
+# setwd("Documents/QuantSysBios/ProtTransEmbedding/RUNS/MouseLymphoma/hp_v50k/")
+# sequences = read.csv("hp_v50k_proteome.csv", stringsAsFactors = F, header = T)
+# TF_IDF = read.csv("TF_IDF_hp_v50k.csv", stringsAsFactors = F, header = T)
+# words = read.csv("words_hp_v50k.csv", stringsAsFactors = F, header = T)
+# indices = read.csv("ids_hp_v50k_w5.csv", stringsAsFactors = F, header = F)
+# weight_matrix = h5read("hp_v50k_model_w5_d100/weights.h5", "/embedding/embedding")
 
 
 ### MAIN PART ###
 # multiprocessing
 threads = availableCores()
-cl = makeCluster(threads, type = "FORK")
-registerDoParallel(threads)
-registerDoMC(threads)
+registerDoParallel(8)
 
 # assign tokens to weight matrix
 {
@@ -217,12 +216,12 @@ out.tfidf.ccr = unlist(snakemake@output[["sequence_repres_seq2vec_TFIDF_CCR"]])
 out.sif.ccr = unlist(snakemake@output[["sequence_repres_seq2vec_SIF_CCR"]])
 
 # tmp !!
-# out = "DEEPml_sequence_repres_w5_d100_seq2vec.csv"
-# out.tfidf = "DEEPml_sequence_repres_w5_d100_seq2vec-TFIDF.csv"
-# out.sif = "DEEPml_sequence_repres_w5_d100_seq2vec-SIF.csv"
-# out.ccr = "DEEPml_sequence_repres_w5_d100_seq2vec_CCR.csv"
-# out.tfidf.ccr = "DEEPml_sequence_repres_w5_d100_seq2vec-TFIDF_CCR.csv"
-# out.sif.ccr = "DEEPml_sequence_repres_w5_d100_seq2vec-SIF_CCR.csv"
+out = "hp_v50k_sequence_repres_w5_d128_seq2vec.csv"
+out.tfidf = "hp_v50k_sequence_repres_w5_d128_seq2vec-TFIDF.csv"
+out.sif = "hp_v50k_sequence_repres_w5_d128_seq2vec-SIF.csv"
+out.ccr = "hp_v50k_sequence_repres_w5_d128_seq2vec_CCR.csv"
+out.tfidf.ccr = "hp_v50k_sequence_repres_w5_d128_seq2vec-TFIDF_CCR.csv"
+out.sif.ccr = "hp_v50k_sequence_repres_w5_d128_seq2vec-SIF_CCR.csv"
 
 # tmp in case of crash!
 # seq2vec = read.csv(out, stringsAsFactors = F)
@@ -325,7 +324,6 @@ system.time(foreach (i = 1:nrow(sequences.master)) %dopar% {
   
 })[3]
 
-stopCluster(cl)
 stopImplicitCluster()
 
 print("DONE")
@@ -362,11 +360,11 @@ mergeOut = function(out = ""){
     
     # tmp !!! combine with existing file
     
-    if (file.exists(out)) {
-      ex = read.csv(out, stringsAsFactors = F, header = T)
-      tbl = rbind(ex, tbl) %>% unique()
-    }
-    
+    # if (file.exists(out)) {
+    #   ex = read.csv(out, stringsAsFactors = F, header = T)
+    #   tbl = rbind(ex, tbl) %>% unique()
+    # }
+    # 
     
     return(tbl)
     

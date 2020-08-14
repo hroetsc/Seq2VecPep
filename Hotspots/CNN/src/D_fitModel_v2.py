@@ -98,7 +98,7 @@ def format_input(tokensAndCounts):
     tokens = np.array(tokensAndCounts.loc[:, ['Accession', 'tokens']], dtype='object')
     counts = np.array(tokensAndCounts['counts'], dtype='float32')
 
-    # tmp!
+    # log-transform counts
     counts = np.log2((counts + 1))
 
     print('number of features: ', counts.shape[0])
@@ -189,8 +189,7 @@ emb_train, emb_val, counts_train, counts_val = train_test_split(emb, counts, tes
 ### build and compile model
 # build dense relu layers with batch norm and dropout
 def dense_layer(prev_layer, nodes):
-    drop = layers.Dropout(0.05)(prev_layer)
-    norm = layers.BatchNormalization(trainable=True)(drop)
+    norm = layers.BatchNormalization(trainable=True)(prev_layer)
     dense = layers.Dense(nodes, activation='relu',
                          kernel_regularizer=keras.regularizers.l2(l=0.01),
                          kernel_initializer=tf.keras.initializers.HeNormal())(norm)
@@ -198,15 +197,20 @@ def dense_layer(prev_layer, nodes):
 
 
 # residual blocks (convolutions)
-def residual_block(prev_layer, no_filters):
-    conv = layers.Conv2D(no_filters, 3, 2,
-                         activation='relu',
-                         padding='same',
+def residual_block(prev_layer, no_filters, kernel_size, strides, padding, identity=False):
+    conv = layers.Conv2D(no_filters, kernel_size, strides,
+                         padding=padding,
                          kernel_regularizer=keras.regularizers.l2(l=0.01),
                          kernel_initializer=tf.keras.initializers.HeNormal(),
                          data_format='channels_first')(prev_layer)
-    pool = layers.MaxPool2D((2, 2))(conv)
-    return pool
+    norm = layers.BatchNormalization(trainable=True)(conv)
+    act = layers.Activation('relu')(norm)
+
+    if not identity:
+        pool = layers.MaxPool2D((2, 2))(act)
+        return pool
+    else:
+        return act
 
 
 # function that returns model
@@ -217,15 +221,19 @@ def build_and_compile_model():
                       name='input')
 
     ## convolutional layers
-    tf.print('convolutions')
+    tf.print('identity block')
 
-    conv1 = residual_block(inp, 16)
-    conv2 = residual_block(conv1, 32)
-    conv3 = residual_block(conv2, 64)
+    b1 = residual_block(inp, no_filters=16, kernel_size=1, strides=1, padding='valid', identity=True)
+    b2 = residual_block(b1, no_filters=32, kernel_size=3, strides=1, padding='same', identity=True)
+    b3 = residual_block(b2, no_filters=64, kernel_size=1, strides=1, padding='valid', identity=True)
+
+    # skip-connection to input layer
+    conc = layers.Add()[b3, inp]
+    conc = layers.Activation('relu')(conc)
 
     # flatten
     tf.print('flatten and pass to fully connected layers')
-    flat = layers.Flatten()(conv3)
+    flat = layers.Flatten()(conc)
 
     ## dense layers
     # fully-connected layers with L2-regularization, batch normalization and dropout
@@ -234,11 +242,14 @@ def build_and_compile_model():
     dense3 = dense_layer(dense2, 256)
     dense4 = dense_layer(dense3, 128)
     dense5 = dense_layer(dense4, 64)
+    dense6 = dense_layer(dense5, 32)
+    dense7 = dense_layer(dense6, 16)
 
+    out_norm = layers.BatchNormalization(trainable=True)(dense7)
     out = layers.Dense(1, activation='linear',
                        kernel_regularizer=keras.regularizers.l2(l=0.01),
                        kernel_initializer=tf.keras.initializers.HeNormal(),
-                       name='output')(dense5)
+                       name='output')(out_norm)
 
     ## model
     model = keras.Model(inputs=inp, outputs=out)
@@ -253,14 +264,15 @@ def build_and_compile_model():
                   metrics=['mean_absolute_error', 'mean_absolute_percentage_error', 'cosine_proximity'],
                   experimental_run_tf_function=False)
 
-    # for reproducibility
+    # for reproducibility during optimization
     tf.print('optimizer: Adagrad')
     tf.print("learning rate: 0.001")
     tf.print('number of convolutions: 3')
-    tf.print('number of dense layers: 6')
+    tf.print('number of dense layers: 8')
     tf.print('starting filter value: 16')
     tf.print('regularization: L2')
-    tf.print('using Dropout layer: yes')
+    tf.print('using batch normalization: yes')
+    tf.print('using Dropout layer: no')
 
     return model
 
@@ -277,7 +289,7 @@ if hvd.rank() == 0:
     callbacks.append(tf.keras.callbacks.ModelCheckpoint(filepath='/scratch2/hroetsc/Hotspots/results/model/ckpts',
                                                         monitor='val_loss',
                                                         mode='min',
-                                                        safe_best_only=False,
+                                                        safe_best_only=True,
                                                         verbose=1,
                                                         save_weights_only=True))
 
@@ -354,7 +366,7 @@ tokens_test, counts_test, emb_test = open_and_format_matrices(tokens_test, count
 
 # make prediction
 pred = model.predict(x=emb_test,
-                     batch_size=8,
+                     batch_size=4,
                      verbose=1 if hvd.rank() == 0 else 0,
                      max_queue_size=256)
 

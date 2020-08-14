@@ -20,12 +20,12 @@ library(rhdf5)
 library(doParallel)
 library(future)
 
-registerDoParallel(cores=availableCores())
+registerDoParallel(cores=4)
 
 
 ### INPUT ###
-indices = read.csv("../ids_hp_w5_new.csv", stringsAsFactors = F, header = F)
-weight_matrix = h5read("hp_model_w5_d100/weights.h5", "/embedding/embedding")
+indices = read.csv("ids_hp_v50k_w5.csv", stringsAsFactors = F, header = F)
+weight_matrix = h5read("hp_v50k_model_w5_d128/weights.h5", "/embedding/embedding")
 
 if(! dir.exists("token_embeddings")){
   dir.create("token_embeddings")
@@ -416,6 +416,294 @@ ggsave(filename = paste0("token_embeddings/singleAA_",
        plot = s.aa, device = "png", dpi = "retina")
 }
 
+########### single aa pairwise distances ###########
+
+# functions
+
+for (c in 1:(ncol(single.aa)-1)){
+  single.aa[, c] = single.aa[, c] %>% as.character() %>% as.numeric()
+}
+
+matmult = function(v1 = "", v2 = ""){
+  return(as.numeric(v1) %*% as.numeric(v2))
+}
+
+dot_product = function(v1 = "", v2 = ""){
+  p = matmult(v1, v2)/(sqrt(matmult(v1, v1)) * sqrt(matmult(v2, v2)))
+  return(p)
+}
+
+# compute distances
+
+aa = single.aa$subword
+
+dist_single.aa = matrix(nrow = length(aa), ncol = length(aa))
+rownames(dist_single.aa) = aa
+colnames(dist_single.aa) = aa
+
+dot_single.aa = dist_single.aa
+
+for (i in 1:length(aa)) {
+  
+  for (j in 1:length(aa)) {
+    
+    dist_single.aa[i, j] = dist(rbind(single.aa[i, grep_weights(single.aa)],
+                                single.aa[j, grep_weights(single.aa)]),
+                                method = "euclidean")
+    
+    dot_single.aa[i, j] = dot_product(single.aa[i, grep_weights(single.aa)] %>% as.numeric(),
+                                      single.aa[j, grep_weights(single.aa)] %>% as.numeric())
+    
+  }
+}
+
+
+# plotting
+
+library(pheatmap)
+library(RColorBrewer)
+library(grDevices)
+library(lattice)
+library(reshape2)
+
+spectral <- brewer.pal(11, "Spectral")
+spectralRamp <- colorRampPalette(spectral)
+spectral5000 <- spectralRamp(5000)
+
+
+png(filename = "token_embeddings/pariwiseDist_euclidean.png",
+    height = 3000, width = 3000, res = 400)
+pheatmap(dist_single.aa, scale = "none",
+         color = spectral5000,
+         #cutree_cols = 15, cutree_rows = 15,
+         treeheight_col = 50, treeheight_row = 50,
+         legend = T, annotation_legend = T, show_rownames = T, show_colnames = T,
+         main = "pairwise euclidean distances between amino acid embeddings")
+
+dev.off()
+
+
+png(filename = "token_embeddings/pariwiseDist_dot.png",
+    height = 3000, width = 3000, res = 400)
+pheatmap(dot_single.aa, scale = "none",
+         color = spectral5000,
+         #cutree_cols = 15, cutree_rows = 15,
+         treeheight_col = 50, treeheight_row = 50,
+         legend = T, annotation_legend = T, show_rownames = T, show_colnames = T,
+         main = "pairwise cosine similarities between amino acid embeddings")
+
+dev.off()
+
+
+########### exclude L, X and U ###########
+
+# general characterisation of single aa tokens
+
+freq.tokens = matrix(ncol = 2, nrow = length(aa)) %>% as.data.frame()
+colnames(freq.tokens) = c("subword", "token_freq")
+
+for (i in 1:length(aa)){
+  print(paste0(aa[i], " at position ", which(weights$subword == aa[i])))
+  
+  freq.tokens[i, ] = c(aa[i], which(weights$subword == aa[i]))
+}
+
+
+single.aa.LXU = single.aa[-which(single.aa$subword == "L" | single.aa$subword == "X" | single.aa$subword == "U"), ]
+
+um_single.aa.LXU = UMAP_single.aa(single.aa.LXU[, grep_weights(single.aa.LXU)])
+
+# add metainformation
+um_single.aa.LXU = cbind(single.aa.LXU$subword, um_single.aa.LXU)
+colnames(um_single.aa.LXU)[1] = "subword"
+um_single.aa.LXU = left_join(um_single.aa.LXU, PropMatrix0)
+um_single.aa.LXU = left_join(um_single.aa.LXU, freq.tokens)
+um_single.aa.LXU[is.na(um_single.aa.LXU)] = 0
+
+# plot
+
+{
+  # token frequency
+  s.aa = ggplot(um_single.aa.LXU, aes(UMAP1, UMAP2, color = token_freq)) +
+    geom_text(aes(label = subword, color = token_freq), size=4,
+              show.legend = T) +
+    scale_color_viridis_d(option = "inferno") + 
+    theme_bw()
+  s.aa
+  ggsave(filename = paste0("token_embeddings/singleAA_woLXU_",
+                           "token_freq", ".png"),
+         plot = s.aa, device = "png", dpi = "retina")
+  
+  # BLOSUM 10
+  s.aa = ggplot(um_single.aa.LXU, aes(UMAP1, UMAP2, color = BLOSUM9)) +
+    geom_text(aes(label = subword, color = BLOSUM9), size=4,
+              show.legend = T) +
+    scale_color_viridis_c(option = "inferno") + 
+    theme_bw()
+  s.aa
+  ggsave(filename = paste0("token_embeddings/singleAA_woLXU_",
+                           "BLOSUM9", ".png"),
+         plot = s.aa, device = "png", dpi = "retina")
+  
+  # Hydrophobicity
+  s.aa = ggplot(um_single.aa.LXU, aes(UMAP1, UMAP2, color = Hydrophobicity)) +
+    geom_text(aes(label = subword, color = Hydrophobicity), size=4,
+              show.legend = T) +
+    scale_color_viridis_c(option = "inferno") + 
+    theme_bw()
+  s.aa
+  ggsave(filename = paste0("token_embeddings/singleAA_woLXU_",
+                           "Hydrophobicity", ".png"),
+         plot = s.aa, device = "png", dpi = "retina")
+  
+  # Polarity
+  s.aa = ggplot(um_single.aa.LXU, aes(UMAP1, UMAP2, color = Polarity)) +
+    geom_text(aes(label = subword, color = Polarity), size=4,
+              show.legend = T) +
+    scale_color_viridis_c(option = "inferno") + 
+    theme_bw()
+  s.aa
+  ggsave(filename = paste0("token_embeddings/singleAA_woLXU_",
+                           "Polarity", ".png"),
+         plot = s.aa, device = "png", dpi = "retina")
+  
+  # H-bonding
+  s.aa = ggplot(um_single.aa.LXU, aes(UMAP1, UMAP2, color = `H-bonding`)) +
+    geom_text(aes(label = subword, color = `H-bonding`), size=4,
+              show.legend = T) +
+    scale_color_viridis_c(option = "inferno") + 
+    theme_bw()
+  s.aa
+  ggsave(filename = paste0("token_embeddings/singleAA_woLXU_",
+                           "H-bonding", ".png"),
+         plot = s.aa, device = "png", dpi = "retina")
+  
+  # mol.weight
+  s.aa = ggplot(um_single.aa.LXU, aes(UMAP1, UMAP2, color = mol.weight)) +
+    geom_text(aes(label = subword, color = mol.weight), size=4,
+              show.legend = T) +
+    scale_color_viridis_c(option = "inferno") + 
+    theme_bw()
+  s.aa
+  ggsave(filename = paste0("token_embeddings/singleAA_woLXU_",
+                           "mol_weight", ".png"),
+         plot = s.aa, device = "png", dpi = "retina")
+  
+  # Aliphatic.number
+  s.aa = ggplot(um_single.aa.LXU, aes(UMAP1, UMAP2, color = Aliphatic.number)) +
+    geom_text(aes(label = subword, color = Aliphatic.number), size=4,
+              show.legend = T) +
+    scale_color_viridis_c(option = "inferno") + 
+    theme_bw()
+  s.aa
+  ggsave(filename = paste0("token_embeddings/singleAA_woLXU_",
+                           "Aliphatic_number", ".png"),
+         plot = s.aa, device = "png", dpi = "retina")
+  
+  # Aromatic.number
+  s.aa = ggplot(um_single.aa.LXU, aes(UMAP1, UMAP2, color = Aromatic.number)) +
+    geom_text(aes(label = subword, color = Aromatic.number), size=4,
+              show.legend = T) +
+    scale_color_viridis_c(option = "inferno") + 
+    theme_bw()
+  s.aa
+  ggsave(filename = paste0("token_embeddings/singleAA_woLXU_",
+                           "Aromatic_number", ".png"),
+         plot = s.aa, device = "png", dpi = "retina")
+  
+  # Acidic.number
+  s.aa = ggplot(um_single.aa.LXU, aes(UMAP1, UMAP2, color = Acidic.number)) +
+    geom_text(aes(label = subword, color = Acidic.number), size=4,
+              show.legend = T) +
+    scale_color_viridis_c(option = "inferno") + 
+    theme_bw()
+  s.aa
+  ggsave(filename = paste0("token_embeddings/singleAA_woLXU_",
+                           "Acidic_number", ".png"),
+         plot = s.aa, device = "png", dpi = "retina")
+}
+
+aa.LXU = um_single.aa.LXU$subword
+
+dist_single.aa.LXU = matrix(nrow = length(aa.LXU), ncol = length(aa.LXU))
+rownames(dist_single.aa.LXU) = aa.LXU
+colnames(dist_single.aa.LXU) = aa.LXU
+
+dot_single.aa.LXU = dist_single.aa.LXU
+
+for (i in 1:length(aa.LXU)) {
+  
+  for (j in 1:length(aa.LXU)) {
+    
+    dist_single.aa.LXU[i, j] = dist(rbind(single.aa.LXU[i, grep_weights(single.aa.LXU)],
+                                      single.aa.LXU[j, grep_weights(single.aa.LXU)]),
+                                method = "euclidean")
+    
+    dot_single.aa.LXU[i, j] = dot_product(single.aa.LXU[i, grep_weights(single.aa.LXU)] %>% as.numeric(),
+                                      single.aa.LXU[j, grep_weights(single.aa.LXU)] %>% as.numeric())
+    
+  }
+}
+
+
+# plotting
+
+library(pheatmap)
+library(RColorBrewer)
+library(grDevices)
+library(lattice)
+library(reshape2)
+
+spectral <- brewer.pal(11, "Spectral")
+spectralRamp <- colorRampPalette(spectral)
+spectral5000 <- spectralRamp(5000)
+
+
+png(filename = "token_embeddings/pariwiseDist_woLXU_euclidean.png",
+    height = 3000, width = 3000, res = 400)
+pheatmap(dist_single.aa.LXU, scale = "none",
+         color = spectral5000,
+         #cutree_cols = 15, cutree_rows = 15,
+         treeheight_col = 50, treeheight_row = 50,
+         legend = T, annotation_legend = T, show_rownames = T, show_colnames = T,
+         main = "pairwise euclidean distances between amino acid embeddings")
+
+dev.off()
+
+
+png(filename = "token_embeddings/pariwiseDist_woLXU_dot.png",
+    height = 3000, width = 3000, res = 400)
+pheatmap(dot_single.aa.LXU, scale = "none",
+         color = spectral5000,
+         #cutree_cols = 15, cutree_rows = 15,
+         treeheight_col = 50, treeheight_row = 50,
+         legend = T, annotation_legend = T, show_rownames = T, show_colnames = T,
+         main = "pairwise cosine similarities between amino acid embeddings")
+
+dev.off()
+
+
+# compare with BLOSUM
+
+library(Biostrings)
+
+data("BLOSUM62")
+x11()
+pheatmap(BLOSUM62, scale = "none",
+         color = spectral5000,
+         #cutree_cols = 15, cutree_rows = 15,
+         treeheight_col = 50, treeheight_row = 50,
+         legend = T, annotation_legend = T, show_rownames = T, show_colnames = T,
+         main = "BLOSUM62")
+
+x11()
+data("BLOSUM50")
+pheatmap(BLOSUM50, scale = "none",
+         color = spectral5000,
+         #cutree_cols = 15, cutree_rows = 15,
+         treeheight_col = 50, treeheight_row = 50,
+         legend = T, annotation_legend = T, show_rownames = T, show_colnames = T,
+         main = "BLOSUM50")
 ########### all tokens ###########
 
 UMAP_all.tokens = function(tbl = ""){
@@ -655,3 +943,6 @@ scatter3d(x = um_3d$UMAP1,
           point.col = colors [ rank ])
 rgl.postscript("token_embeddings/3d_Hydrophobicity.ps",fmt="ps")
 }
+
+PropMatrix = left_join(indices, PropMatrix0)
+write.csv(PropMatrix, "../../../Validation/human_proteome/data/PropMatrix_v50k.csv", row.names = F)

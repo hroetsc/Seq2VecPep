@@ -36,9 +36,9 @@ def parallel_processing(n, wid, windowSize, vocab_size, n_batches, file, keep, n
 
     # reduce amount of skip-grams
     skip_grams = np.array([list(zip(*pairs))[0], list(zip(*pairs))[1], labels], dtype='int32').T
-    keep_idx = np.random.randint(low = 0, high = skip_grams.shape[0], size = int(np.ceil(skip_grams.shape[0]*keep)))
+    #keep_idx = np.random.randint(low = 0, high = skip_grams.shape[0], size = int(np.ceil(skip_grams.shape[0]*keep)))
 
-    skip_grams = skip_grams[keep_idx,]
+    #skip_grams = skip_grams[keep_idx,]
 
 #    counter = 0
 #    counter_prev = 0

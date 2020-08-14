@@ -17,8 +17,9 @@ library(tokenizers.bpe)
 
 
 ### INPUT ###
-# vocab_size = 5000
-# threads = future::availableCores()
+# vocab_size = 5e03
+vocab_size = 5e04
+threads = future::availableCores()
 
 # load arguments
 params = read.csv(snakemake@input[["params"]], stringsAsFactors = F, header = T)

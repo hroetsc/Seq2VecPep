@@ -27,10 +27,10 @@ sequences = as.data.frame(sequences)
 
 # setwd("Documents/QuantSysBios/ProtTransEmbedding/")
 # sequences = read.csv("files/ProteasomeDB.csv", stringsAsFactors = F)
-
-# sequences = read.csv("files/proteome_human.csv", stringsAsFactors = F)
+sequences = read.csv("files/proteome_human.csv", stringsAsFactors = F)
 # sequences = sequences[sample(nrow(sequences), 128), ]
 # sequences = read.csv("GENCODEml_proteome.csv", stringsAsFactors = F)
+
 
 # load the model
 threads = as.numeric(params[which(params$parameter == "threads"), "value"])
@@ -112,6 +112,8 @@ write.csv(ModelVocab, file = unlist(snakemake@output[["model_vocab"]]), row.name
 # save words
 write.csv(words, file = unlist(snakemake@output[["words"]]), row.names = F)
 
+write.csv(ModelVocab, file = "Seq2Vec/results/encoded_sequence/model_vocab_hp_v50k.csv", row.names = F)
+write.csv(words, file = "Seq2Vec/results/encoded_sequence/words_hp_v50k.csv", row.names = F)
 
 # write.csv(ModelVocab, file = "Seq2Vec/results/encoded_sequence/model_vocab_singleProtein.csv", row.names = F)
 # write.csv(words, file = "Seq2Vec/results/encoded_sequence/words_singleProtein.csv", row.names = F)

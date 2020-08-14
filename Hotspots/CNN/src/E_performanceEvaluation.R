@@ -48,7 +48,7 @@ for (c in 1:ncol(metrics)){
 }
 
 # plotting function
-plotting = function(col1 = "", col2 = "", name = "", path = "results/model_metrics_"){
+plotting = function(col1 = "", col2 = "", name = "", path = "results/Conv1D_v2_model_metrics_"){
   
   out.path = str_split(path, coll("/"), simplify = T)[,1]
   
@@ -110,14 +110,16 @@ prediction %>% gather() %>%
   geom_density() +
   ggtitle("true and predicted hotspot counts") +
   theme_bw()
-ggsave("results/trueVSpredicted-dens.png", plot = last_plot(),
+ggsave("results/Conv1D_v2_trueVSpredicted-dens.png", plot = last_plot(),
        device = "png", dpi = "retina")
 
 ggplot(prediction, aes(x = count, y = prediction)) +
   geom_point() +
+  xlim(c(-0.2, 5.5)) +
+  ylim(c(-0.2, 5.5)) +
   ggtitle("true and predicted hotspot counts") +
   theme_bw()
-ggsave("results/trueVSpredicted-scatter.png", plot = last_plot(),
+ggsave("results/Conv1D_v2_trueVSpredicted-scatter.png", plot = last_plot(),
        device = "png", dpi = "retina")
 
 
@@ -127,7 +129,7 @@ summary(pred.lm)
 
 # correlation coefficients
 pc = cor(prediction$count, prediction$prediction, method = "pearson")
-# sm = cor(prediction$count, prediction$prediction, method = "spearman")
+sm = cor(prediction$count, prediction$prediction, method = "spearman")
 
 # mean squared error
 mse = (prediction$count - prediction$prediction)^2 %>% mean()
@@ -153,6 +155,6 @@ plot(density(log10((prediction$count - prediction$prediction) %>% abs())),
 
 ########## actual model ##########
 
-h5ls("results/model/model.h5")
+ls = h5ls("results/model/model.h5")
 h5read("results/model/model.h5",
        "/optimizer_weights/Adam/output/kernel")

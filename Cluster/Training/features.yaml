@@ -1,14 +1,14 @@
 # files used in pipeline
 
 # nomenclature:
-# hm - human proteome, w3 - window size = 3, d100 - embedding size = 100
+# hm - human proteome, w3 - window size = 3, d128 - embedding size = 100
 
-words: /scratch2/hroetsc/Seq2Vec/data/words_GENCODEml.csv
+words: /scratch2/hroetsc/Seq2Vec/data/words_hp_v50k.csv
 
 params:
   w5:
-    - GENCODEml_w5_d100
-    - GENCODEml_w5_d150
-    - GENCODEml_w5_d200
+    - hp_v50k_w5_d128
+    - hp_v50k_w5_d150
+    - hp_v50k_w5_d200
 
 ...

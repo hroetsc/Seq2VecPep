@@ -20,7 +20,7 @@ input = snakemake@input[["scores"]]
 ## tmp!
 # input = list.files(path = "similarity/scores", pattern = "RData", recursive = T, full.names = T)
 
-output = "scores_hp_200807_dot.csv"
+output = "scores_hp_200814_dot.csv"
 
 
 ### MAIN PART ###

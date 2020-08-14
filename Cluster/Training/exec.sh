@@ -18,13 +18,13 @@ module load cuda10.1/nsight/10.1.105
 module load cuda10.1/profiler/10.1.105
 module load cudnn/10.1v7.6.5
 
-salloc -p gpu -C scratch2 -N 22 -n 22 --tasks-per-node 1 --gpus-per-task=1 --mem-per-gpu=10G -t 01-00:00:00 --mail-type=END --mail-user=hanna.roetschke@mpibpc.mpg.de --job-name='seq2vec'
+salloc -p gpu -C scratch2 -N 12 -n 12 --tasks-per-node 1 --gpus-per-task=1 --mem-per-gpu=10G -t 01-16:00:00
 
 scontrol show hostnames $SLURM_JOB_NODELIST > nodes.txt
 scontrol show hostnames $SLURM_JOB_NODELIST
 
 snakemake --unlock --cores 1
-snakemake --jobs 100000 --cores 100000 --cluster "srun --mpi=pmix -o GENCODEml_training-%J-%N.out" --latency-wait 300 -R training_w5
+snakemake --jobs 100000 --cores 100000 --cluster "srun --mpi=pmix -o hp_v50k_training-%J-%N.out" --latency-wait 300 -R training_w5
 
 source deactivate
 
