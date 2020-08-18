@@ -48,7 +48,7 @@ for (c in 1:ncol(metrics)){
 }
 
 # plotting function
-plotting = function(col1 = "", col2 = "", name = "", path = "results/Conv1D_v2_model_metrics_"){
+plotting = function(col1 = "", col2 = "", name = "", path = "results/ResNet_model_metrics_"){
   
   out.path = str_split(path, coll("/"), simplify = T)[,1]
   
@@ -110,7 +110,7 @@ prediction %>% gather() %>%
   geom_density() +
   ggtitle("true and predicted hotspot counts") +
   theme_bw()
-ggsave("results/Conv1D_v2_trueVSpredicted-dens.png", plot = last_plot(),
+ggsave("results/ResNet_trueVSpredicted-dens.png", plot = last_plot(),
        device = "png", dpi = "retina")
 
 ggplot(prediction, aes(x = count, y = prediction)) +
@@ -119,7 +119,7 @@ ggplot(prediction, aes(x = count, y = prediction)) +
   ylim(c(-0.2, 5.5)) +
   ggtitle("true and predicted hotspot counts") +
   theme_bw()
-ggsave("results/Conv1D_v2_trueVSpredicted-scatter.png", plot = last_plot(),
+ggsave("results/ResNet_trueVSpredicted-scatter.png", plot = last_plot(),
        device = "png", dpi = "retina")
 
 

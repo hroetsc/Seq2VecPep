@@ -196,62 +196,106 @@ def dense_layer(prev_layer, nodes):
     return dense
 
 
-# residual blocks (convolutions)
-def residual_block(prev_layer, no_filters, kernel_size, strides, padding, identity=False):
-    conv = layers.Conv2D(no_filters, kernel_size, strides,
-                         padding=padding,
-                         kernel_regularizer=keras.regularizers.l2(l=0.01),
-                         kernel_initializer=tf.keras.initializers.HeNormal(),
-                         data_format='channels_first')(prev_layer)
-    norm = layers.BatchNormalization(trainable=True)(conv)
-    act = layers.Activation('relu')(norm)
+# activation and batch normalization
+def bn_relu(inp_layer):
+    bn = layers.BatchNormalization(trainable=True)(inp_layer)
+    relu = layers.Activation('relu')(bn)
+    return relu
 
-    if not identity:
-        pool = layers.MaxPool2D((2, 2))(act)
-        return pool
-    else:
-        return act
+
+# residual blocks (convolutions)
+def residual_block(inp_layer, downsample, filters, kernel_size):
+    y = layers.Conv2D(filters=filters,
+                      kernel_size=kernel_size,
+                      strides=(1 if not downsample else 2),
+                      padding='same',
+                      kernel_regularizer=keras.regularizers.l2(l=0.01),
+                      kernel_initializer=tf.keras.initializers.HeNormal(),
+                      data_format='channels_first')(inp_layer)
+    y = bn_relu(y)
+    y = layers.Conv2D(filters=filters,
+                      kernel_size=kernel_size,
+                      strides=1,
+                      padding='same',
+                      kernel_regularizer=keras.regularizers.l2(l=0.01),
+                      kernel_initializer=tf.keras.initializers.HeNormal(),
+                      data_format='channels_first')(y)
+
+    if downsample:
+        inp_layer = layers.Conv2D(filters=filters,
+                                  kernel_size=1,
+                                  strides=2,
+                                  padding='same',
+                                  kernel_regularizer=keras.regularizers.l2(l=0.01),
+                                  kernel_initializer=tf.keras.initializers.HeNormal(),
+                                  data_format='channels_first')(inp_layer)
+
+    out = layers.Add()([inp_layer, y])
+    out = bn_relu(out)
+
+    return out
 
 
 # function that returns model
 def build_and_compile_model():
-    ## layers
+    ## input
     tf.print('model input')
     inp = keras.Input(shape=(tokPerWindow, embeddingDim, 1),
                       name='input')
 
-    ## convolutional layers
-    tf.print('identity block')
+    ## hyperparameters
+    # starting filter value
+    num_filters = 16
+    kernel_size = 3
+    # number and size of residual blocks
+    num_blocks_list = [4, 4, 4]
 
-    b1 = residual_block(inp, no_filters=16, kernel_size=1, strides=1, padding='valid', identity=True)
-    b2 = residual_block(b1, no_filters=32, kernel_size=3, strides=1, padding='same', identity=True)
-    b3 = residual_block(b2, no_filters=64, kernel_size=1, strides=1, padding='valid', identity=True)
+    ## convolutional layers (ResNet)
+    tf.print('residual blocks')
 
-    # skip-connection to input layer
-    conc = layers.Add()[b3, inp]
-    conc = layers.Activation('relu')(conc)
+    # structure of residual blocks:
+    # a) original: weight-BN-ReLU-weight-BN-addition-ReLU
+    # b) BN after addition: weight-BN-ReLU-weight-addition-BN-ReLU --> currently used
+    # c) ReLU before addition: weight-BN-ReLU-weight-BN-ReLU-addition
+    # d) full pre-activation (SpliceAI): BN-ReLU-weight-BN-ReLU-weight-addition
 
-    # flatten
-    tf.print('flatten and pass to fully connected layers')
-    flat = layers.Flatten()(conc)
+    # initial convolution
+    t = layers.BatchNormalization(trainable=True)(inp)
+    t = layers.Conv2D(filters=num_filters,
+                      kernel_size=kernel_size,
+                      strides=1,
+                      padding='same',
+                      kernel_regularizer=keras.regularizers.l2(l=0.01),
+                      kernel_initializer=tf.keras.initializers.HeNormal(),
+                      data_format='channels_first')(t)
+    t = bn_relu(t)
+
+    # residual blocks
+    for i in range(len(num_blocks_list)):
+        no_blocks = num_blocks_list[i]
+        for j in range(no_blocks):
+            t = residual_block(t,
+                               downsample=(j == 0 and i != 0),
+                               filters=num_filters,
+                               kernel_size=kernel_size)
+        num_filters *= 2
+
+    t = layers.AveragePooling2D(4)(t)
+    flat = layers.Flatten()(t)
 
     ## dense layers
+    tf.print('dense layers')
     # fully-connected layers with L2-regularization, batch normalization and dropout
     dense1 = dense_layer(flat, 1024)
-    dense2 = dense_layer(dense1, 512)
-    dense3 = dense_layer(dense2, 256)
-    dense4 = dense_layer(dense3, 128)
-    dense5 = dense_layer(dense4, 64)
-    dense6 = dense_layer(dense5, 32)
-    dense7 = dense_layer(dense6, 16)
 
-    out_norm = layers.BatchNormalization(trainable=True)(dense7)
-    out = layers.Dense(1, activation='linear',
+    out_norm = layers.BatchNormalization(trainable=True)(dense1)
+    out = layers.Dense(1, activation='relu', # no negative predictions
                        kernel_regularizer=keras.regularizers.l2(l=0.01),
                        kernel_initializer=tf.keras.initializers.HeNormal(),
                        name='output')(out_norm)
 
-    ## model
+
+    ## concatenate to model
     model = keras.Model(inputs=inp, outputs=out)
 
     ## compile model
@@ -267,8 +311,8 @@ def build_and_compile_model():
     # for reproducibility during optimization
     tf.print('optimizer: Adagrad')
     tf.print("learning rate: 0.001")
-    tf.print('number of convolutions: 3')
-    tf.print('number of dense layers: 8')
+    tf.print('number/size of residual blocks: [4,4,4]')
+    tf.print('number of dense layers: 2')
     tf.print('starting filter value: 16')
     tf.print('regularization: L2')
     tf.print('using batch normalization: yes')
