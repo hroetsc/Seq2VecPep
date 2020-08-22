@@ -86,21 +86,25 @@ getDist = function(v1 = "", v2 = "") {
   # Wasserstein metric (earth mover's distance)
   emd = wasserstein1d(v1, v2)
   # Bhattacharyya (similar to Mahalanobis)
-  bhatt = distance(v, method = "bhattacharyya")
+  # bhatt = distance(v, method = "bhattacharyya")
   # euclidean distance
   euc = distance(v, method = "euclidean")
+  # mse
+  mse = (v1-v2)^2
   
   # KS test
   ks = ks.test(v1, v2, alternative = "two.sided")$p.value
+  # Pearson correlation
+  pcc = cor(v1, v2, method = "pearson")
   # cosine similarity
   cos = distance(v, method = "cosine")
   # Jensen-Shannon divergence
-  js_div = distance(v, method = "jensen-shannon")
+  # js_div = distance(v, method = "jensen-shannon")
   
   
-  out = c(emd, bhatt, euc, ks, cos, js_div)
-  names(out) = c("Wasserstein_metric","Bhattacharyya", "euclidean",
-                 "KS_pvalue", "cosine", "Jensen_Shannon_divergence")
+  out = c(emd, bhatt, euc, mse, ks, pcc, cos, js_div)
+  names(out) = c("Wasserstein_metric", "euclidean", "mean_squared_error",
+                 "KS_pvalue", "Pearson_correlation", "cosine")
   
   return(out)
 }

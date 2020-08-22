@@ -2,17 +2,13 @@
 # EVALUATION OF DIFFERENT EMBEDDING METHODS
 # description:  predicted similarity between protein sequences based on embedding and post-processing
 # input:        sequence embeddings
-# output:       similarity matrix
+# output:       similarity scores
 # author:       HR
 
 library(foreach)
 library(doParallel)
 library(doMC)
 library(future)
-library(plyr)
-
-#library(emdist)
-
 library(plyr)
 library(dplyr)
 
@@ -29,11 +25,20 @@ accessions = read.csv(snakemake@input[["batch_accessions"]], stringsAsFactors = 
 
 
 # function that returns cosine of angle between two vectors
+# z-transform embedding vectors to make dot product distributions comparable
+normalise = function(v = ""){
+  v = (v - mean(v)) / sd(v)
+  return(v)
+}
+# matrix multiplication
 matmult = function(v1 = "", v2 = ""){
   return(as.numeric(v1) %*% as.numeric(v2))
 }
-
+# dot product
 dot_product = function(v1 = "", v2 = ""){
+  v1 = normalise(v1)
+  v2 = normalise(v2)
+  
   p = matmult(v1, v2)/(sqrt(matmult(v1, v1)) * sqrt(matmult(v2, v2)))
   return(p)
 }
@@ -73,8 +78,6 @@ foreach(i = 1:length(input)) %dopar% {
     sim[a, "dot"] = dot_product(v1 = v1, v2 = v2)
     #euclidean distance
     sim[a, "euclidean"] = dist(rbind(v1,v2), method = "euclidean")
-    # earth mover's distance
-    # sim[a, "emd"] = emd2d(as.matrix(v1), as.matrix(v2))
   }
 
 

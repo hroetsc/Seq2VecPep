@@ -11,13 +11,8 @@ scores = read.csv("scores_hp_200807_dot.csv", stringsAsFactors = F)
 
 
 ### MAIN PART ###
-# tmp: remove Bhattacharyya and Jensen-Shannon
-scores$Jensen_Shannon_divergence = NULL
-scores$Bhattacharyya = NULL
-
-
-metrics = c("Wasserstein_metric", "euclidean",
-            "KS_pvalue", "cosine")
+metrics = c("Wasserstein_metric", "euclidean", "mean_squared_error",
+            "KS_pvalue", "Pearson_correlation")
 
 # remove entries where equal metrics are compared
 pairs = data.frame(p1 = c("syn", "sem_MF", "sem_BP", "sem_CC"),

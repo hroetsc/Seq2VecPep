@@ -11,6 +11,8 @@ library(rhdf5)
 library(ggplot2)
 library(tidyr)
 
+JOBID = "5184756-1"
+
 
 ### INPUT ###
 # download results
@@ -18,8 +20,20 @@ system("scp -rp hroetsc@transfer.gwdg.de:/usr/users/hroetsc/Hotspots/results/* r
 
 # open them
 metrics = read.table("results/model_metrics.txt", sep = ",", stringsAsFactors = F)
-prediction = read.csv("results/model_predictions.csv", stringsAsFactors = F)
 
+# prediction = read.csv("results/model_predictions.csv", stringsAsFactors = F)
+prediction.fs = list.files("results", pattern = "model_predictions_rank",
+                        full.names = T, recursive = T)
+for (p in 1:length(prediction.fs)){
+  if (p == 1){
+    prediction = read.csv(prediction.fs[p], stringsAsFactors = F)
+  } else {
+    
+    prediction = rbind(prediction,
+                      read.csv( prediction.fs[p], stringsAsFactors = F))
+    
+  }
+}
 
 ### MAIN PART ###
 
@@ -48,7 +62,7 @@ for (c in 1:ncol(metrics)){
 }
 
 # plotting function
-plotting = function(col1 = "", col2 = "", name = "", path = "results/ResNet_model_metrics_"){
+plotting = function(col1 = "", col2 = "", name = "", path = paste0("results/", JOBID, "_model_metrics_")){
   
   out.path = str_split(path, coll("/"), simplify = T)[,1]
   
@@ -110,16 +124,16 @@ prediction %>% gather() %>%
   geom_density() +
   ggtitle("true and predicted hotspot counts") +
   theme_bw()
-ggsave("results/ResNet_trueVSpredicted-dens.png", plot = last_plot(),
+ggsave(paste0("results/", JOBID, "_trueVSpredicted-dens.png"), plot = last_plot(),
        device = "png", dpi = "retina")
 
 ggplot(prediction, aes(x = count, y = prediction)) +
-  geom_point() +
-  xlim(c(-0.2, 5.5)) +
-  ylim(c(-0.2, 5.5)) +
+  geom_point(alpha = 0.1, size = 0.3) +
+  xlim(c(4, 6)) +
+  ylim(c(4, 6)) +
   ggtitle("true and predicted hotspot counts") +
   theme_bw()
-ggsave("results/ResNet_trueVSpredicted-scatter.png", plot = last_plot(),
+ggsave(paste0("results/", JOBID, "_trueVSpredicted-scatter.png"), plot = last_plot(),
        device = "png", dpi = "retina")
 
 
@@ -132,16 +146,31 @@ pc = cor(prediction$count, prediction$prediction, method = "pearson")
 sm = cor(prediction$count, prediction$prediction, method = "spearman")
 
 # mean squared error
-mse = (prediction$count - prediction$prediction)^2 %>% mean()
+mse = (prediction$count - prediction$prediction)^2 %>% mean() %>% round(4)
 # root mean squared error
-rmse = sqrt(mse)
+rmse = sqrt(mse) %>% round(4)
 # mean absolute deviation
-mae = (prediction$count - prediction$prediction) %>% abs() %>% mean()
+mae = (prediction$count - prediction$prediction) %>% abs() %>% mean() %>% round(4)
 
-# sum up
-all.metrics = c(summary(pred.lm)$r.squared, pc, mse, rmse, mae) %>% round(4)
-names(all.metrics) = c("Rsquared", "PCC", "MSE", "RMSE", "MAE")
+# sumarise
+all.metrics = c(JOBID, summary(pred.lm)$r.squared, pc, mse, rmse, mae)
+names(all.metrics) = c("JOBID", "Rsquared", "PCC", "MSE", "RMSE", "MAE")
 all.metrics
+
+
+### OUTPUT ###
+out = "results/performance.csv"
+if(file.exists(out)) {
+  write(all.metrics, file = out, ncolumns = length(all.metrics),
+        append = T, sep = ",")
+  
+} else {
+  
+  write(all.metrics, file = out, ncolumns = length(all.metrics),
+        append = F, sep = ",")
+  
+}
+
 
 # some ideas
 plot(density(log10((prediction$count - prediction$prediction)^2)),

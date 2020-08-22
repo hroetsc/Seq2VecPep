@@ -5,6 +5,8 @@
 # output: model, metrics, predictions for test data set
 # author: HR
 
+# using ResNet structure
+
 import os
 import numpy as np
 import pandas as pd
@@ -67,12 +69,15 @@ tokPerWindow = 8
 
 epochs = 1600
 batchSize = 32
+pseudocounts = 5
 
 epochs = int(np.ceil(epochs / hvd.size()))
 batchSize = batchSize * hvd.size()
 
 print('number of epochs, adjusted by number of GPUs: ', epochs)
 print('batch size, adjusted by number of GPUs: ', batchSize)
+print('number of pseudocounts: ', pseudocounts)
+print("-------------------------------------------------------------------------")
 
 ########## part 1: fit model ##########
 ### INPUT ###
@@ -98,8 +103,8 @@ def format_input(tokensAndCounts):
     tokens = np.array(tokensAndCounts.loc[:, ['Accession', 'tokens']], dtype='object')
     counts = np.array(tokensAndCounts['counts'], dtype='float32')
 
-    # log-transform counts
-    counts = np.log2((counts + 1))
+    # log-transform counts (+ pseudocounts)
+    counts = np.log2((counts + pseudocounts))
 
     print('number of features: ', counts.shape[0])
     return tokens, counts
@@ -126,10 +131,9 @@ def open_and_format_matrices(tokens, counts, emb_path, acc_path):
             # read current chunk of embeddings and format in matrix shape
             dt = np.fromfile(emin, dtype='float32', count=no_elements)
 
-            # z-transform array
-            # dt = (dt - np.mean(dt)) / np.std(dt)
-
-            embMatrix[b] = dt.reshape((tokPerWindow, embeddingDim))
+            # make sure to pass 4D-Tensor to model: (batchSize, depth, height, width)
+            dt = dt.reshape((tokPerWindow, embeddingDim))
+            embMatrix[b] = np.expand_dims(dt, axis=0)
 
             # get current accession (index)
             ain.seek(int(b * 4), 0)
@@ -173,8 +177,10 @@ class SequenceGenerator(keras.utils.Sequence):
         return int(np.ceil(len(self.counts) / float(self.batchSize)))
 
     def __getitem__(self, idx):
-        batch_emb = self.emb[idx * self.batchSize: (idx + 1) * self.batchSize, :, :]
+        batch_emb = self.emb[idx * self.batchSize: (idx + 1) * self.batchSize, :, :, :]
         batch_counts = self.counts[idx * self.batchSize: (idx + 1) * self.batchSize]
+
+        # print(batch_emb.shape)
 
         return (batch_emb, batch_counts)
 
@@ -190,35 +196,37 @@ emb_train, emb_val, counts_train, counts_val = train_test_split(emb, counts, tes
 # build dense relu layers with batch norm and dropout
 def dense_layer(prev_layer, nodes):
     norm = layers.BatchNormalization(trainable=True)(prev_layer)
-    dense = layers.Dense(nodes, activation='relu',
+    dense = layers.Dense(nodes, activation='selu',
                          kernel_regularizer=keras.regularizers.l2(l=0.01),
-                         kernel_initializer=tf.keras.initializers.HeNormal())(norm)
+                         kernel_initializer=tf.keras.initializers.LecunNormal())(norm)
     return dense
 
 
 # activation and batch normalization
 def bn_relu(inp_layer):
     bn = layers.BatchNormalization(trainable=True)(inp_layer)
-    relu = layers.Activation('relu')(bn)
+    relu = layers.Activation('selu')(bn)
     return relu
 
 
 # residual blocks (convolutions)
-def residual_block(inp_layer, downsample, filters, kernel_size):
+def residual_block(inp_layer, downsample, filters, kernel_size, dilation_rate):
+    # y = bn_relu(inp_layer)
     y = layers.Conv2D(filters=filters,
                       kernel_size=kernel_size,
                       strides=(1 if not downsample else 2),
                       padding='same',
                       kernel_regularizer=keras.regularizers.l2(l=0.01),
-                      kernel_initializer=tf.keras.initializers.HeNormal(),
+                      kernel_initializer=tf.keras.initializers.LecunNormal(),
                       data_format='channels_first')(inp_layer)
     y = bn_relu(y)
     y = layers.Conv2D(filters=filters,
                       kernel_size=kernel_size,
                       strides=1,
+                      dilation_rate=dilation_rate,
                       padding='same',
                       kernel_regularizer=keras.regularizers.l2(l=0.01),
-                      kernel_initializer=tf.keras.initializers.HeNormal(),
+                      kernel_initializer=tf.keras.initializers.LecunNormal(),
                       data_format='channels_first')(y)
 
     if downsample:
@@ -227,7 +235,7 @@ def residual_block(inp_layer, downsample, filters, kernel_size):
                                   strides=2,
                                   padding='same',
                                   kernel_regularizer=keras.regularizers.l2(l=0.01),
-                                  kernel_initializer=tf.keras.initializers.HeNormal(),
+                                  kernel_initializer=tf.keras.initializers.LecunNormal(),
                                   data_format='channels_first')(inp_layer)
 
     out = layers.Add()([inp_layer, y])
@@ -240,7 +248,7 @@ def residual_block(inp_layer, downsample, filters, kernel_size):
 def build_and_compile_model():
     ## input
     tf.print('model input')
-    inp = keras.Input(shape=(tokPerWindow, embeddingDim, 1),
+    inp = keras.Input(shape=(1, tokPerWindow, embeddingDim),
                       name='input')
 
     ## hyperparameters
@@ -249,6 +257,7 @@ def build_and_compile_model():
     kernel_size = 3
     # number and size of residual blocks
     num_blocks_list = [4, 4, 4]
+    dilation_rate_list = [1, 1, 1]
 
     ## convolutional layers (ResNet)
     tf.print('residual blocks')
@@ -266,21 +275,25 @@ def build_and_compile_model():
                       strides=1,
                       padding='same',
                       kernel_regularizer=keras.regularizers.l2(l=0.01),
-                      kernel_initializer=tf.keras.initializers.HeNormal(),
+                      kernel_initializer=tf.keras.initializers.LecunNormal(),
                       data_format='channels_first')(t)
     t = bn_relu(t)
 
     # residual blocks
     for i in range(len(num_blocks_list)):
         no_blocks = num_blocks_list[i]
+        dil_rate = dilation_rate_list[i]
         for j in range(no_blocks):
             t = residual_block(t,
                                downsample=(j == 0 and i != 0),
                                filters=num_filters,
-                               kernel_size=kernel_size)
+                               kernel_size=kernel_size,
+                               dilation_rate=dil_rate)
         num_filters *= 2
 
-    t = layers.AveragePooling2D(4)(t)
+    t = layers.AveragePooling2D(pool_size=4,
+                                data_format='channels_first',
+                                padding='same')(t)
     flat = layers.Flatten()(t)
 
     ## dense layers
@@ -305,18 +318,26 @@ def build_and_compile_model():
 
     model.compile(loss=keras.losses.MeanSquaredError(),
                   optimizer=opt,
-                  metrics=['mean_absolute_error', 'mean_absolute_percentage_error', 'cosine_proximity'],
+                  metrics=['mean_absolute_error', 'mean_absolute_percentage_error'],
                   experimental_run_tf_function=False)
 
+
     # for reproducibility during optimization
+    tf.print('......................................................')
     tf.print('optimizer: Adagrad')
     tf.print("learning rate: 0.001")
     tf.print('number/size of residual blocks: [4,4,4]')
-    tf.print('number of dense layers: 2')
+    tf.print('dilation rates: [1,1,1]')
+    tf.print('structure of residual block: b) BN after addition')
+    tf.print('channels: first')
+    tf.print('activation function: selu/lecun_normal')
+    tf.print('number of dense layers before output layer: 1 (1024, selu)')
+    tf.print('output activation function: relu')
     tf.print('starting filter value: 16')
     tf.print('regularization: L2')
     tf.print('using batch normalization: yes')
     tf.print('using Dropout layer: no')
+    tf.print('......................................................')
 
     return model
 
@@ -423,7 +444,8 @@ prediction = pd.DataFrame({"count": counts_test.flatten(),
 ### OUTPUT ###
 print('SAVE PREDICTED COUNTS')
 
-if hvd.rank() == 0:
-    pd.DataFrame.to_csv(prediction, '/scratch2/hroetsc/Hotspots/results/model_predictions.csv', index=False)
+pd.DataFrame.to_csv(prediction,
+                    '/scratch2/hroetsc/Hotspots/results/model_predictions_rank{}.csv'.format(int(hvd.rank())),
+                    index=False)
 
 tf.keras.backend.clear_session()
