@@ -5,20 +5,23 @@
 # output: model, metrics, predictions for test data set
 # author: HR
 
-# using DenseNet structure
+# using custom structure with splitted input
 
 import os
 import numpy as np
 import pandas as pd
 
 from sklearn.model_selection import train_test_split
+
 import tensorflow as tf
+
 from tensorflow import keras
 from tensorflow.keras import layers
 
+tf.keras.backend.clear_session()
+
 import horovod.tensorflow.keras as hvd
 
-tf.keras.backend.clear_session()
 hvd.init()
 
 ### initialize Horovod ###
@@ -64,8 +67,8 @@ print('HYPERPARAMETERS')
 embeddingDim = 128
 tokPerWindow = 8
 
-epochs = 100
-batchSize = 32
+epochs = 800
+batchSize = 16
 pseudocounts = 1
 
 epochs = int(np.ceil(epochs / hvd.size()))
@@ -74,7 +77,7 @@ batchSize = batchSize * hvd.size()
 print('number of epochs, adjusted by number of GPUs: ', epochs)
 print('batch size, adjusted by number of GPUs: ', batchSize)
 print('number of pseudocounts: ', pseudocounts)
-print('using scaled input data: True')
+print('using scaled input data: False')
 print("-------------------------------------------------------------------------")
 
 ########## part 1: fit model ##########
@@ -82,9 +85,13 @@ print("-------------------------------------------------------------------------
 print('LOAD DATA')
 
 ## on the cluster
+# tokensAndCounts_train = pd.read_csv('/scratch2/hroetsc/Hotspots/data/windowTokens_training.csv')
+# emb_train = '/scratch2/hroetsc/Hotspots/data/embMatrices_training.dat'
+# acc_train = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_training.dat'
+
 tokensAndCounts_train = pd.read_csv('/scratch2/hroetsc/Hotspots/data/windowTokens_OPTtraining.csv')
-emb_train = '/scratch2/hroetsc/Hotspots/data/embMatrices_training.dat'
-acc_train = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_training.dat'
+emb_train = '/scratch2/hroetsc/Hotspots/data/embMatrices_OPTtraining.dat'
+acc_train = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_OPTtraining.dat'
 
 ## on local machine
 # tokensAndCounts_train = pd.read_csv('data/windowTokens_OPTtraining.csv')
@@ -130,9 +137,6 @@ def open_and_format_matrices(tokens, counts, emb_path, acc_path):
             dt = np.fromfile(emin, dtype='float32', count=no_elements)
 
             # make sure to pass 4D-Tensor to model: (batchSize, depth, height, width)
-            # scale all values between 0 and 1
-            dt = (dt - np.min(dt)) / (np.max(dt) - np.min(dt))
-
             dt = dt.reshape((tokPerWindow, embeddingDim))
             embMatrix[b] = np.expand_dims(dt, axis=0)
 
@@ -194,146 +198,123 @@ emb_train, emb_val, counts_train, counts_val = train_test_split(emb, counts, tes
 
 
 ### build and compile model
-# composite function: batch normalization, relu, 3x3 convolution
-# with bottleneck
-def composite(inp_layer, filters):
-    # bottleneck
-    l = layers.BatchNormalization(trainable=True)(inp_layer)
-    l = layers.Activation('relu')(l)
-    l = layers.ZeroPadding2D((1,1))(l)
-    l = layers.Conv2D(filters=filters,
-                      kernel_size=(1, 1),
-                      strides=1,
-                      padding='same',
-                      kernel_regularizer=keras.regularizers.l2(l=0.0001),
-                      kernel_initializer=tf.keras.initializers.HeNormal(),
-                      data_format='channels_first')(l)
-
-    # actual composition
-    l = layers.BatchNormalization(trainable=True)(l)
-    l = layers.Activation('relu')(l)
-    l = layers.ZeroPadding2D((1, 1))(l)
-    l = layers.Conv2D(filters=filters,
-                      kernel_size=(3,3),
-                      strides=1,
-                      padding='same',
-                      kernel_regularizer=keras.regularizers.l2(l=0.0001),
-                      kernel_initializer=tf.keras.initializers.HeNormal(),
-                      data_format='channels_first')(l)
-    return l
-
-# layers between blocks: transition layers (do convolution and pooling)
-# batch normalization layer and an 1×1 convolutional layer followed by a 2×2 average pooling layer
-# compression to reduce the number of feature maps at transition
-def transition_layers(inp_layer, theta):
-    m = inp_layer.shape[1]
-    n_maps = int(np.floor(m * theta))
-
-    l = layers.BatchNormalization(trainable=True)(inp_layer)
-    l = layers.Activation('relu')(l)
-
-    l = layers.Conv2D(filters=n_maps,
-                      kernel_size=(1,1),
-                      strides=1,
-                      padding='same',
-                      kernel_regularizer=keras.regularizers.l2(l=0.0001),
-                      kernel_initializer=tf.keras.initializers.HeNormal(),
-                      use_bias=False,
-                      data_format='channels_first')(inp_layer)
-
-    l = layers.AveragePooling2D(pool_size=(2,2),
-                                padding='same',
-                                data_format='channels_first')(l)
-    return l
-
-
-# dense block
-def dense_block(inp_layer, n_layers, n_filters, k):
-    for i in range(n_layers):
-        conv_out = composite(inp_layer, n_filters)
-        inp_layer = layers.Concatenate(axis=2)([conv_out, inp_layer])
-
-        n_filters += k
-
-    return inp_layer, n_filters
-
-
-# build dense selu layers with batch norm
+# build dense relu layers with batch norm and dropout
 def dense_layer(prev_layer, nodes):
     norm = layers.BatchNormalization(trainable=True)(prev_layer)
     dense = layers.Dense(nodes, activation='selu',
-                         kernel_regularizer=keras.regularizers.l2(l=0.0001),
                          kernel_initializer=tf.keras.initializers.LecunNormal())(norm)
     return dense
 
 
+# residual blocks (convolutions)
+def residual_block(prev_layer, no_filters, kernel_size, strides):
+    conv = layers.Conv2D(filters=no_filters,
+                         kernel_size=kernel_size,
+                         strides=strides,
+                         padding='same',
+                         kernel_initializer=tf.keras.initializers.HeNormal(),
+                         data_format='channels_first')(prev_layer)
+
+    norm = layers.BatchNormalization(trainable=True)(conv)
+    act = layers.LeakyReLU()(norm)
+
+    pool = layers.MaxPool2D(pool_size=2,
+                            strides=2,
+                            data_format='channels_first',
+                            padding='same')(act)
+    return pool
+
+
 # function that returns model
 def build_and_compile_model():
+    ## hyperparameters
+    num_filters = 16  # starting filter value
+    kernel_size = 3
+
     ## input
     tf.print('model input')
-    inp = keras.Input(shape=(1, tokPerWindow, embeddingDim))
+    inp = keras.Input(shape=(1, tokPerWindow, embeddingDim),
+                      name='input')
 
-    ## hyperparameters
-    num_filters = 32 # starting filter value
-    num_blocks = 3
-    num_layers_per_block = 80
-    theta = 0.5  # compression factor
-    k = 24  # growth rate
+    # split input into single tokens and perform dimension reduction on them
+    token_outputs = [None] * tokPerWindow
+    for t in range(tokPerWindow):
+        # slice input tensor
+        intermediate = inp[:, :, t, :]
+        # add dense layers
+        intermediate = layers.Dense(64,
+                                    activation='selu',
+                                    kernel_initializer=tf.keras.initializers.LecunNormal())(intermediate)
+        # intermediate = layers.BatchNormalization(trainable=True)(intermediate)
+        intermediate = layers.Dense(8,
+                                    activation='selu',
+                                    kernel_initializer=tf.keras.initializers.LecunNormal())(intermediate)
 
-    # assemble all dense blocks and connect with transition layers
-    tf.print('build DenseNet')
-    # initial convolution
-    t = layers.BatchNormalization(trainable=True)(inp)
-    t = layers.Conv2D(filters=num_filters,
-                      kernel_size=(3,3),
-                      strides=1,
-                      padding='same',
-                      kernel_regularizer=keras.regularizers.l2(l=0.0001),
-                      kernel_initializer=tf.keras.initializers.HeNormal(),
-                      use_bias=False,
-                      data_format='channels_first')(t)
-    # dense blocks
-    for i in range(num_blocks):
-        t, num_filters = dense_block(t, num_layers_per_block, num_filters, k)
-        t = transition_layers(t, num_filters, theta)
+        token_outputs[t] = intermediate
 
-    t = layers.GlobalAveragePooling2D()
+    # concatenate reduced token embeddings --> shape should be (None,8,8)
+    redIn = layers.Concatenate(axis=1, name='reduced_input')(token_outputs)
+    redIn = layers.Reshape((tokPerWindow, tokPerWindow))(redIn)
 
-    out_norm = layers.BatchNormalization(trainable=True)(t)
-    out = layers.Dense(1, activation='linear', # no negative predictions
-                       kernel_regularizer=keras.regularizers.l2(l=0.0001),
+    # expand dimensions --> should be (None, 1, 8, 8)
+    redIn = tf.expand_dims(redIn, axis=1)
+
+    ## convolutional layers
+    tf.print('convolutional layers')
+    # convolution on input token embeddings --> 256-d
+    t_conv = residual_block(redIn, num_filters, kernel_size, strides=1)
+    t_flat = layers.Flatten(name='flattened_redInp')(t_conv)
+
+    # convolution on full input tensor --> 256-d
+    # f_conv = residual_block(inp, num_filters, kernel_size, strides=2)
+    # f_conv = residual_block(f_conv, num_filters * 2, kernel_size, strides=2)
+    # f_flat = layers.Flatten(name='flattened_fullInp')(f_conv)
+
+    # add the two flattened layers
+    # all_flat = layers.Add(name='flattened_allInps')([t_flat, f_flat])
+
+    ## dense layers
+    tf.print('dense layers')
+    # fully-connected layers with batch normalization
+
+    dense1 = dense_layer(t_flat, 256)
+    dense2 = dense_layer(dense1, 128)
+    dense3 = dense_layer(dense2, 64)
+
+    out_norm = layers.BatchNormalization(trainable=True)(dense3)
+    out = layers.Dense(1, activation='linear',
                        kernel_initializer=tf.keras.initializers.HeNormal(),
                        name='output')(out_norm)
-
 
     ## concatenate to model
     model = keras.Model(inputs=inp, outputs=out)
 
     ## compile model
     tf.print('compile model')
-    opt = tf.keras.optimizers.Adagrad(learning_rate=0.0001 * hvd.size())
+    opt = tf.keras.optimizers.Adagrad(learning_rate=0.01 * hvd.size())
     opt = hvd.DistributedOptimizer(opt)
 
-    model.compile(loss=keras.losses.MeanSquaredError(),
+    model.compile(loss='mean_squared_logarithmic_error',
                   optimizer=opt,
-                  metrics=['accuracy', 'mean_absolute_error'],
+                  metrics=['mean_squared_error', 'mean_absolute_percentage_error', 'mean_absolute_error'],
                   experimental_run_tf_function=False)
-
 
     # for reproducibility during optimization
     tf.print('......................................................')
+    tf.print('CUSTOM STRUCTURE WITH SPLITTED INPUT ')
     tf.print('optimizer: Adagrad')
-    tf.print("learning rate: 0.001")
-    tf.print('number of dense blocks: ', num_blocks)
-    tf.print('size of dense block: ', num_layers_per_block)
-    tf.print('growth rate: ', k)
-    tf.print('compression factor: ', theta)
+    tf.print("learning rate: 0.01")
+    tf.print('loss: mean squared logarithmic error')
     tf.print('channels: first')
-    tf.print('activation function: relu/he_normal')
-    tf.print('number of dense layers before output layer: 0')
-    tf.print('starting filter value: ', num_filters)
+    tf.print('pooling: MaxPool2D, strides = 2')
+    tf.print('activation function: leaky relu / he_normal')
+    tf.print('number of dense layers before output layer: 3 (256-64, selu)')
     tf.print('output activation function: linear')
-    tf.print('regularization: L2 (0001)')
+    tf.print('starting filter value: ', num_filters)
+    tf.print('kernel size: ', kernel_size)
+    tf.print('strides: depending on the desired output dimension (256)')
+    tf.print('number of convolutions: 1 for token embeddings, 2 for full input tensor')
+    tf.print('regularization: none')
     tf.print('using batch normalization: yes')
     tf.print('using Dropout layer: no')
     tf.print('......................................................')
@@ -407,9 +388,13 @@ print('MAKE PREDICTION')
 
 ### INPUT ###
 ## on the cluster
+# tokensAndCounts_test = pd.read_csv('/scratch2/hroetsc/Hotspots/data/windowTokens_testing.csv')
+# emb_test = '/scratch2/hroetsc/Hotspots/data/embMatrices_testing.dat'
+# acc_test = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_testing.dat'
+
 tokensAndCounts_test = pd.read_csv('/scratch2/hroetsc/Hotspots/data/windowTokens_OPTtesting.csv')
-emb_test = '/scratch2/hroetsc/Hotspots/data/embMatrices_testing.dat'
-acc_test = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_testing.dat'
+emb_test = '/scratch2/hroetsc/Hotspots/data/embMatrices_OPTtesting.dat'
+acc_test = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_OPTtesting.dat'
 
 ## on local machine
 # tokensAndCounts_test = pd.read_csv('data/windowTokens_OPTtesting.csv')
@@ -430,7 +415,7 @@ tokens_test, counts_test, emb_test = open_and_format_matrices(tokens_test, count
 
 # make prediction
 pred = model.predict(x=emb_test,
-                     batch_size=4,
+                     batch_size=batchSize,
                      verbose=1 if hvd.rank() == 0 else 0,
                      max_queue_size=256)
 

@@ -67,9 +67,9 @@ print('HYPERPARAMETERS')
 embeddingDim = 128
 tokPerWindow = 8
 
-epochs = 1600
+epochs = 800
 batchSize = 32
-pseudocounts = 5
+pseudocounts = 1
 
 epochs = int(np.ceil(epochs / hvd.size()))
 batchSize = batchSize * hvd.size()
@@ -77,6 +77,7 @@ batchSize = batchSize * hvd.size()
 print('number of epochs, adjusted by number of GPUs: ', epochs)
 print('batch size, adjusted by number of GPUs: ', batchSize)
 print('number of pseudocounts: ', pseudocounts)
+print('using scaled input data: False')
 print("-------------------------------------------------------------------------")
 
 ########## part 1: fit model ##########
@@ -84,9 +85,13 @@ print("-------------------------------------------------------------------------
 print('LOAD DATA')
 
 ## on the cluster
+# tokensAndCounts_train = pd.read_csv('/scratch2/hroetsc/Hotspots/data/windowTokens_training.csv')
+# emb_train = '/scratch2/hroetsc/Hotspots/data/embMatrices_training.dat'
+# acc_train = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_training.dat'
+
 tokensAndCounts_train = pd.read_csv('/scratch2/hroetsc/Hotspots/data/windowTokens_OPTtraining.csv')
-emb_train = '/scratch2/hroetsc/Hotspots/data/embMatrices_training.dat'
-acc_train = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_training.dat'
+emb_train = '/scratch2/hroetsc/Hotspots/data/embMatrices_OPTtraining.dat'
+acc_train = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_OPTtraining.dat'
 
 ## on local machine
 # tokensAndCounts_train = pd.read_csv('data/windowTokens_OPTtraining.csv')
@@ -132,6 +137,9 @@ def open_and_format_matrices(tokens, counts, emb_path, acc_path):
             dt = np.fromfile(emin, dtype='float32', count=no_elements)
 
             # make sure to pass 4D-Tensor to model: (batchSize, depth, height, width)
+            # scale all values between 0 and 1
+            # dt = (dt - np.min(dt)) / (np.max(dt) - np.min(dt))
+
             dt = dt.reshape((tokPerWindow, embeddingDim))
             embMatrix[b] = np.expand_dims(dt, axis=0)
 
@@ -196,28 +204,27 @@ emb_train, emb_val, counts_train, counts_val = train_test_split(emb, counts, tes
 # build dense relu layers with batch norm and dropout
 def dense_layer(prev_layer, nodes):
     norm = layers.BatchNormalization(trainable=True)(prev_layer)
-    dense = layers.Dense(nodes, activation='selu',
-                         kernel_regularizer=keras.regularizers.l2(l=0.01),
-                         kernel_initializer=tf.keras.initializers.LecunNormal())(norm)
+    dense = layers.Dense(nodes, activation='relu',
+                         #kernel_regularizer=keras.regularizers.l2(l=0.0001),
+                         kernel_initializer=tf.keras.initializers.HeNormal())(norm)
     return dense
 
 
 # activation and batch normalization
 def bn_relu(inp_layer):
     bn = layers.BatchNormalization(trainable=True)(inp_layer)
-    relu = layers.Activation('selu')(bn)
+    relu = layers.Activation('relu')(bn)
     return relu
 
 
 # residual blocks (convolutions)
 def residual_block(inp_layer, downsample, filters, kernel_size, dilation_rate):
-    # y = bn_relu(inp_layer)
     y = layers.Conv2D(filters=filters,
                       kernel_size=kernel_size,
                       strides=(1 if not downsample else 2),
                       padding='same',
-                      kernel_regularizer=keras.regularizers.l2(l=0.01),
-                      kernel_initializer=tf.keras.initializers.LecunNormal(),
+                      #kernel_regularizer=keras.regularizers.l2(l=0.0001),
+                      kernel_initializer=tf.keras.initializers.HeNormal(),
                       data_format='channels_first')(inp_layer)
     y = bn_relu(y)
     y = layers.Conv2D(filters=filters,
@@ -225,21 +232,22 @@ def residual_block(inp_layer, downsample, filters, kernel_size, dilation_rate):
                       strides=1,
                       dilation_rate=dilation_rate,
                       padding='same',
-                      kernel_regularizer=keras.regularizers.l2(l=0.01),
-                      kernel_initializer=tf.keras.initializers.LecunNormal(),
+                      #kernel_regularizer=keras.regularizers.l2(l=0.0001),
+                      kernel_initializer=tf.keras.initializers.HeNormal(),
                       data_format='channels_first')(y)
+    y = layers.BatchNormalization(trainable=True)(y)
 
     if downsample:
         inp_layer = layers.Conv2D(filters=filters,
                                   kernel_size=1,
                                   strides=2,
                                   padding='same',
-                                  kernel_regularizer=keras.regularizers.l2(l=0.01),
-                                  kernel_initializer=tf.keras.initializers.LecunNormal(),
+                                  #kernel_regularizer=keras.regularizers.l2(l=0.0001),
+                                  kernel_initializer=tf.keras.initializers.HeNormal(),
                                   data_format='channels_first')(inp_layer)
 
     out = layers.Add()([inp_layer, y])
-    out = bn_relu(out)
+    out = layers.Activation('relu')(out)
 
     return out
 
@@ -253,18 +261,18 @@ def build_and_compile_model():
 
     ## hyperparameters
     # starting filter value
-    num_filters = 16
-    kernel_size = 3
+    num_filters = 8
+    kernel_size = 5
     # number and size of residual blocks
-    num_blocks_list = [4, 4, 4]
-    dilation_rate_list = [1, 1, 1]
+    num_blocks_list = [2, 5, 5, 2]
+    dilation_rate_list = [1, 1, 1, 1]
 
     ## convolutional layers (ResNet)
     tf.print('residual blocks')
 
     # structure of residual blocks:
-    # a) original: weight-BN-ReLU-weight-BN-addition-ReLU
-    # b) BN after addition: weight-BN-ReLU-weight-addition-BN-ReLU --> currently used
+    # a) original: weight-BN-ReLU-weight-BN-addition-ReLU --> currently used
+    # b) BN after addition: weight-BN-ReLU-weight-addition-BN-ReLU
     # c) ReLU before addition: weight-BN-ReLU-weight-BN-ReLU-addition
     # d) full pre-activation (SpliceAI): BN-ReLU-weight-BN-ReLU-weight-addition
 
@@ -274,8 +282,8 @@ def build_and_compile_model():
                       kernel_size=kernel_size,
                       strides=1,
                       padding='same',
-                      kernel_regularizer=keras.regularizers.l2(l=0.01),
-                      kernel_initializer=tf.keras.initializers.LecunNormal(),
+                      #kernel_regularizer=keras.regularizers.l2(l=0.0001),
+                      kernel_initializer=tf.keras.initializers.HeNormal(),
                       data_format='channels_first')(t)
     t = bn_relu(t)
 
@@ -299,11 +307,11 @@ def build_and_compile_model():
     ## dense layers
     tf.print('dense layers')
     # fully-connected layers with L2-regularization, batch normalization and dropout
-    dense1 = dense_layer(flat, 1024)
+    dense1 = dense_layer(flat, 256)
 
     out_norm = layers.BatchNormalization(trainable=True)(dense1)
-    out = layers.Dense(1, activation='relu', # no negative predictions
-                       kernel_regularizer=keras.regularizers.l2(l=0.01),
+    out = layers.Dense(1, activation='linear', # no negative predictions
+                       #kernel_regularizer=keras.regularizers.l2(l=0.0001),
                        kernel_initializer=tf.keras.initializers.HeNormal(),
                        name='output')(out_norm)
 
@@ -313,28 +321,30 @@ def build_and_compile_model():
 
     ## compile model
     tf.print('compile model')
-    opt = tf.keras.optimizers.Adagrad(learning_rate=0.001 * hvd.size())
+    opt = tf.keras.optimizers.Adadelta(learning_rate=0.001 * hvd.size())
     opt = hvd.DistributedOptimizer(opt)
 
     model.compile(loss=keras.losses.MeanSquaredError(),
                   optimizer=opt,
-                  metrics=['mean_absolute_error', 'mean_absolute_percentage_error'],
+                  metrics=['accuracy', 'mean_absolute_error', 'mean_absolute_percentage_error'],
                   experimental_run_tf_function=False)
 
 
     # for reproducibility during optimization
     tf.print('......................................................')
-    tf.print('optimizer: Adagrad')
+    tf.print('RESNET STRUCTURE')
+    tf.print('optimizer: Adadelta')
     tf.print("learning rate: 0.001")
-    tf.print('number/size of residual blocks: [4,4,4]')
-    tf.print('dilation rates: [1,1,1]')
-    tf.print('structure of residual block: b) BN after addition')
+    tf.print('number/size of residual blocks: [2,5,5,2]')
+    tf.print('dilation rates: [1,1,1,1]')
+    tf.print('structure of residual block: a) original')
     tf.print('channels: first')
-    tf.print('activation function: selu/lecun_normal')
-    tf.print('number of dense layers before output layer: 1 (1024, selu)')
-    tf.print('output activation function: relu')
-    tf.print('starting filter value: 16')
-    tf.print('regularization: L2')
+    tf.print('activation function: relu/he_normal')
+    tf.print('number of dense layers before output layer: 1 (256, relu)')
+    tf.print('output activation function: linear')
+    tf.print('starting filter value: ', num_filters)
+    tf.print('kernel size: ', kernel_size)
+    tf.print('regularization: none')
     tf.print('using batch normalization: yes')
     tf.print('using Dropout layer: no')
     tf.print('......................................................')
@@ -408,9 +418,13 @@ print('MAKE PREDICTION')
 
 ### INPUT ###
 ## on the cluster
+# tokensAndCounts_test = pd.read_csv('/scratch2/hroetsc/Hotspots/data/windowTokens_testing.csv')
+# emb_test = '/scratch2/hroetsc/Hotspots/data/embMatrices_testing.dat'
+# acc_test = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_testing.dat'
+
 tokensAndCounts_test = pd.read_csv('/scratch2/hroetsc/Hotspots/data/windowTokens_OPTtesting.csv')
-emb_test = '/scratch2/hroetsc/Hotspots/data/embMatrices_testing.dat'
-acc_test = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_testing.dat'
+emb_test = '/scratch2/hroetsc/Hotspots/data/embMatrices_OPTtesting.dat'
+acc_test = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_OPTtesting.dat'
 
 ## on local machine
 # tokensAndCounts_test = pd.read_csv('data/windowTokens_OPTtesting.csv')
@@ -423,6 +437,7 @@ acc_test = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_testing.dat'
 # acc_test = 'data/embMatricesAcc_benchmark.dat'
 
 
+
 ### MAIN PART ###
 # format testing data
 tokens_test, counts_test = format_input(tokensAndCounts_test)
@@ -431,14 +446,15 @@ tokens_test, counts_test, emb_test = open_and_format_matrices(tokens_test, count
 
 # make prediction
 pred = model.predict(x=emb_test,
-                     batch_size=4,
+                     batch_size=batchSize,
                      verbose=1 if hvd.rank() == 0 else 0,
                      max_queue_size=256)
 
 print(pred)
 
 # merge actual and predicted counts
-prediction = pd.DataFrame({"count": counts_test.flatten(),
+prediction = pd.DataFrame({"tokens": tokens_test[:, 1].flatten(),
+                           "count": counts_test,
                            "prediction": pred.flatten()})
 
 ### OUTPUT ###

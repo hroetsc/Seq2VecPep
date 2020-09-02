@@ -9,7 +9,30 @@ import os
 import multiprocessing as mp
 import numpy as np
 
-def findEmbeddings(batch_token, tfidf, weights, embeddingDim, tokPerWindow, weightfile, accfile):
+def findEmbeddings(batch_token, weights, embeddingDim, tokPerWindow, weightfile, accfile):
+    tokens_split = [str.split(' ') for str in [batch_token[1]]][0]
+
+    out = [None] * tokPerWindow
+
+    for n, t in enumerate(tokens_split):
+        # find embedding
+        out[n] = np.array(weights[weights['subword'] == t].iloc[:, 1:(embeddingDim + 1)], dtype='float32').flatten()
+
+    out = np.asarray(out, dtype='float32')
+    idx = np.asarray(batch_token[2], dtype='int32')
+
+
+    # save accessions and weight matrix as numpy array in binary format
+    with open(weightfile, 'ab') as wf, open(accfile, 'ab') as af:
+        out.tofile(wf)
+        idx.tofile(af)
+
+        wf.close()
+        af.close()
+
+
+# old version: use seq2vec + TFIDF
+def findEmbeddings_tfidf(batch_token, tfidf, weights, embeddingDim, tokPerWindow, weightfile, accfile):
     tokens_split = [str.split(' ') for str in [batch_token[1]]][0]
     acc = batch_token[0]
 

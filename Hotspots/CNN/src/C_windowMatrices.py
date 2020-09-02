@@ -14,31 +14,35 @@ import C_helper
 
 ### INPUT ###
 # for benchmarking
-# tokensAndCounts_benchmark = pd.read_csv('results/windowTokens_benchmark.csv')
-tokensAndCounts_train = pd.read_csv('data/windowTokens_OPTtraining.csv')
-tokensAndCounts_test = pd.read_csv('data/windowTokens_OPTtesting.csv')
+# tokensAndCounts_benchmark = pd.read_csv('data/windowTokens_benchmark.csv')
 
-weights = pd.read_csv('data/token_embeddings.csv')
+ext = ""
+print('extension: ', ext)
 
-tfidf_train = pd.read_csv('data/TFIDF_training.csv')
-tfidf_test = pd.read_csv('data/TFIDF_testing.csv')
+subs = 'OPT'
+print('subset: ', subs)
+
+tokensAndCounts_train = pd.read_csv(str('data/'+ext+'windowTokens_'+subs+'training.csv'))
+tokensAndCounts_test = pd.read_csv(str('data/'+ext+'windowTokens_'+subs+'testing.csv'))
+
+weights = pd.read_csv('data/token_AAindices.csv')
 
 
 ### MAIN PART ###
 
 # hyperparameters
-workers = 72
+workers = 16
 embeddingDim = 128
 tokPerWindow = 8
 
-# weight_bench = 'results/embMatrices_benchmark.dat'
-# acc_bench = 'results/embMatricesAcc_benchmark.dat'
+# weight_bench = 'data/embMatrices_benchmark.dat'
+# acc_bench = 'data/embMatricesAcc_benchmark.dat'
 
-weight_train = 'data/embMatrices_training.dat'
-acc_train = 'data/embMatricesAcc_training.dat'
+weight_train = str('data/AAindex_'+ext+'embMatrices_'+subs+'training.dat')
+acc_train = str('data/AAindex_'+ext+'embMatricesAcc_'+subs+'training.dat')
 
-weight_test = 'data/embMatrices_testing.dat'
-acc_test = 'data/embMatricesAcc_testing.dat'
+weight_test = str('data/AAindex_'+ext+'embMatrices_'+subs+'testing.dat')
+acc_test = str('data/AAindex_'+ext+'embMatricesAcc_'+subs+'testing.dat')
 
 
 # get tokens
@@ -57,21 +61,21 @@ tokens_test = get_tokens(tokensAndCounts_test)
 pool = mp.Pool(workers)
 
 # benchmarking
-print('embedding matrices for benchmarking data')
+# print('embedding matrices for benchmarking data')
 # if __name__ == "__main__":
 #     pool.starmap( C_helper.findEmbeddings,
-#                   [[batch_token, tfidf_train, weights, embeddingDim, tokPerWindow, weight_bench, acc_bench] for batch_token in list(tokens_bench)] )
+#                   [[batch_token, weights, embeddingDim, tokPerWindow, weight_bench, acc_bench] for batch_token in list(tokens_bench)] )
 
 # training data
 print('embedding matrices for training data')
 if __name__ == "__main__":
     pool.starmap( C_helper.findEmbeddings,
-                  [[batch_token, tfidf_train, weights, embeddingDim, tokPerWindow, weight_train, acc_train] for batch_token in list(tokens_train)] )
+                  [[batch_token, weights, embeddingDim, tokPerWindow, weight_train, acc_train] for batch_token in list(tokens_train)] )
 
 # testing data
 print('embedding matrices for testing data')
 if __name__ == "__main__":
     pool.starmap( C_helper.findEmbeddings,
-                  [[batch_token, tfidf_test, weights, embeddingDim, tokPerWindow, weight_test, acc_test] for batch_token in list(tokens_test)] )
+                  [[batch_token, weights, embeddingDim, tokPerWindow, weight_test, acc_test] for batch_token in list(tokens_test)] )
 
 pool.close()

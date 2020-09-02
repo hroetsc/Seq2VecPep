@@ -10,9 +10,12 @@ library(stringr)
 library(rhdf5)
 library(ggplot2)
 library(tidyr)
+library(tidymodels)
+library(DescTools)
 
-JOBID = "5184756-1"
 
+JOBID = "5195099-0"
+no_ranks = 8
 
 ### INPUT ###
 # download results
@@ -21,19 +24,22 @@ system("scp -rp hroetsc@transfer.gwdg.de:/usr/users/hroetsc/Hotspots/results/* r
 # open them
 metrics = read.table("results/model_metrics.txt", sep = ",", stringsAsFactors = F)
 
-# prediction = read.csv("results/model_predictions.csv", stringsAsFactors = F)
+
 prediction.fs = list.files("results", pattern = "model_predictions_rank",
                         full.names = T, recursive = T)
-for (p in 1:length(prediction.fs)){
-  if (p == 1){
-    prediction = read.csv(prediction.fs[p], stringsAsFactors = F)
+for (p in 0:(no_ranks-1)){
+  if (p == 0){
+    prediction = read.csv(paste0("results/model_predictions_rank", p, ".csv"), stringsAsFactors = F)
   } else {
     
     prediction = rbind(prediction,
-                      read.csv( prediction.fs[p], stringsAsFactors = F))
+                      read.csv(paste0("results/model_predictions_rank", p, ".csv"), stringsAsFactors = F))
     
   }
 }
+
+prediction = unique(prediction)
+
 
 ### MAIN PART ###
 
@@ -62,7 +68,7 @@ for (c in 1:ncol(metrics)){
 }
 
 # plotting function
-plotting = function(col1 = "", col2 = "", name = "", path = paste0("results/", JOBID, "_model_metrics_")){
+plotting = function(col1 = "", col2 = "", name = "", path = paste0("results/plots/", JOBID, "_model_metrics_")){
   
   out.path = str_split(path, coll("/"), simplify = T)[,1]
   
@@ -97,7 +103,6 @@ plotting = function(col1 = "", col2 = "", name = "", path = paste0("results/", J
          pch = c(20, 1),
          box.lty = 1,
          pt.cex = 1)
-  
   dev.off()
 }
 
@@ -109,53 +114,71 @@ for (i in 1:(ncol(metrics)/2)){
 }
 
 
-########## prediction ##########
+########## regression ##########
 # prediction$count = log(prediction$count + 1)
 # prediction$count = prediction$count + 0.65
 # prediction = prediction[-which(prediction$count < 1), ]
 
+# tmp !!
+# prediction$count = 2^(prediction$count) - 1
+# prediction$pred_count = 2^(prediction$pred_count) - 1
+
 # general
 summary(prediction$count)
-summary(prediction$prediction)
+summary(prediction$pred_count)
 
-# visual
-prediction %>% gather() %>%
-  ggplot(aes(x = value, color = key)) +
-  geom_density() +
-  ggtitle("true and predicted hotspot counts") +
-  theme_bw()
-ggsave(paste0("results/", JOBID, "_trueVSpredicted-dens.png"), plot = last_plot(),
-       device = "png", dpi = "retina")
 
-ggplot(prediction, aes(x = count, y = prediction)) +
-  geom_point(alpha = 0.1, size = 0.3) +
-  xlim(c(4, 6)) +
-  ylim(c(4, 6)) +
-  ggtitle("true and predicted hotspot counts") +
-  theme_bw()
-ggsave(paste0("results/", JOBID, "_trueVSpredicted-scatter.png"), plot = last_plot(),
-       device = "png", dpi = "retina")
+prediction$Accession = NULL
+prediction$window = NULL
 
 
 # linear model --> R^2 and adjusted R^2
-pred.lm = lm(prediction ~ count, data = prediction)
+pred.lm = lm(pred_count ~ count, data = prediction)
 summary(pred.lm)
 
+
 # correlation coefficients
-pc = cor(prediction$count, prediction$prediction, method = "pearson")
-sm = cor(prediction$count, prediction$prediction, method = "spearman")
+pc = cor(prediction$count, prediction$pred_count, method = "pearson")
+sm = cor(prediction$count, prediction$pred_count, method = "spearman")
 
 # mean squared error
-mse = (prediction$count - prediction$prediction)^2 %>% mean() %>% round(4)
+mse = (prediction$count - prediction$pred_count)^2 %>% mean() %>% round(4)
 # root mean squared error
 rmse = sqrt(mse) %>% round(4)
 # mean absolute deviation
-mae = (prediction$count - prediction$prediction) %>% abs() %>% mean() %>% round(4)
+mae = (prediction$count - prediction$pred_count) %>% abs() %>% mean() %>% round(4)
 
 # sumarise
 all.metrics = c(JOBID, summary(pred.lm)$r.squared, pc, mse, rmse, mae)
 names(all.metrics) = c("JOBID", "Rsquared", "PCC", "MSE", "RMSE", "MAE")
 all.metrics
+
+start = min(prediction) - 0.1
+stop = max(prediction) + 0.1
+
+
+# visual
+prediction[, c("count", "pred_count")] %>% gather() %>%
+  ggplot(aes(x = value, color = key)) +
+  geom_density() +
+  ggtitle("true and predicted hotspot counts") +
+  theme_bw()
+ggsave(paste0("results/plots/", JOBID, "_trueVSpredicted-dens.png"), plot = last_plot(),
+       device = "png", dpi = "retina")
+
+ggplot(prediction, aes(x = count, y = pred_count)) +
+  geom_point(alpha = 0.05, size = 0.1) +
+  xlim(c(start, stop)) +
+  ylim(c(start, stop)) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dotted") +
+  coord_equal() +
+  ggtitle("true and predicted hotspot counts",
+          subtitle = paste0("PCC: ", pc %>% round(4), ", R^2: ", summary(pred.lm)$r.squared %>% round(4))) +
+  theme_bw()
+ggsave(paste0("results/plots/", JOBID, "_trueVSpredicted-scatter.png"), plot = last_plot(),
+       device = "png", dpi = "retina")
+
+
 
 
 ### OUTPUT ###
@@ -172,15 +195,106 @@ if(file.exists(out)) {
 }
 
 
-# some ideas
-plot(density(log10((prediction$count - prediction$prediction)^2)),
-     main = "log10 squared error distribution")
 
-plot(density(log10((prediction$count - prediction$prediction) %>% abs())),
-     main = "log10 absolute error distribution")
+########## binary classification ##########
+PRECISION = function(TP = "", FP = "") {
+  return(as.numeric(TP) / (as.numeric(TP) + as.numeric(FP)))
+}
 
-# accuracy = bias
-# precision = inverse of variance
+RECALL = function(TP = "", P = "") {
+  return(as.numeric(TP) / as.numeric(P))
+}
+
+SENSITIVITY = function(TP = "", P = "") {
+  return(as.numeric(TP) / as.numeric(P))
+}
+
+SPECIFICITY = function(TN = "", N = "") {
+  return(as.numeric(TN) / as.numeric(N))
+}
+
+
+roc.pr.CURVE = function(df = "") {
+  
+  th_range = c(-Inf, seq(min(df$pred_label), max(df$pred_label), length.out = 300), Inf)
+  
+  df$pred_count = NULL
+  
+  
+  sens = rep(NA, length(th_range))
+  spec = rep(NA, length(th_range))
+  
+  prec = rep(NA, length(th_range))
+  rec = rep(NA, length(th_range))
+  
+  for (t in seq_along(th_range)) {
+    
+    cnt_dat = df %>% mutate(pred = ifelse(pred_label > th_range[t], 1, 0))
+    
+    # P, N, TP, TN, FP
+    P = cnt_dat[cnt_dat$label == 1, ] %>% nrow()
+    N = cnt_dat[cnt_dat$label == 0, ] %>% nrow()
+    
+    TP = cnt_dat[cnt_dat$pred == 1 & cnt_dat$label == 1, ] %>% nrow()
+    TN = cnt_dat[cnt_dat$pred == 0 & cnt_dat$label == 0, ] %>% nrow()
+    
+    FP = cnt_dat[cnt_dat$pred == 1 & cnt_dat$label == 0, ] %>% nrow()
+    
+    
+    sens[t] = SENSITIVITY(TP, P)
+    spec[t] = SPECIFICITY(TN, N)
+    
+    prec[t] = PRECISION(TP, FP)
+    rec[t] = RECALL(TP, P)
+  }
+  
+  curve = data.frame(score = th_range,
+                     precision = prec,
+                     recall = rec,
+                     sensitivity = sens,
+                     specificity = spec)
+  
+  return(curve)
+}
+curve = roc.pr.CURVE(df = prediction)
+
+# AUC
+pr.na = which(! is.na(curve$precision | curve$recall))
+pr.auc = AUC(curve$recall[pr.na],
+             curve$precision[pr.na])
+
+roc.na = which(! is.na(curve$sensitivity | curve$specificity))
+roc.auc = AUC(curve$specificity[pr.na],
+              curve$sensitivity[pr.na])
+
+theme_set(theme_bw())
+roc.curve = curve %>%
+  ggplot() +
+  geom_path(aes(1 - specificity, sensitivity)) + 
+  geom_abline(intercept = 0, slope = 1, linetype = "dotted") +
+  xlim(c(0,1)) +
+  ylim(c(0,1)) +
+  ggtitle("ROC",
+          subtitle = paste0("AUC: ", roc.auc %>% round(4)))
+
+roc.curve
+
+pr.curve = curve %>%
+  ggplot() +
+  geom_path(aes(recall, precision)) + 
+  xlim(c(0,1)) +
+  ylim(c(0,1)) +
+  ggtitle("PR",
+          subtitle = paste0("AUC: ", pr.auc %>% round(4)))
+
+pr.curve
+
+ggsave(paste0("results/plots/", JOBID, "_ROC.png"),
+       plot = roc.curve, device = "png", dpi = "retina")
+ggsave(paste0("results/plots/", JOBID, "_PR.png"),
+       plot = pr.curve, device = "png", dpi = "retina")
+
+
 
 ########## actual model ##########
 
