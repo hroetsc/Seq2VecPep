@@ -187,44 +187,90 @@ tokens_test, labels_test, counts_test, emb_test = open_and_format_matrices(token
                                                                            emb_test, acc_test)
 
 
+# generator function
+class SequenceGenerator(keras.utils.Sequence):
+
+    def __init__(self, emb, labels, counts, batchSize, augment=False):
+        self.emb, self.labels, self.counts = emb, labels, counts
+        self.batchSize = batchSize
+        self.augment = augment
+
+        self.rnd_size = int(np.ceil(self.batchSize * 0.2))
+        self.rnd_vflip = np.random.randint(0, self.batchSize, self.rnd_size)
+        self.rnd_hflip = np.random.randint(0, self.batchSize, self.rnd_size)
+        self.rnd_bright = np.random.randint(0, self.batchSize, self.rnd_size)
+
+        self.indices = np.arange(self.counts.shape[0])
+
+    def __len__(self):
+        return int(np.ceil(len(self.counts) / float(self.batchSize)))
+
+    def __getitem__(self, idx):
+        batch_emb = self.emb[idx * self.batchSize: (idx + 1) * self.batchSize, :, :, :]
+        batch_labels = self.labels[idx * self.batchSize: (idx + 1) * self.batchSize]
+        batch_counts = self.counts[idx * self.batchSize: (idx + 1) * self.batchSize]
+
+        # randomly augment input data
+        if self.augment:
+            batch_emb[self.rnd_vflip] = np.flipud(batch_emb[self.rnd_vflip])
+            batch_emb[self.rnd_hflip] = np.fliplr(batch_emb[self.rnd_hflip])
+            batch_emb[self.rnd_bright] = batch_emb[self.rnd_bright] + np.random.uniform(-1, 1)
+
+        print(batch_emb.shape)
+
+        return (batch_emb, [batch_labels, batch_counts])
+
+    def on_epoch_end(self):
+        np.random.shuffle(self.indices)
+
+
 ### build and compile model
-def dense_layer(prev_layer, nodes, drop_prob):
-    drop = layers.Dropout(drop_prob)(prev_layer)
-    norm = layers.BatchNormalization(trainable=True)(drop)
-    dense = layers.Dense(nodes, activation='selu',
-                         kernel_initializer=keras.initializers.LecunNormal(),
-                         kernel_regularizer=keras.regularizers.l2(0.01))(norm)
-    return dense
-
-
-def convolution(prev_layer, no_filters, kernel_size, strides, drop_prob, pooling=True):
-    conv = layers.Convolution2D(filters=no_filters,
-                                kernel_size=kernel_size,
-                                strides=strides,
-                                padding='same',
-                                kernel_initializer=keras.initializers.HeNormal(),
-                                kernel_regularizer=keras.regularizers.l2(0.01),
-                                data_format='channels_first')(prev_layer)
-
-    norm = layers.BatchNormalization(trainable=True)(conv)
-    drop = layers.Dropout(drop_prob)(norm)
-    act = layers.Activation('relu')(drop)
-
-    if pooling:
-        pool = layers.MaxPool2D(pool_size=2,
-                                strides=2,
-                                data_format='channels_first',
-                                padding='same')(act)
-        return pool
-
-    else:
-        return act
-
 
 # function that returns model
 def build_and_compile_model():
-    drop_prob = 0.5
+    ## hyperparameters
+    drop_prob = 0.3
     tf.print('dropout probability: ', drop_prob)
+    lr = 0.001 * hvd.size()
+    tf.print('learning rate, adjusted by number of GPUS: ', lr)
+    lamb = (1 / (2 * lr * epochs))*0.1
+    tf.print('weight decay parameter: ', lamb)
+
+    ## functions
+    def dense_layer(prev_layer, nodes, drop_prob=drop_prob, dropout=False, lamb=lamb):
+
+        if dropout:
+            norm = layers.Dropout(drop_prob)(prev_layer)
+            norm = layers.BatchNormalization(trainable=True)(norm)
+        else:
+            norm = layers.BatchNormalization(trainable=True)(prev_layer)
+
+        dense = layers.Dense(nodes, activation='relu',
+                             kernel_initializer=tf.keras.initializers.HeNormal(),
+                             activity_regularizer=tf.keras.regularizers.l2(lamb))(norm)
+        return dense
+
+    def convolution(prev_layer, no_filters, kernel_size, strides, pooling=True, lamb=lamb):
+        conv = layers.LocallyConnected2D(filters=no_filters,
+                                         kernel_size=kernel_size,
+                                         strides=strides,
+                                         padding='valid',
+                                         kernel_initializer=tf.keras.initializers.HeNormal(),
+                                         activity_regularizer=tf.keras.regularizers.l2(lamb),
+                                         data_format='channels_first')(prev_layer)
+
+        norm = layers.BatchNormalization(trainable=True)(conv)
+        act = layers.Activation('relu')(norm)
+
+        if pooling:
+            pool = layers.MaxPool2D(pool_size=2,
+                                    strides=2,
+                                    data_format='channels_first',
+                                    padding='valid')(act)
+            return pool
+
+        else:
+            return act
 
     ## input
     tf.print('model input')
@@ -232,33 +278,38 @@ def build_and_compile_model():
     inp = keras.Input(shape=(1, tokPerWindow, embeddingDim),
                       name='input')
 
-    # conv = convolution(inp, no_filters=16, kernel_size=3, strides=2, drop_prob=0.1)
-    # conv = convolution(conv, no_filters=32, kernel_size=3, strides=2, drop_prob=0.1)
-    # conv = convolution(conv, no_filters=64, kernel_size=3, strides=2, drop_prob=0.1)
+    dense = dense_layer(inp, embeddingDim)
+    dense = layers.Flatten()(dense)
 
-    dense = layers.Flatten()(inp)
-
-    no_dense = 8
+    no_dense = 6
     tf.print('number of dense layers: ', no_dense)
 
     nodes = 2048
     for l in range(no_dense):
-        dense = dense_layer(dense, nodes, drop_prob)
+        dense = dense_layer(dense, nodes)
         nodes *= 0.5
 
-    norm = layers.BatchNormalization(trainable=True)(dense)
+    res = layers.Reshape((1, 8, 8))(dense)
+    conv = convolution(res, no_filters=8, kernel_size=3, strides=1)
+    conv = layers.Flatten()(conv)
+
+    conv = dense_layer(conv, 1024)
+    conv = dense_layer(conv, 256)
+    conv = dense_layer(conv, 64)
 
     # classification task
+    class_norm = layers.BatchNormalization(trainable=True)(dense)
     classification = layers.Dense(1, activation='sigmoid',
-                                  kernel_initializer=keras.initializers.HeNormal(),
-                                  kernel_regularizer=keras.regularizers.l2(0.01),
-                                  name='classification')(norm)
+                                  kernel_initializer=tf.keras.initializers.HeNormal(),
+                                  activity_regularizer=tf.keras.regularizers.l2(lamb),
+                                  name='classification')(class_norm)
 
     # regression task
+    reg_norm = layers.BatchNormalization(trainable=True)(conv)
     regression = layers.Dense(1, activation='linear',
-                              kernel_initializer=keras.initializers.HeNormal(),
-                              kernel_regularizer=keras.regularizers.l2(0.01),
-                              name='regression')(norm)
+                              kernel_initializer=tf.keras.initializers.HeNormal(),
+                              activity_regularizer=tf.keras.regularizers.l2(lamb),
+                              name='regression')(reg_norm)
 
     ## concatenate to model
     model = keras.Model(inputs=inp, outputs=[classification, regression])
@@ -266,15 +317,13 @@ def build_and_compile_model():
     ## compile model
     tf.print('compile model')
 
-    lr = 0.001 * hvd.size()
-    tf.print('learning rate, adjusted by number of GPUS: ', lr)
     opt = tf.keras.optimizers.Adam(learning_rate=lr)
     opt = hvd.DistributedOptimizer(opt)
 
     losses = {'classification': 'binary_crossentropy',
               'regression': 'mean_squared_error'}
 
-    loss_weights = {'classification': 1.0,
+    loss_weights = {'classification': 0.5,
                     'regression': 1.0}
     tf.print(loss_weights.keys())
     tf.print(loss_weights.values())
@@ -291,10 +340,10 @@ def build_and_compile_model():
     # for reproducibility during optimization
     tf.print('......................................................')
     tf.print('BINARY CLASSIFICATION AND REGRESSION AT THE SAME TIME')
-    tf.print('optimizer: Adam')
+    tf.print('optimizer: Adam - ', lr)
     tf.print('loss: binary_crossentropy and mean_squared_error')
-    tf.print('activation function dense layers: selu/lecun normal')
-    tf.print('regularization: L2 (0.01)')
+    tf.print('activation function dense layers: relu/he normal')
+    tf.print('activity regularization: L2 - ', lamb)
     tf.print('kernel initialization: he normal')
     tf.print('using batch normalization: yes')
     tf.print('using Dropout layer: yes, ', drop_prob)
@@ -306,18 +355,33 @@ def build_and_compile_model():
 #### train model
 print('MODEL TRAINING')
 # define callbacks - adapt later for multi-node training
+# early stopping if model is already converged
+# early stopping does not work at the moment
+# Error: Error occurred when finalizing GeneratorDataset iterator: Failed precondition: Python interpreter state is not initialized. The process may be terminated.
+#         [[{{node PyFunc}}]]
+# only append to callbacks on worker 0?
+
+es = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
+                                      mode='min',
+                                      patience=epochs,
+                                      min_delta=0.05,
+                                      verbose=1,
+                                      restore_best_weights=True)
+
 callbacks = [
+    es,
     hvd.callbacks.BroadcastGlobalVariablesCallback(0),  # broadcast initial variables from rank 0 to all other servers
 ]
 
 # save chackpoints only on worker 0
 if hvd.rank() == 0:
-    callbacks.append(tf.keras.callbacks.ModelCheckpoint(filepath='/scratch2/hroetsc/Hotspots/results/model/ckpts',
-                                                        monitor='val_loss',
-                                                        mode='min',
-                                                        safe_best_only=True,
-                                                        verbose=1,
-                                                        save_weights_only=True))
+    callbacks.append(
+        tf.keras.callbacks.ModelCheckpoint(filepath='/scratch2/hroetsc/Hotspots/results/model/best_model.h5',
+                                           monitor='val_loss',
+                                           mode='min',
+                                           safe_best_only=True,
+                                           verbose=1,
+                                           save_weights_only=False))
 
 # define number of steps - make sure that no. of steps is the same for all ranks!
 # otherwise, stalled ranks problem might occur
@@ -330,15 +394,14 @@ val_steps = int(np.ceil(val_steps / hvd.size()))
 
 ## fit model
 model = build_and_compile_model()
-model.summary()
 
-print('train for {}, validate for {} steps per epoch'.format(steps, val_steps))
-# print('using sequence generator')
-fit = model.fit(x=emb,
-                y=[labels, counts],
-                batch_size=batchSize,
-                validation_batch_size=batchSize,
-                validation_data=(emb_test, [labels_test, counts_test]),
+if hvd.rank() == 0:
+    model.summary()
+    print('train for {}, validate for {} steps per epoch'.format(steps, val_steps))
+    print('using sequence generator')
+
+fit = model.fit(x=SequenceGenerator(emb, labels, counts, batchSize, augment=True),
+                validation_data=SequenceGenerator(emb_test, labels_test, counts_test, batchSize),
                 steps_per_epoch=steps,
                 validation_steps=val_steps,
                 epochs=epochs,
@@ -369,32 +432,37 @@ if hvd.rank() == 0:
 
 ########## part 2: make prediction ##########
 print('MAKE PREDICTION')
-### MAIN PART ###
-# make prediction
-pred = model.predict(x=emb_test,
-                     batch_size=batchSize,
-                     verbose=1 if hvd.rank() == 0 else 0,
-                     max_queue_size=256)
+### INPUT ###
+if hvd.rank() == 0:
+    print('load best model')
+    best_model = tf.keras.models.load_model('/scratch2/hroetsc/Hotspots/results/model/best_model.h5')
 
-print('counts:')
-print(counts_test)
+    ### MAIN PART ###
+    # make prediction
+    pred = best_model.predict(x=emb_test,
+                              batch_size=batchSize,
+                              verbose=1 if hvd.rank() == 0 else 0,
+                              max_queue_size=256)
+    print('counts:')
+    print(counts_test)
 
-print('prediction:')
-print(pred)
+    print('prediction:')
+    print(pred)
 
-# merge actual and predicted counts
-prediction = pd.DataFrame({"Accession": tokens_test[:, 0],
-                           "window": tokens_test[:, 1],
-                           "label": labels_test,
-                           "count": counts_test,
-                           "pred_label": pred[0].flatten(),
-                           "pred_count": pred[1].flatten()})
+    # merge actual and predicted counts
+    prediction = pd.DataFrame({"Accession": tokens_test[:, 0],
+                               "window": tokens_test[:, 1],
+                               "label": labels_test,
+                               "count": counts_test,
+                               "pred_label": pred[0].flatten(),
+                               "pred_count": pred[1].flatten()})
 
-### OUTPUT ###
-print('SAVE PREDICTED COUNTS')
+    ### OUTPUT ###
+    print('SAVE PREDICTED COUNTS')
 
-pd.DataFrame.to_csv(prediction,
-                    '/scratch2/hroetsc/Hotspots/results/model_predictions_rank{}.csv'.format(int(hvd.rank())),
-                    index=False)
+    pd.DataFrame.to_csv(prediction,
+                        '/scratch2/hroetsc/Hotspots/results/model_predictions_rank{}.csv'.format(int(hvd.rank())),
+                        index=False)
+
 
 tf.keras.backend.clear_session()

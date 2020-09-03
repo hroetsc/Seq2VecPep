@@ -14,8 +14,8 @@ library(tidymodels)
 library(DescTools)
 
 
-JOBID = "5195099-0"
-no_ranks = 8
+JOBID = "5198425-3"
+no_ranks = 1
 
 ### INPUT ###
 # download results
@@ -296,8 +296,20 @@ ggsave(paste0("results/plots/", JOBID, "_PR.png"),
 
 
 
-########## actual model ##########
+########## estimating weight decay parameter ##########
 
-ls = h5ls("results/model/model.h5")
-h5read("results/model/model.h5",
-       "/optimizer_weights/Adam/output/kernel")
+ls = h5ls("results/model/best_model.h5")
+
+# A Simple Trick for Estimating the Weight Decay Parameter (Roegnvaldsson 2006
+# weight decay for regression
+reg_weights = h5read("results/model/best_model.h5",
+                     "/model_weights/regression/regression")[[2]]
+
+est_reg_lambda = abs(2 * reg_weights) %>% sum()
+
+# weight decay for regression
+class_weights = h5read("results/model/best_model.h5",
+                     "/model_weights/classification/classification")[[2]]
+
+est_class_lambda = abs(2 * reg_weights) %>% sum()
+
