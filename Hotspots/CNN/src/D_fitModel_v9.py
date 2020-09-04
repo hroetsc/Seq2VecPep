@@ -14,15 +14,16 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+
 tf.keras.backend.clear_session()
 import horovod.tensorflow.keras as hvd
+
 hvd.init()
 
-from D_helper import print_initialization,\
-    format_input, open_and_format_matrices,\
-    RestoreBestModel, lr_schedule, LearningRateScheduler,\
+from D_helper import print_initialization, \
+    format_input, open_and_format_matrices, \
+    RestoreBestModel, lr_schedule, LearningRateScheduler, \
     save_training_res
-
 
 print_initialization()
 
@@ -70,7 +71,6 @@ tokensAndCounts_test = pd.read_csv('/scratch2/hroetsc/Hotspots/data/windowTokens
 emb_test = '/scratch2/hroetsc/Hotspots/data/embMatrices_OPTtesting.dat'
 acc_test = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_OPTtesting.dat'
 
-
 ### MAIN PART ###
 print('FORMAT INPUT AND GET EMBEDDING MATRICES')
 
@@ -89,63 +89,124 @@ def build_and_compile_model():
     ## hyperparameters
     lr = 0.001 * hvd.size()
     tf.print('learning rate, adjusted by number of GPUS: ', lr)
-    lamb = (1 / (2 * lr * epochs)) * 0.0001
-    tf.print('weight decay parameter: ', lamb)
 
-    # build dense relu layers with batch norm and dropout
-    def dense_layer(prev_layer, nodes, lamb=lamb):
-        norm = layers.BatchNormalization(trainable=True)(prev_layer)
-        dense = layers.Dense(nodes, activation='selu',
-                             activity_regularizer=tf.keras.regularizers.l1(lamb),
-                             kernel_initializer=tf.keras.initializers.LecunNormal())(norm)
-        return dense
+    def bn_relu(layer):
+        bn = layers.BatchNormalization(trainable=True)(layer)
+        relu = layers.Activation('relu')(bn)
+        return relu
 
-    # residual blocks (convolutions)
-    def residual_block(prev_layer, no_filters, kernel_size, strides, lamb=lamb):
-        conv = layers.Conv2D(filters=no_filters,
+    def convolution(layer, filters, kernel_size, strides, pool_size=2):
+        conv = layers.Conv2D(filters=filters,
                              kernel_size=kernel_size,
                              strides=strides,
                              padding='same',
-                             kernel_initializer=tf.keras.initializers.HeNormal(),
-                             activity_regularizer=tf.keras.regularizers.l1(lamb),
-                             data_format='channels_first')(prev_layer)
-
-        norm = layers.BatchNormalization(trainable=True)(conv)
-        act = layers.LeakyReLU()(norm)
-
-        pool = layers.AveragePooling2D(pool_size=2,
-                                       strides=2,
-                                       data_format='channels_first',
-                                       padding='same')(act)
+                             activation='relu',
+                             data_format='channels_first')(layer)
+        pool = layers.MaxPool2D(pool_size=pool_size,
+                                strides=strides,
+                                padding='same',
+                                data_format='channels_first')(conv)
         return pool
+
+    def convolutional_block(layer, filters, kernel_size):
+        ### BLOCK A ###
+        A_init = convolution(inp, filters=filters, kernel_size=1, strides=1, pool_size=1)
+        # a) original: weight-BN-ReLU-weight-BN-addition-ReLU
+        A = layers.Conv2D(filters=filters,
+                          kernel_size=(kernel_size, kernel_size),
+                          strides=1,
+                          padding='same',
+                          data_format='channels_first')(A_init)
+        A = bn_relu(A)
+        A = layers.Conv2D(filters=filters,
+                          kernel_size=(kernel_size, kernel_size),
+                          strides=1,
+                          padding='same',
+                          data_format='channels_first')(A)
+        A = layers.BatchNormalization(trainable=True)(A)
+        A_add = layers.Add()([A_init, A])
+        A_add = layers.Activation('relu')(A_add)
+        A_add = convolution(A_add, filters=filters, kernel_size=kernel_size, strides=2)
+
+
+        ### BLOCK B ###
+        B_init = convolution(inp, filters=filters, kernel_size=1, strides=1, pool_size=1)
+        # b) BN after addition: weight-BN-ReLU-weight-addition-BN-ReLU
+        B = layers.Conv2D(filters=filters,
+                          kernel_size=(kernel_size, kernel_size),
+                          strides=1,
+                          padding='same',
+                          data_format='channels_first')(B_init)
+        B = bn_relu(B)
+        B = layers.Conv2D(filters=filters,
+                          kernel_size=(kernel_size, kernel_size),
+                          strides=1,
+                          padding='same',
+                          data_format='channels_first')(B)
+        B_add = layers.Add()([B_init, B])
+        B_add = bn_relu(B_add)
+        B_add = convolution(B_add, filters=filters, kernel_size=kernel_size, strides=2)
+
+
+        ### BLOCK C ###
+        C_init = convolution(inp, filters=filters, kernel_size=1, strides=1, pool_size=1)
+        # c) ReLU before addition: weight-BN-ReLU-weight-BN-ReLU-addition
+        C = layers.Conv2D(filters=filters,
+                          kernel_size=(kernel_size, kernel_size),
+                          strides=1,
+                          padding='same',
+                          data_format='channels_first')(C_init)
+        C = bn_relu(C)
+        C = layers.Conv2D(filters=filters,
+                          kernel_size=(kernel_size, kernel_size),
+                          strides=1,
+                          padding='same',
+                          data_format='channels_first')(C)
+        C = bn_relu(C)
+        C_add = layers.Add()([C_init, C])
+        C_add = convolution(C_add, filters=filters, kernel_size=kernel_size, strides=2)
+
+
+        ### BLOCK D ###
+        D_init = convolution(inp, filters=filters, kernel_size=1, strides=1, pool_size=1)
+        # d) full pre-activation (SpliceAI): BN-ReLU-weight-BN-ReLU-weight-addition
+        D = bn_relu(D_init)
+        D = layers.Conv2D(filters=filters,
+                          kernel_size=(kernel_size, kernel_size),
+                          strides=1,
+                          padding='same',
+                          data_format='channels_first')(D)
+        D = bn_relu(D)
+        D = layers.Conv2D(filters=filters,
+                          kernel_size=(kernel_size, kernel_size),
+                          strides=1,
+                          padding='same',
+                          data_format='channels_first')(D)
+        D_add = layers.Add()([D_init, D])
+        D_add = convolution(D_add, filters=filters, kernel_size=kernel_size, strides=2)
+
+        ### concatenate ###
+        conc = layers.Concatenate(axis=1)([A_add, B_add, C_add, D_add])
+        flat = layers.Flatten()(conc)
+
+        return flat
+
 
     ## input
     tf.print('model input')
     inp = keras.Input(shape=(1, tokPerWindow, embeddingDim),
                       name='input')
 
-    ## hyperparameters
-    num_filters = 16  # starting filter value
-    kernel_size = 5
-    strides = 1
+    block = convolutional_block(inp, filters=16, kernel_size=3)
 
-    # ## convolutional layers
-    tf.print('convolutional layers')
-    conv1 = residual_block(inp, num_filters, kernel_size, strides)
-    conv2 = residual_block(conv1, int(num_filters * 2), kernel_size, strides)
-    conv3 = residual_block(conv2, int(num_filters * 4), kernel_size, strides)
+    dense = layers.Dense(1024, activation='relu')(block)
+    dense = layers.Dense(256, activation='relu')(dense)
+    dense = layers.Dense(64, activation='relu')(dense)
 
-    ## dense layers
-    tf.print('dense layers')
-    flat = layers.Flatten()(conv3)
-    dense1 = dense_layer(flat, 1024)
-    dense2 = dense_layer(dense1, 256)
-    dense3 = dense_layer(dense2, 64)
-
-    out_norm = layers.BatchNormalization(trainable=True)(dense3)
-    out = layers.Dense(1, activation='linear',
+    out_norm = layers.BatchNormalization(trainable=True)(dense)
+    out = layers.Dense(1,
+                       activation='linear',
                        kernel_initializer=tf.keras.initializers.HeNormal(),
-                       activity_regularizer=tf.keras.regularizers.l1(lamb),
                        name='output')(out_norm)
 
     ## concatenate to model
@@ -156,27 +217,18 @@ def build_and_compile_model():
     opt = tf.keras.optimizers.Adam(learning_rate=lr)
     opt = hvd.DistributedOptimizer(opt)
 
-    model.compile(loss='mean_squared_error',
+    model.compile(loss=keras.losses.MeanSquaredError(),
                   optimizer=opt,
-                  metrics=['mean_absolute_percentage_error', 'mean_absolute_error'],
+                  metrics=['mean_absolute_error', 'mean_absolute_percentage_error', 'accuracy'],
                   experimental_run_tf_function=False)
 
     # for reproducibility during optimization
     tf.print('......................................................')
-    tf.print('SIMPLE CONVOLUTIONAL STRUCTURE')
+    tf.print('MIXTURE OF RESNET AND SPLICEAI')
     tf.print('optimizer: Adam')
     tf.print("learning rate: ", lr)
     tf.print('loss: mean squared error')
-    tf.print('channels: first')
-    tf.print('pooling: Average2D, strides = 2')
-    tf.print('activation function: leaky relu / he_normal')
-    tf.print('number of dense layers before output layer: 3 (1024-64, selu)')
-    tf.print('output activation function: linear')
-    tf.print('starting filter value: ', num_filters)
-    tf.print('kernel size: ', kernel_size)
-    tf.print('strides: ', strides)
-    tf.print('number of convolutions: 3')
-    tf.print('activity regularization: L1 - ', lamb)
+    tf.print('regularization: none')
     tf.print('using batch normalization: yes')
     tf.print('using Dropout layer: no')
     tf.print('......................................................')
@@ -186,7 +238,7 @@ def build_and_compile_model():
 
 #### train model
 print('MODEL TRAINING')
-
+# define callbacks
 callbacks = [RestoreBestModel(),
              LearningRateScheduler(schedule=lr_schedule, compress=.4),
              hvd.callbacks.BroadcastGlobalVariablesCallback(0),
@@ -233,12 +285,10 @@ fit = model.fit(x=emb,
 print('SAVE MODEL AND METRICS')
 save_training_res(model, fit)
 
-
 ########## part 2: make prediction ##########
 print('MAKE PREDICTION')
-### INPUT ###
+
 if hvd.rank() == 0:
-    ### MAIN PART ###
     # make prediction
     pred = model.predict(x=emb_test,
                          batch_size=16,
@@ -257,9 +307,7 @@ if hvd.rank() == 0:
                                "count": counts_test,
                                "pred_count": pred.flatten()})
 
-    ### OUTPUT ###
     print('SAVE PREDICTED COUNTS')
-
     pd.DataFrame.to_csv(prediction,
                         '/scratch2/hroetsc/Hotspots/results/model_predictions.csv',
                         index=False)

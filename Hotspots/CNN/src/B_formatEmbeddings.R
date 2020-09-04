@@ -46,7 +46,15 @@ weights$word_ID = NULL
 weights = weights[, c("subword", seq(1, embeddingDim))]
 
 
+# get mean vector of all tokens
+for (c in 2:ncol(weights)) {
+  weights[, c] = weights[, c] %>% as.character %>% as.numeric()
+}
+mu = colMeans(weights[, c(2:ncol(weights))])
+
+
 ### OUTPUT ###
 write.csv(weights, "data/token_embeddings.csv", row.names = F)
+write.csv(mu, "data/mean_emb.csv", row.names = F)
 
 

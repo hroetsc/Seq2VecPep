@@ -12,21 +12,29 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
 import shap
 
 pseudocounts = 1
 tokPerWindow = 8
 embeddingDim = 128
+batchSize = 16
 
+no_models = 8
 
 ### INPUT ###
-# load model
-model = tf.keras.models.load_model('CNN/results/model/model.h5')
-
 # load some of the data
+mu = pd.read_csv('CNN/data/mean_emb.csv')
+mu = np.tile(np.array(mu).flatten(), tokPerWindow).reshape((tokPerWindow, embeddingDim))
+
 tokensAndCounts = pd.read_csv('CNN/data/windowTokens_OPTtraining.csv')
 emb = 'CNN/data/embMatrices_OPTtraining.dat'
 acc = 'CNN/data/embMatricesAcc_OPTtraining.dat'
+
+tokensAndCounts_test = pd.read_csv('CNN/data/windowTokens_OPTtesting.csv')
+emb_test = 'CNN/data/embMatrices_OPTtesting.dat'
+acc_test = 'CNN/data/embMatricesAcc_OPTtesting.dat'
 
 def format_input(tokensAndCounts):
     tokens = np.array(tokensAndCounts.loc[:, ['Accession', 'tokens']], dtype='object')
@@ -37,6 +45,7 @@ def format_input(tokensAndCounts):
 
     print('number of features: ', counts.shape[0])
     return tokens, counts
+
 
 def open_and_format_matrices(tokens, counts, emb_path, acc_path):
     no_elements = int(tokPerWindow * embeddingDim)  # number of matrix elements per sliding window
@@ -57,6 +66,7 @@ def open_and_format_matrices(tokens, counts, emb_path, acc_path):
 
             # make sure to pass 4D-Tensor to model: (batchSize, depth, height, width)
             dt = dt.reshape((tokPerWindow, embeddingDim))
+            # dt = dt - mu
             embMatrix[b] = np.expand_dims(dt, axis=0)
 
             # get current accession (index)
@@ -79,11 +89,122 @@ def open_and_format_matrices(tokens, counts, emb_path, acc_path):
     # output: reformatted tokens and counts, embedding matrix
     return tokens, counts, embMatrix
 
-
 tokens, counts = format_input(tokensAndCounts)
 tokens, counts, emb = open_and_format_matrices(tokens, counts, emb, acc)
 
+tokens_test, counts_test = format_input(tokensAndCounts_test)
+tokens_test, counts_test, emb_test = open_and_format_matrices(tokens_test, counts_test, emb_test, acc_test)
+
 
 ### MAIN PART ###
+### visualize embeddings ###
+# pick 200 random embeddings and their counts
+idx = np.random.randint(0, emb.shape[0], 200)
+tmp_counts = [None]*len(idx)
+tmp_embs = [None]*len(idx)
+
+for i in range(len(idx)):
+    tmp_counts[i] = float(counts[idx[i]])
+    tmp_embs[i] = emb[idx[i], :, :, :].reshape(tokPerWindow, embeddingDim)
+
+tmp_counts = np.array(tmp_counts)
+tmp_embs = np.array(tmp_embs)
+
+# sort embeddings by counts
+sort = np.argsort(tmp_counts)
+tmp_counts = tmp_counts[sort]
+tmp_embs = tmp_embs[sort]
+
+# plot
+fig, axs = plt.subplots(nrows=len(idx), ncols=1, figsize=(1, 12))
+for i in range(len(sort)):
+    axs[i].imshow(tmp_embs[i, :, :])
+    axs[i].axis('off')
+fig.tight_layout()
+plt.savefig(str('CNN/results/sequence_matrices/sequence_sorted.pdf'), dpi=1200)
+plt.show()
+
+pca = PCA(n_components=8)
+fig, axs = plt.subplots(nrows=len(idx), ncols=1, figsize=(1, 12))
+for i in range(len(sort)):
+    axs[i].imshow(pca.fit_transform(tmp_embs[i, :, :]))
+    axs[i].axis('off')
+fig.tight_layout()
+plt.savefig(str('CNN/results/sequence_matrices/sequence_PCA.pdf'), dpi=1200)
+plt.show()
+
+
+### load models and create emsemble
+all_models = [None] * no_models
+
+for i in range(no_models):
+    print('loading model from rank ', i)
+
+    model = tf.keras.models.load_model('CNN/results/model/best_model_rank{}.h5'.format(i))
+
+    for layer in model.layers:
+        layer.trainable = False
+        layer._name = 'ensemble_' + str(i) + '_' + layer.name
+
+    all_models[i] = model
+
+print('building ensemble')
+ensemble_in = [model.input for model in all_models]
+ensemble_out = [model.output for model in all_models]
+
+merge = layers.Concatenate()(ensemble_out)
+dense = layers.Dense(128, activation='relu',
+                     kernel_initializer=tf.keras.initializers.HeNormal())(merge)
+out = layers.Dense(1, activation='linear',
+                   name='ensemble_output')(dense)
+
+ensemble = keras.Model(inputs=ensemble_in, outputs=out)
+ensemble.compile(loss='mean_squared_error',
+                 metrics='mean_absolute_error',
+                 optimizer=keras.optimizers.Adam(learning_rate=0.001))
+
+ensemble.summary()
+
+ensemble.fit(x=emb,
+             y=counts,
+             batch_size=batchSize,
+             validation_data=(emb_test, counts_test),
+             validation_batch_size=batchSize,
+             epochs=10,
+             initial_epoch=1,
+             max_queue_size=256,
+             verbose=2,
+             shuffle=True)
+
+# save ensemble
+ensemble.save('CNN/results/ensemble.h5')
+
+### MAIN PART ###
+# make prediction
+pred = ensemble.predict(x=emb_test,
+                        batch_size=16,
+                        verbose=1,
+                        max_queue_size=256)
+print('counts:')
+print(counts_test)
+
+print('prediction:')
+print(pred.flatten())
+
+# merge actual and predicted counts
+prediction = pd.DataFrame({"Accession": tokens_test[:, 0],
+                           "window": tokens_test[:, 1],
+                           "count": counts_test,
+                           "pred_count": pred.flatten()})
+
+print('SAVE PREDICTED COUNTS')
+pd.DataFrame.to_csv(prediction,
+                    'CNN/results/ensemble_predictions.csv',
+                    index=False)
+
+
+### apply shap values
 background = emb[np.random.choice(emb.shape[0], 100, replace=False), :, :, :]
-e = shap.DeepExplainer(model, background)
+e = shap.DeepExplainer(ensemble, background)
+
+shap_values = e.shap_values(background)

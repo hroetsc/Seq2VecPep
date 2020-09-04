@@ -14,7 +14,7 @@ library(tidymodels)
 library(DescTools)
 
 
-JOBID = "5198425-3"
+JOBID = "5201169-36"
 no_ranks = 1
 
 ### INPUT ###
@@ -23,22 +23,21 @@ system("scp -rp hroetsc@transfer.gwdg.de:/usr/users/hroetsc/Hotspots/results/* r
 
 # open them
 metrics = read.table("results/model_metrics.txt", sep = ",", stringsAsFactors = F)
+prediction = read.csv("results/model_predictions.csv", stringsAsFactors = F)
 
-
-prediction.fs = list.files("results", pattern = "model_predictions_rank",
-                        full.names = T, recursive = T)
-for (p in 0:(no_ranks-1)){
-  if (p == 0){
-    prediction = read.csv(paste0("results/model_predictions_rank", p, ".csv"), stringsAsFactors = F)
-  } else {
-    
-    prediction = rbind(prediction,
-                      read.csv(paste0("results/model_predictions_rank", p, ".csv"), stringsAsFactors = F))
-    
-  }
-}
-
-prediction = unique(prediction)
+# prediction.fs = list.files("results", pattern = "model_predictions_rank",
+#                            full.names = T, recursive = T)
+# 
+# for (p in 0:(no_ranks-1)){
+#   if (p == 0){
+#     prediction = read.csv(paste0("results/model_predictions_rank", p, ".csv"), stringsAsFactors = F)
+#   } else {
+#     
+#     prediction = rbind(prediction,
+#                       read.csv(paste0("results/model_predictions_rank", p, ".csv"), stringsAsFactors = F))
+#     
+#   }
+# }
 
 
 ### MAIN PART ###
@@ -76,11 +75,19 @@ plotting = function(col1 = "", col2 = "", name = "", path = paste0("results/plot
     dir.create(out.path)
   }
   
-  if (max(col1, col2) <=1){
-    upper = 1
+  
+  if (min(col1, col2) < 0){
+    col1 = log2(col1 + abs(lower)+1)
+    col2 = log2(col2 + abs(lower)+1)
+    
   } else {
-    upper = max(col1, col2)
+    col1 = log2(col1)
+    col2 = log2(col2)
   }
+  
+  lower = min(col1, col2) - 1
+  upper = max(col1, col2) + 1
+  
   
   png(filename = paste0(path, name, ".png"),
       width = 2000, height = 2000, res = 300)
@@ -90,9 +97,9 @@ plotting = function(col1 = "", col2 = "", name = "", path = paste0("results/plot
        pch = 20,
        cex = 0.8,
        col = "darkblue",
-       ylim = c(0, upper),
+       ylim = c(lower, upper),
        xlab = "epoch",
-       ylab = str_replace_all(name, "_", " "))
+       ylab = paste0('log2 ', str_replace_all(name, "_", " ")))
   points(col2 ~ epochs,
          pch = 1,
          cex = 0.8,
@@ -112,6 +119,17 @@ for (i in 1:(ncol(metrics)/2)){
            col2 = metrics[, (i + (ncol(metrics)/2))],
            name = colnames(metrics)[i])
 }
+
+# generalization loss
+gl = 100 * ((metrics$val_loss/min(metrics$val_loss)) - 1)
+
+png(filename = paste0("results/plots/", JOBID, "_generalisation.png"),
+    width = 2000, height = 2000, res = 300)
+plot(log2(gl), col='seagreen',
+     ylab = 'log2 generalisation loss',
+     xlab = 'epoch',
+     main = 'generalisation loss during training')
+dev.off()
 
 
 ########## regression ##########
@@ -167,7 +185,7 @@ ggsave(paste0("results/plots/", JOBID, "_trueVSpredicted-dens.png"), plot = last
        device = "png", dpi = "retina")
 
 ggplot(prediction, aes(x = count, y = pred_count)) +
-  geom_point(alpha = 0.05, size = 0.1) +
+  geom_point(alpha = 0.5, size = 0.3) +
   xlim(c(start, stop)) +
   ylim(c(start, stop)) +
   geom_abline(intercept = 0, slope = 1, linetype = "dotted") +
@@ -300,6 +318,10 @@ ggsave(paste0("results/plots/", JOBID, "_PR.png"),
 
 ls = h5ls("results/model/best_model.h5")
 
+weights = h5read("results/model/best_model.h5"
+                 , "/model_weights/output/output")
+summary(weights[["kernel:0"]] %>% as.numeric())
+
 # A Simple Trick for Estimating the Weight Decay Parameter (Roegnvaldsson 2006
 # weight decay for regression
 reg_weights = h5read("results/model/best_model.h5",
@@ -311,5 +333,5 @@ est_reg_lambda = abs(2 * reg_weights) %>% sum()
 class_weights = h5read("results/model/best_model.h5",
                      "/model_weights/classification/classification")[[2]]
 
-est_class_lambda = abs(2 * reg_weights) %>% sum()
+est_class_lambda = abs(2 * class_weights) %>% sum()
 
