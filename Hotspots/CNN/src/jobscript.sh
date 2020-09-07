@@ -15,7 +15,7 @@ module load cudnn/10.1v7.6.5
 salloc -p gpu -C scratch2 -N 8 -n 8 --tasks-per-node 1 --gpus-per-task=1 --mem-per-gpu=10G -t 12:00:00 --job-name='hotspots'
 scontrol show hostnames $SLURM_JOB_NODELIST
 
-srun --mpi=pmix -o hotspots-%J.out python D_fitModel_v3.py
+srun --mpi=pmix -o hotspots-%J.out python D_fitModel_v9.py
 cp -rf /scratch2/hroetsc/Hotspots/results/* results/
 
 #mpirun --mca mpi_warn_on_fork 0 --output-filename hotspots-%J-%N.out python C_fitModel.py

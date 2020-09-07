@@ -12,8 +12,8 @@ library(zoo)
 
 
 ### INPUT ###
-
-prediction = read.csv("results/model_predictions_rank0.csv", stringsAsFactors = F)
+JOBID = "5205164-12"
+prediction = read.csv("results/model_predictions.csv", stringsAsFactors = F)
 # tmp
 # prediction$pred_count = prediction$pred_label*prediction$pred_count
 
@@ -68,7 +68,7 @@ for (i in 1:nrow(prots)){
 
 # plot
 
-pdf("results/Counts_trueVSpred.pdf", width = 12, height = 8)
+pdf(paste0("results/",JOBID,"_Counts_trueVSpred.pdf"), width = 12, height = 8)
 par(mfrow = c(2,2))
 
 for (k in 1:length(countsTrue)) {

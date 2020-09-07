@@ -14,12 +14,13 @@ library(tidymodels)
 library(DescTools)
 
 
-JOBID = "5201169-36"
+JOBID = "5205164-12"
 no_ranks = 1
 
 ### INPUT ###
 # download results
-system("scp -rp hroetsc@transfer.gwdg.de:/usr/users/hroetsc/Hotspots/results/* results/")
+system("scp -rp hroetsc@transfer.gwdg.de:/usr/users/hroetsc/Hotspots/results/model_metrics.txt results/")
+system("scp -rp hroetsc@transfer.gwdg.de:/usr/users/hroetsc/Hotspots/results/model_predictions.csv results/")
 
 # open them
 metrics = read.table("results/model_metrics.txt", sep = ",", stringsAsFactors = F)
@@ -185,7 +186,7 @@ ggsave(paste0("results/plots/", JOBID, "_trueVSpredicted-dens.png"), plot = last
        device = "png", dpi = "retina")
 
 ggplot(prediction, aes(x = count, y = pred_count)) +
-  geom_point(alpha = 0.5, size = 0.3) +
+  geom_point(alpha = 0.3, size = 0.1) +
   xlim(c(start, stop)) +
   ylim(c(start, stop)) +
   geom_abline(intercept = 0, slope = 1, linetype = "dotted") +

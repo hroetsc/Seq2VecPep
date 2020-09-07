@@ -1,11 +1,9 @@
 import os
 import numpy as np
 import pandas as pd
-
+from sklearn.decomposition import PCA
 import tensorflow as tf
-
 from tensorflow import keras
-from tensorflow.keras import layers
 import horovod.tensorflow.keras as hvd
 
 ########################################################################################################################
@@ -77,14 +75,17 @@ def format_input(tokensAndCounts):
 
 
 
-def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, mu, augment=False):
+def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, augment=False, ret_pca=False):
     no_elements = int(tokPerWindow * embeddingDim)  # number of matrix elements per sliding window
     # how many bytes are this? (32-bit encoding --> 4 bytes per element)
     chunk_size = int(no_elements * 4)
 
     embMatrix = [None] * tokens.shape[0]
+    PCAs = [None] * tokens.shape[0]
     accMatrix = [None] * tokens.shape[0]
     chunk_pos = 0
+
+    pca = PCA(n_components=tokPerWindow)
 
     # open weights and accessions binary file
     with open(emb_path, 'rb') as emin, open(acc_path, 'rb') as ain:
@@ -99,6 +100,7 @@ def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, mu, aug
 
             # make sure to pass 4D-Tensor to model: (batchSize, depth, height, width)
             dt = dt.reshape((tokPerWindow, embeddingDim))
+            PCAs[b] = np.expand_dims(pca.fit_transform(dt), axis=0)
 
             # for 2D convolution --> 5d input:
             embMatrix[b] = np.expand_dims(dt, axis=0)
@@ -121,6 +123,7 @@ def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, mu, aug
     labels = labels[accMatrix]
 
     embMatrix = np.array(embMatrix, dtype='float32')
+    PCAs = np.array(PCAs)
 
     # randomly augment training data
     if augment:
@@ -134,12 +137,17 @@ def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, mu, aug
         embMatrix_bright = embMatrix[rnd_bright, :, :, :] + np.random.uniform(-1, 1)
 
         embMatrix = np.concatenate((embMatrix, embMatrix_vflip, embMatrix_hflip, embMatrix_bright))
+        PCAs = np.concatenate((PCAs, PCAs[rnd_vflip], PCAs[rnd_hflip], PCAs[rnd_bright]))
         labels = np.concatenate((labels, labels[rnd_vflip], labels[rnd_hflip], labels[rnd_bright]))
         counts = np.concatenate((counts, counts[rnd_vflip], counts[rnd_hflip], counts[rnd_bright]))
         tokens = np.concatenate((tokens, tokens[rnd_vflip], tokens[rnd_hflip], tokens[rnd_bright]))
 
     # output: reformatted tokens and counts, embedding matrix
-    return tokens, labels, counts, embMatrix
+    if ret_pca:
+        return tokens, labels, counts, embMatrix, PCAs
+
+    else:
+        return tokens, labels, counts, embMatrix
 
 
 ########################################################################################################################
@@ -172,7 +180,7 @@ def triang(x, amp, period):
 
 # plan for learning rates
 e = np.arange(0,epochs+1)
-LR_SCHEDULE = [(x, triang(x, 0.005, int(epochs/5))) for x in e]
+LR_SCHEDULE = [(x, triang(x, 0.01, int(epochs/5))) for x in e]
 
 def lr_schedule(epoch, cnt_lr):
     if epoch < LR_SCHEDULE[0][0] or epoch > LR_SCHEDULE[-1][0]:
@@ -224,3 +232,22 @@ def save_training_res(model, fit):
         m = list(zip(name, val))
         m = pd.DataFrame(m)
         pd.DataFrame.to_csv(m, '/scratch2/hroetsc/Hotspots/results/model_metrics.txt', header=False, index=False)
+
+
+def combine_predictions():
+    print('combining predictions from all ranks')
+
+    for i in range(hvd.size()):
+        cnt_pred = pd.read_csv('/scratch2/hroetsc/Hotspots/results/model_prediction_rank{}.csv'.format(i))
+        if i == 0:
+            res = pd.DataFrame({'Accession': cnt_pred['Accession'],
+                                'window': cnt_pred['window'],
+                                'label': cnt_pred['label'],
+                                'count': cnt_pred['count'],
+                                'pred_count': cnt_pred['pred_count']*(1/hvd.size())})
+        else
+            res['pred_count'] += cnt_pred['pred_count']*(1/hvd.size())
+
+    pd.DataFrame.to_csv(res,
+                        '/scratch2/hroetsc/Hotspots/results/model_predictions.csv',
+                        index=False)
