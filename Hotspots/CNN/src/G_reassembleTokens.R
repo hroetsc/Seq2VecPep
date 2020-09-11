@@ -12,7 +12,6 @@ library(zoo)
 
 
 ### INPUT ###
-JOBID = "5205164-12"
 prediction = read.csv("results/model_predictions.csv", stringsAsFactors = F)
 # tmp
 # prediction$pred_count = prediction$pred_label*prediction$pred_count

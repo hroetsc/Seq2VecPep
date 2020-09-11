@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
+from sklearn.feature_selection import *
 import tensorflow as tf
 from tensorflow import keras
 import horovod.tensorflow.keras as hvd
@@ -47,8 +48,8 @@ def print_initialization():
 embeddingDim = 128
 tokPerWindow = 8
 
-epochs = 160
-batchSize = 16
+epochs = 400
+batchSize = 32
 pseudocounts = 1
 
 epochs = int(np.ceil(epochs / hvd.size()))
@@ -60,6 +61,8 @@ batchSize = batchSize * hvd.size()
 ########################################################################################################################
 
 def format_input(tokensAndCounts):
+    print('format tokens and counts and retrieve labels')
+
     tokens = np.array(tokensAndCounts.loc[:, ['Accession', 'tokens']], dtype='object')
     counts = np.array(tokensAndCounts['counts'], dtype='float32')
 
@@ -75,7 +78,10 @@ def format_input(tokensAndCounts):
 
 
 
-def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, augment=False, ret_pca=False):
+def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, no_features, proteins,
+                             augment=False, ret_pca=False):
+    print('open and format embedding matrices, get all features')
+
     no_elements = int(tokPerWindow * embeddingDim)  # number of matrix elements per sliding window
     # how many bytes are this? (32-bit encoding --> 4 bytes per element)
     chunk_size = int(no_elements * 4)
@@ -87,6 +93,10 @@ def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, augment
 
     pca = PCA(n_components=tokPerWindow)
 
+    def scaling(x, a, b):
+        sc_x = (x - np.min(x)) / (np.max(x) - np.min(x))
+        return (b-a)*sc_x + a
+
     # open weights and accessions binary file
     with open(emb_path, 'rb') as emin, open(acc_path, 'rb') as ain:
         # loop over files to get elements
@@ -95,20 +105,28 @@ def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, augment
             # read current chunk of embeddings and format in matrix shape
             dt = np.fromfile(emin, dtype='float32', count=no_elements)
 
-            # normalize input data (z-transformation)
-            # dt = (dt - np.mean(dt)) / np.std(dt)
+            # get current accession (index)
+            ain.seek(int(b * 4), 0)
+            cnt_acc = int(np.fromfile(ain, dtype='int32', count=1))
+            accMatrix[b] = cnt_acc
+
+            # for biophysical properties: replace NaNs
+            # dt = np.nan_to_num(dt)
+            # z-transform input data
+            # dt = (dt - np.min(dt)) / (np.max(dt) - np.min(dt))
+
+            # scale input data between 0 and 255 (color)
+            # dt = scaling(dt, a=0, b=255)
 
             # make sure to pass 4D-Tensor to model: (batchSize, depth, height, width)
             dt = dt.reshape((tokPerWindow, embeddingDim))
-            PCAs[b] = np.expand_dims(pca.fit_transform(dt), axis=0)
 
             # for 2D convolution --> 5d input:
             embMatrix[b] = np.expand_dims(dt, axis=0)
             # embMatrix[b] = dt
 
-            # get current accession (index)
-            ain.seek(int(b * 4), 0)
-            accMatrix[b] = int(np.fromfile(ain, dtype='int32', count=1))
+            # apply PCA
+            PCAs[b] = np.expand_dims(pca.fit_transform(dt), axis=0)
 
             # increment chunk position
             chunk_pos += chunk_size
@@ -124,6 +142,17 @@ def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, augment
 
     embMatrix = np.array(embMatrix, dtype='float32')
     PCAs = np.array(PCAs)
+
+    # get protein embeddings
+    tok = pd.DataFrame(tokens[:, 0], columns=['Accession'])
+    prots = tok.merge(proteins, how='left')
+    prots = np.array(prots.iloc[:, 1:])
+
+    # get the proper shape and merge with embedding matrix
+    # prots = np.array([np.tile(prots[i, :], tokPerWindow).reshape((tokPerWindow, embeddingDim)) for i in range(prots.shape[0])])
+    # prots = np.expand_dims(prots, axis=1)
+
+    # embMatrix = np.concatenate((embMatrix, prots), axis=1)
 
     # randomly augment training data
     if augment:
@@ -142,12 +171,18 @@ def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, augment
         counts = np.concatenate((counts, counts[rnd_vflip], counts[rnd_hflip], counts[rnd_bright]))
         tokens = np.concatenate((tokens, tokens[rnd_vflip], tokens[rnd_hflip], tokens[rnd_bright]))
 
+    # select best features
+    embMatrix_flat = np.array([embMatrix[i, :, :, :].flatten() for i in range(embMatrix.shape[0])])
+    selector = SelectKBest(f_regression, k=no_features)
+    BestFeatures = selector.fit_transform(X=embMatrix_flat, y=counts)
+
+
     # output: reformatted tokens and counts, embedding matrix
     if ret_pca:
-        return tokens, labels, counts, embMatrix, PCAs
+        return tokens, labels, counts, embMatrix, prots, BestFeatures, PCAs
 
     else:
-        return tokens, labels, counts, embMatrix
+        return tokens, labels, counts, embMatrix, prots, BestFeatures
 
 
 ########################################################################################################################
@@ -173,42 +208,36 @@ class RestoreBestModel(keras.callbacks.Callback):
         print('RESTORING WEIGHTS FROM VALIDATION LOSS {}'.format(self.best))
 
 
-# learning rate schedule
-# triangular learning rate function
-def triang(x, amp, period):
-    return (2*amp / np.pi)*np.arcsin(np.sin(((2*np.pi)/period)*x))+amp
 
 # plan for learning rates
-e = np.arange(0,epochs+1)
-LR_SCHEDULE = [(x, triang(x, 0.01, int(epochs/5))) for x in e]
+# class LearningRateScheduler(keras.callbacks.Callback):
+#     def __init__(self):
+#         super(LearningRateScheduler, self).__init__()
+#
+#     def on_epoch_end(self, epoch, logs=None):
+#         cnt_lr = float(tf.keras.backend.get_value(self.model.optimizer.learning_rate))
+#         print("epoch {}: learning rate is {}".format(epoch, cnt_lr))
 
-def lr_schedule(epoch, cnt_lr):
-    if epoch < LR_SCHEDULE[0][0] or epoch > LR_SCHEDULE[-1][0]:
-        return cnt_lr
-    for i in range(len(LR_SCHEDULE)):
-        if epoch == LR_SCHEDULE[i][0]:
-            return LR_SCHEDULE[i][1]
-    return cnt_lr
+class CosineAnnealing(keras.callbacks.Callback):
+    def __init__(self, no_cycles, no_epochs, max_lr):
+        super(CosineAnnealing, self).__init__()
+        self.no_cycles = no_cycles
+        self.no_epochs = no_epochs
+        self.max_lr = max_lr
+        self.lrates = list()
 
-class LearningRateScheduler(keras.callbacks.Callback):
-    def __init__(self, schedule, compress):
-        super(LearningRateScheduler, self).__init__()
-        self.schedule = schedule
-        self.compress = compress
+    def cos_annealing(self, epoch, no_cycles, no_epochs, max_lr):
+        epochs_per_cycle = np.floor(no_epochs / no_cycles)
+        cos_arg = (np.pi * (epoch % epochs_per_cycle)) / (epochs_per_cycle)
+        return (max_lr / 2) * (np.cos(cos_arg) + 1)
 
-    def on_train_begin(self, logs=None):
-        self.val_loss = np.Inf
+    def on_epoch_begin(self, epoch, logs=None):
+        lr = self.cos_annealing(epoch, self.no_cycles, self.no_epochs, self.max_lr)
+        tf.keras.backend.set_value(self.model.optimizer.lr, lr)
 
-    def on_epoch_end(self, epoch, logs=None):
-        cnt_lr = float(tf.keras.backend.get_value(self.model.optimizer.learning_rate))
-        if np.greater(logs.get('val_loss'), self.val_loss):
-            scheduled_lr = self.schedule(epoch, cnt_lr)*self.compress
-        else:
-            scheduled_lr = self.schedule(epoch, cnt_lr)
+        print("epoch {}: learning rate is {}".format(epoch, lr))
+        self.lrates.append(lr)
 
-        tf.keras.backend.set_value(self.model.optimizer.lr, scheduled_lr)
-        self.val_loss = logs.get('val_loss')
-        print("epoch {}: learning rate is {}".format(epoch, scheduled_lr))
 
 
 ########################################################################################################################
@@ -245,7 +274,7 @@ def combine_predictions():
                                 'label': cnt_pred['label'],
                                 'count': cnt_pred['count'],
                                 'pred_count': cnt_pred['pred_count']*(1/hvd.size())})
-        else
+        else:
             res['pred_count'] += cnt_pred['pred_count']*(1/hvd.size())
 
     pd.DataFrame.to_csv(res,

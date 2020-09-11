@@ -53,6 +53,36 @@ for (c in 2:ncol(weights)) {
 mu = colMeans(weights[, c(2:ncol(weights))])
 
 
+# plot some of the embeddings
+pdf("tokenEmbeddings_dens.pdf", width = 12, height = 8)
+par(mfrow = c(2,2))
+for (k in 1:nrow(weights)) {
+  
+  y = weights[k, c(2:ncol(weights))] %>% as.character() %>% as.numeric()
+  plot(density(y), type = "l",
+       main = paste0("distribution of embedding values of ", weights$subword[k]),
+       axes = F, ylab = "value", xlab = "density")
+  axis(1)
+  axis(2)
+}
+dev.off()
+
+
+pdf("tokenEmbeddings.pdf", width = 12, height = 8)
+par(mfrow = c(2,2))
+for (k in 1:nrow(weights)) {
+  
+  y = weights[k, c(2:ncol(weights))] %>% as.character() %>% as.numeric()
+  plot(y, type = "l",
+       main = paste0("embedding values of ", weights$subword[k]),
+       axes = F, xlab = "dimension", ylab = "value")
+  axis(1)
+  axis(2)
+}
+dev.off()
+
+
+
 ### OUTPUT ###
 write.csv(weights, "data/token_embeddings.csv", row.names = F)
 write.csv(mu, "data/mean_emb.csv", row.names = F)

@@ -5,6 +5,8 @@
 # output: evaluation results
 # author: HR
 
+setwd("Documents/QuantSysBios/ProtTransEmbedding/Hotspots/CNN/")
+
 library(dplyr)
 library(stringr)
 library(rhdf5)
@@ -14,8 +16,8 @@ library(tidymodels)
 library(DescTools)
 
 
-JOBID = "5205164-12"
-no_ranks = 1
+JOBID = "5217927-4"
+
 
 ### INPUT ###
 # download results
@@ -25,20 +27,6 @@ system("scp -rp hroetsc@transfer.gwdg.de:/usr/users/hroetsc/Hotspots/results/mod
 # open them
 metrics = read.table("results/model_metrics.txt", sep = ",", stringsAsFactors = F)
 prediction = read.csv("results/model_predictions.csv", stringsAsFactors = F)
-
-# prediction.fs = list.files("results", pattern = "model_predictions_rank",
-#                            full.names = T, recursive = T)
-# 
-# for (p in 0:(no_ranks-1)){
-#   if (p == 0){
-#     prediction = read.csv(paste0("results/model_predictions_rank", p, ".csv"), stringsAsFactors = F)
-#   } else {
-#     
-#     prediction = rbind(prediction,
-#                       read.csv(paste0("results/model_predictions_rank", p, ".csv"), stringsAsFactors = F))
-#     
-#   }
-# }
 
 
 ### MAIN PART ###
@@ -180,7 +168,7 @@ stop = max(prediction) + 0.1
 prediction[, c("count", "pred_count")] %>% gather() %>%
   ggplot(aes(x = value, color = key)) +
   geom_density() +
-  ggtitle("true and predicted hotspot counts") +
+  ggtitle("true and predicted hotspot counts \nusing AA indices") +
   theme_bw()
 ggsave(paste0("results/plots/", JOBID, "_trueVSpredicted-dens.png"), plot = last_plot(),
        device = "png", dpi = "retina")
@@ -191,7 +179,7 @@ ggplot(prediction, aes(x = count, y = pred_count)) +
   ylim(c(start, stop)) +
   geom_abline(intercept = 0, slope = 1, linetype = "dotted") +
   coord_equal() +
-  ggtitle("true and predicted hotspot counts",
+  ggtitle("true and predicted hotspot counts \nusing AA indices",
           subtitle = paste0("PCC: ", pc %>% round(4), ", R^2: ", summary(pred.lm)$r.squared %>% round(4))) +
   theme_bw()
 ggsave(paste0("results/plots/", JOBID, "_trueVSpredicted-scatter.png"), plot = last_plot(),
@@ -316,8 +304,8 @@ ggsave(paste0("results/plots/", JOBID, "_PR.png"),
 
 
 ########## estimating weight decay parameter ##########
-
-ls = h5ls("results/model/best_model.h5")
+system("scp -rp hroetsc@transfer.gwdg.de:/usr/users/hroetsc/Hotspots/results/model/best_model_rank0.h5 results/model/")
+ls = h5ls("results/model/best_model_rank0.h5")
 
 weights = h5read("results/model/best_model.h5"
                  , "/model_weights/output/output")
