@@ -5,9 +5,7 @@
 # output: model, metrics, predictions for test data set
 # author: HR
 
-# using simple conv / dense structure
 
-import os
 import numpy as np
 import pandas as pd
 
@@ -43,10 +41,11 @@ embeddingDim = 128
 tokPerWindow = 8
 
 epochs = 400
-batchSize = 16
+batchSize = 32
 pseudocounts = 1
-no_cycles = 2
+no_cycles = 4
 no_features = int(tokPerWindow * 10)
+augment = False
 
 epochs = int(np.ceil(epochs / hvd.size()))
 batchSize = batchSize * hvd.size()
@@ -56,8 +55,8 @@ print('batch size, adjusted by number of GPUs: ', batchSize)
 print('number of learning rate cycles: ', no_cycles)
 print('number of pseudocounts: ', pseudocounts)
 print('using scaled input data: False')
-print('selecting ', no_features, ' best features for prediction')
-print('no training data augmentation')
+print('selecting ', no_features, ' best features (not for prediction)')
+print('training data augmentation: ', augment)
 print("-------------------------------------------------------------------------")
 
 ########## part 1: fit model ##########
@@ -65,7 +64,6 @@ print("-------------------------------------------------------------------------
 print('LOAD DATA')
 
 ## on the cluster
-
 tokensAndCounts_train = pd.read_csv('/scratch2/hroetsc/Hotspots/data/windowTokens_OPTtraining.csv')
 emb_train = '/scratch2/hroetsc/Hotspots/data/embMatrices_OPTtraining.dat'
 acc_train = '/scratch2/hroetsc/Hotspots/data/embMatricesAcc_OPTtraining.dat'
@@ -83,7 +81,7 @@ tokens, labels, counts = format_input(tokensAndCounts_train)
 tokens, labels, counts, emb, bestFeatures, pca = open_and_format_matrices(tokens, labels, counts, emb_train, acc_train,
                                                                           no_features=no_features,
                                                                           proteins=proteins,
-                                                                          augment=False, ret_pca=True)
+                                                                          augment=augment, ret_pca=True)
 
 tokens_test, labels_test, counts_test = format_input(tokensAndCounts_test)
 tokens_test, labels_test, counts_test, emb_test, \
@@ -97,27 +95,8 @@ bestFeatures_test, pca_test = open_and_format_matrices(tokens_test,
                                                        augment=False,
                                                        ret_pca=True)
 
+
 ### build and compile model
-
-params = {'n_conv_kernels': 512,
-          'conv_kernel_size': (5, 5),
-          'padding': 'valid',
-          'n_primary_caps': 64,
-          'primary_caps_vector': 16,
-          'n_secondary_caps': 2,
-          'secondary_caps_vector': 32,
-          'r': 3,
-          'units_1': 1024,
-          'units_2': 2048,
-          'tok_per_window': tokPerWindow,
-          'embedding_dim': embeddingDim,
-          'epsilon': 1e-07,
-          'm_plus': 0.9,
-          'm_minus': 0.1,
-          'lamb': 0.5,
-          'alpha': 5e-03}
-
-
 # write model
 class CapsNet(keras.Model):
     def __init__(self,
@@ -125,7 +104,8 @@ class CapsNet(keras.Model):
                  n_primary_caps, primary_caps_vector,
                  n_secondary_caps, secondary_caps_vector,
                  r,
-                 units_1, units_2, tok_per_window, embedding_dim,
+                 units_1, units_2,
+                 inp_channels, tok_per_window, embedding_dim,
                  epsilon, m_plus, m_minus, lamb, alpha,
                  name='capsnet'):
         super(CapsNet, self).__init__(name=name)
@@ -143,9 +123,14 @@ class CapsNet(keras.Model):
 
         self.units_1 = units_1
         self.units_2 = units_2
+        self.inp_channels = inp_channels
         self.tok_per_window = tok_per_window
         self.embedding_dim = embedding_dim
-        self.output_dim = int(self.tok_per_window, self.embedding_dim)
+        self.output_dim = int(self.tok_per_window * self.embedding_dim)
+
+        # does only work with padding = "same"!
+        self.vector_dim = int(self.tok_per_window * 0.5 * self.embedding_dim * 0.5 * self.n_primary_caps)
+        # e.g. 16384
 
         self.epsilon = epsilon
         self.m_plus = m_plus
@@ -173,7 +158,10 @@ class CapsNet(keras.Model):
                                                  name='primary_capsule')
 
             # affine transform weight matrix
-            self.w = tf.Variable(tf.random_normal_initializer()(shape=(1, 1152, self.n_secondary_caps, self.secondary_caps_vector,
+            self.w = tf.Variable(tf.random_normal_initializer()(shape=(1,
+                                                                       self.vector_dim,
+                                                                       self.n_secondary_caps,
+                                                                       self.secondary_caps_vector,
                                                                        self.primary_caps_vector)),
                                  dtype=tf.float32,
                                  name="pose_estimation", trainable=True)
@@ -193,7 +181,7 @@ class CapsNet(keras.Model):
     def squash(self, s):
         with tf.name_scope('squash_function') as scope:
             s_norm = tf.norm(s, axis=-1, keepdims=True)
-            return (tf.square(s_norm) / (1 + tf.square(s_norm))) * (s / s_norm)
+            return (tf.square(s_norm) / (1 + tf.square(s_norm))) * (s / s_norm + self.epsilon)  # epsilon is facultative
 
     # loss
     # make sure that norm does not become 0
@@ -214,7 +202,7 @@ class CapsNet(keras.Model):
         margin_loss = tf.reduce_mean(tf.reduce_sum(l, axis=-1))
 
         # reconstruction (decoding) loss
-        y_matrix_flat = tf.reshape(x, shape=(-1, (int(tokPerWindow * embeddingDim))))
+        y_matrix_flat = tf.reshape(x, shape=(-1, (int(self.tok_per_window * self.embedding_dim))))
         reconstruction_loss = tf.reduce_mean(tf.square(y_matrix_flat - dec))
 
         loss = tf.add(margin_loss, self.alpha * reconstruction_loss)
@@ -222,63 +210,109 @@ class CapsNet(keras.Model):
 
     @tf.function
     def call(self, inputs):
-        input_x, y = inputs
+
         # input x: (None, 2, 8, 128)
         # input y: (None, 2)
-        y_one_hot = tf.one_hot(y, depth=2)
-
-        x = self.convolution(input_x)
+        x = inputs
+        input_x = keras.Input(self.inp_channels, self.tok_per_window, self.embedding_dim)(x)
+        # primary convolution
+        conv_x = self.convolution(input_x)  # (None, n_conv_kernels, 8, 128)
         # lower-level capsule, returns vector
-        x = self.primary_capsule(x)
+        conv_x = self.primary_capsule(conv_x)  # (None, n_primary_caps*primary_caps_vector=1024, 4, 64)
 
         # secondary capsule detects high-level features
         with tf.name_scope('form_capsule') as scope:
             # reshape vector output of lower-level capsule
-            u = tf.reshape(x, (-1, self.n_primary_caps * x.shape[0] * x.shape[1] * x.shape[2]))
+            u = tf.reshape(conv_x, shape=(-1,
+                                          self.n_primary_caps * conv_x.shape[2] * conv_x.shape[3],
+                                          # channels first! should be equal to vector_dim
+                                          self.primary_caps_vector))  # (None, 16384, 16) e.g.
             u = tf.expand_dims(u, axis=-2)
-            u = tf.expand_dims(u, axis=-1)
+            u = tf.expand_dims(u, axis=-1)  # (None, 16384, 1, 16, 1)
             # multiply with weight matrix to get estimator of u
             u_hat = tf.matmul(self.w, u)
-            u_hat = tf.squeeze(u_hat, [4])
+            u_hat = tf.squeeze(u_hat, [4])  # (None, 16384, 2, 32)
 
         # determine scalar weights by applying dynamic routing algorithm
         with tf.name_scope('dynamic_routing') as scope:
             # initialize parameter b
-            b = tf.zeros(shape=(input_x.shape[0], 1152, self.n_secondary_caps, 1))  # (None, 1152, 10, 1)
+            b = tf.zeros(shape=(x.shape[0],
+                                self.vector_dim,
+                                self.n_secondary_caps,
+                                1))  # (None, 16384, 2, 1)
 
             # iterate to refine b
             for i in range(self.r):
                 # softmax ensures probability characteristics (non-negative, sum up to 1)
-                c = tf.nn.softmax(b, axis=-2)  # (None, 1152, 10, 1)
+                c = tf.nn.softmax(b, axis=-2)  # (None, 16834, 2, 1)
                 # scale down all input vectors and add them up
-                s = tf.reduce_sum(tf.multiply(c, u_hat), axis=1, keepdims=True)  # (None, 1, 10, 16)
+                s = tf.reduce_sum(tf.multiply(c, u_hat), axis=1, keepdims=True)  # (None, 1, 2, 32)
                 v = self.squash(s)
 
                 # update b
                 agreement = tf.squeeze(tf.matmul(tf.expand_dims(u_hat, axis=-1),
                                                  tf.expand_dims(v, axis=-1),
                                                  transpose_a=True),
-                                       [4])
+                                       [4])  # (None, 16384, 2, 1)
                 b += agreement
 
         # mask labels
         with tf.name_scope('masking') as scope:
-            y = tf.expand_dims(y, axis=-1)  # (None, 2, 1)
-            y = tf.expand_dims(y, axis=1)  # (None, 1, 2, 1)
-            mask = tf.cast(y, dtype=tf.float32)
-            v_masked = tf.multiply(mask, v)
+            y_exp = tf.expand_dims(y, axis=-1)
+            y_exp = tf.expand_dims(y_exp, axis=1)
+            mask = tf.cast(y_exp, dtype=tf.float32)  # (None, 1, 2, 1)
+            v_masked = tf.multiply(mask, v)  # (None, 1, 2, 32)
 
         with tf.name_scope('decoding') as scope:
-            v_ = tf.reshape(v_masked, shape=(-1, self.n_secondary_caps * self.secondary_caps_vector))
+            v_ = tf.reshape(v_masked, shape=(-1, self.n_secondary_caps * self.secondary_caps_vector))  # (None, 64)
             dec = self.dense_1(v_)
             dec = self.dense_2(dec)
+            dec = self.dense_3(dec)  # (None, 1024)
 
-        loss = self.loss_function(v, dec, y_one_hot, x)
-        self.add_loss(loss)
 
-        return dec
+        # 2 outputs: secondary capsule output (squashed) and decoded sequence
+        return v, dec
+
+    @tf.function
+    def train_step(self, data):
+        x, y = data
+
+        with tf.GradientTape() as tape:
+            v, dec = self(x, training=True)
+            # v == y_pred
+            # compute loss
+            loss = self.loss_function(v, dec, y, x)
+
+        # compute gradients
+        trainable_vars = self.trainable_variables
+        gradients = tape.gradient(loss, trainable_vars)
+        # update weights
+        self.optimizer.apply_gradients(zip(gradients, trainable_vars))
+        # get metrics
+        self.compiled_metrics.update_state(y, v)
+        return {m.name: m.result() for m in self.metrics}
+
 
 ## compile model
+params = {'n_conv_kernels': 512,
+          'conv_kernel_size': (3, 3),
+          'padding': 'same',
+          'n_primary_caps': 64,
+          'primary_caps_vector': 16,
+          'n_secondary_caps': 2,
+          'secondary_caps_vector': 32,
+          'r': 3,
+          'units_1': 1024,
+          'units_2': 2048,
+          'inp_channels': 2,
+          'tok_per_window': int(tokPerWindow),
+          'embedding_dim': int(embeddingDim),
+          'epsilon': 1e-07,
+          'm_plus': 0.9,
+          'm_minus': 0.1,
+          'lamb': 0.5,
+          'alpha': 5e-03}
+
 model = CapsNet(**params)
 
 lr = 0.001 * hvd.size()
@@ -291,12 +325,12 @@ model.compile(loss=keras.losses.MeanSquaredError(),
               metrics=['mean_absolute_error', 'mean_absolute_percentage_error', 'accuracy'],
               experimental_run_tf_function=False)
 
-model.summary()
-
 tf.print('......................................................')
 tf.print('CAPSULE NEURAL NETWORK')
 tf.print('optimizer: Adam')
 tf.print("learning rate: --> cosine annealing")
+tf.print(params.keys())
+tf.print(params.values())
 tf.print('......................................................')
 
 #### train model
@@ -323,14 +357,19 @@ steps = int(np.ceil(steps / hvd.size()))
 val_steps = int(np.ceil(val_steps / hvd.size()))
 
 if hvd.rank() == 0:
-    model.summary()
+    # model.summary()
     print('train for {}, validate for {} steps per epoch'.format(steps, val_steps))
     print('using sequence generator')
 
+# one-hot encoded labels!
+counts_1h = tf.one_hot(counts, depth=2)
+counts_test_1h = tf.one_hot(counts_test, depth=2)
+
 fit = model.fit(x=emb,
-                y=counts,
+                y=[counts_1h, emb],
                 batch_size=batchSize,
-                validation_data=(emb_test, counts_test),
+                validation_data=(emb_test,
+                                 [counts_test_1h, emb_test]),
                 validation_batch_size=batchSize,
                 steps_per_epoch=steps,
                 validation_steps=val_steps,
@@ -349,21 +388,22 @@ save_training_res(model, fit)
 print('MAKE PREDICTION')
 # make prediction
 pred = model.predict(x=emb_test,
-                     batch_size=4,
+                     batch_size=batchSize,
                      verbose=1 if hvd.rank() == 0 else 0,
                      max_queue_size=256)
 print('counts:')
 print(counts_test)
 
 print('prediction:')
-print(pred.flatten())
+pred_counts = np.array(pred[0].flatten())[:, 0]
+print(pred_counts)
 
 # merge actual and predicted counts
 prediction = pd.DataFrame({"Accession": tokens_test[:, 0],
                            "window": tokens_test[:, 1],
                            "label": labels_test,
                            "count": counts_test,
-                           "pred_count": pred.flatten()})
+                           "pred_count": pred_counts})
 
 print('SAVE PREDICTED COUNTS')
 pd.DataFrame.to_csv(prediction,
