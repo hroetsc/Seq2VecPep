@@ -16,7 +16,7 @@ library(tidymodels)
 library(DescTools)
 
 
-JOBID = "5217927-4"
+JOBID = "5338126-6"
 
 
 ### INPUT ###
@@ -28,6 +28,11 @@ system("scp -rp hroetsc@transfer.gwdg.de:/usr/users/hroetsc/Hotspots/results/mod
 metrics = read.table("results/model_metrics.txt", sep = ",", stringsAsFactors = F)
 prediction = read.csv("results/model_predictions.csv", stringsAsFactors = F)
 
+# metrics = read.table("results/hyperopt/ResNet/opt_v4_metrics_027106988430023193.txt", sep = ",", stringsAsFactors = F)
+# prediction = read.csv("results/hyperopt/ResNet/opt_v4_prediction_027106988430023193.csv", stringsAsFactors = F)
+
+# metrics = read.table("results/hyperopt/CapsNet/opt_metrics_029904523491859436.txt", sep = ",", stringsAsFactors = F)
+# prediction = read.csv("results/hyperopt/CapsNet/opt_prediction_029904523491859436.csv", stringsAsFactors = F)
 
 ### MAIN PART ###
 
@@ -102,6 +107,7 @@ plotting = function(col1 = "", col2 = "", name = "", path = paste0("results/plot
   dev.off()
 }
 
+{
 # plot and save
 for (i in 1:(ncol(metrics)/2)){
   plotting(col1 = metrics[,i],
@@ -119,7 +125,7 @@ plot(log2(gl), col='seagreen',
      xlab = 'epoch',
      main = 'generalisation loss during training')
 dev.off()
-
+}
 
 ########## regression ##########
 # prediction$count = log(prediction$count + 1)
@@ -131,6 +137,7 @@ dev.off()
 # prediction$pred_count = 2^(prediction$pred_count) - 1
 
 # general
+{
 summary(prediction$count)
 summary(prediction$pred_count)
 
@@ -159,6 +166,7 @@ mae = (prediction$count - prediction$pred_count) %>% abs() %>% mean() %>% round(
 all.metrics = c(JOBID, summary(pred.lm)$r.squared, pc, mse, rmse, mae)
 names(all.metrics) = c("JOBID", "Rsquared", "PCC", "MSE", "RMSE", "MAE")
 all.metrics
+}
 
 start = min(prediction) - 0.1
 stop = max(prediction) + 0.1
@@ -168,7 +176,7 @@ stop = max(prediction) + 0.1
 prediction[, c("count", "pred_count")] %>% gather() %>%
   ggplot(aes(x = value, color = key)) +
   geom_density() +
-  ggtitle("true and predicted hotspot counts \nusing AA indices") +
+  ggtitle("true and predicted hotspot counts") +
   theme_bw()
 ggsave(paste0("results/plots/", JOBID, "_trueVSpredicted-dens.png"), plot = last_plot(),
        device = "png", dpi = "retina")
@@ -179,7 +187,7 @@ ggplot(prediction, aes(x = count, y = pred_count)) +
   ylim(c(start, stop)) +
   geom_abline(intercept = 0, slope = 1, linetype = "dotted") +
   coord_equal() +
-  ggtitle("true and predicted hotspot counts \nusing AA indices",
+  ggtitle("true and predicted hotspot counts",
           subtitle = paste0("PCC: ", pc %>% round(4), ", R^2: ", summary(pred.lm)$r.squared %>% round(4))) +
   theme_bw()
 ggsave(paste0("results/plots/", JOBID, "_trueVSpredicted-scatter.png"), plot = last_plot(),
@@ -263,6 +271,9 @@ roc.pr.CURVE = function(df = "") {
   
   return(curve)
 }
+# tmp!
+prediction$pred_label = prediction$pred_count
+
 curve = roc.pr.CURVE(df = prediction)
 
 # AUC
@@ -303,15 +314,16 @@ ggsave(paste0("results/plots/", JOBID, "_PR.png"),
 
 
 
-########## estimating weight decay parameter ##########
+########## inspect model file ##########
 system("scp -rp hroetsc@transfer.gwdg.de:/usr/users/hroetsc/Hotspots/results/model/best_model_rank0.h5 results/model/")
 ls = h5ls("results/model/best_model_rank0.h5")
 
-weights = h5read("results/model/best_model.h5"
-                 , "/model_weights/output/output")
-summary(weights[["kernel:0"]] %>% as.numeric())
+weights = h5read("results/model/best_model_rank0.h5"
+                 , "/model_weights")
 
-# A Simple Trick for Estimating the Weight Decay Parameter (Roegnvaldsson 2006
+
+
+# A Simple Trick for Estimating the Weight Decay Parameter (Roegnvaldsson 2006)
 # weight decay for regression
 reg_weights = h5read("results/model/best_model.h5",
                      "/model_weights/regression/regression")[[2]]

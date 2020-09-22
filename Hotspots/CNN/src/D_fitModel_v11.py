@@ -5,9 +5,7 @@
 # output: model, metrics, predictions for test data set
 # author: HR
 
-# using simple conv / dense structure
 
-import os
 import numpy as np
 import pandas as pd
 
@@ -42,10 +40,10 @@ print('HYPERPARAMETERS')
 embeddingDim = 128
 tokPerWindow = 8
 
-epochs = 400
-batchSize = 32
+epochs = 1600
+batchSize = 16
 pseudocounts = 1
-no_cycles = 2
+no_cycles = 16
 no_features = int(tokPerWindow * 20)
 augment = False
 
@@ -81,15 +79,15 @@ proteins = pd.read_csv('/scratch2/hroetsc/Hotspots/data/sequence_embedings.csv')
 print('FORMAT INPUT AND GET EMBEDDING MATRICES')
 
 tokens, labels, counts = format_input(tokensAndCounts_train)
-tokens, labels, counts, emb, prots, bestFeatures, pca = open_and_format_matrices(tokens, labels, counts, emb_train,
-                                                                                 acc_train,
-                                                                                 no_features=no_features,
-                                                                                 proteins=proteins,
-                                                                                 augment=augment, ret_pca=True)
+tokens, labels, counts, emb, bestFeatures, pca = open_and_format_matrices(tokens, labels, counts, emb_train,
+                                                                          acc_train,
+                                                                          no_features=no_features,
+                                                                          proteins=proteins,
+                                                                          augment=augment, ret_pca=True)
 print('no training data augmentation')
 
 tokens_test, labels_test, counts_test = format_input(tokensAndCounts_test)
-tokens_test, labels_test, counts_test, emb_test, prots_test, \
+tokens_test, labels_test, counts_test, emb_test, \
 bestFeatures_test, pca_test = open_and_format_matrices(tokens_test,
                                                        labels_test,
                                                        counts_test,
@@ -122,10 +120,8 @@ def build_and_compile_model():
         return dense
 
     ## model
-    inp0 = layers.Input(shape=(1, tokPerWindow, embeddingDim),
-                        name='input_window')
-    inp1 = layers.Input(shape=(1, embeddingDim),
-                        name='input_protein')
+    inp = layers.Input(shape=(1, tokPerWindow, embeddingDim),
+                       name='input_window')
 
     conv = layers.Conv2D(filters=32,
                          kernel_size=kernel_size,
@@ -133,18 +129,15 @@ def build_and_compile_model():
                          padding='same',
                          kernel_initializer=keras.initializers.HeNormal(),
                          bias_initializer=keras.initializers.Zeros(),
-                         data_format='channels_first')(inp0)
+                         data_format='channels_first')(inp)
     norm = layers.BatchNormalization()(conv)
     act = layers.Activation('relu')(norm)
     pool = layers.MaxPool2D(padding='same',
                             data_format='channels_first')(act)
     pool = layers.Flatten()(pool)
-    dense = bn_relu(pool, 128)
 
-    conc = layers.Concatenate()([inp1, dense])
-    dense = bn_relu(conc, 2048)
+    dense = bn_relu(pool, 2048)
     dense = bn_relu(dense, 1024)
-    dense = bn_relu(dense, 128)
 
     out = layers.Dense(1, activation='linear',
                        kernel_initializer=keras.initializers.GlorotUniform(),
@@ -153,7 +146,7 @@ def build_and_compile_model():
                        name='output')(dense)
 
     ## concatenate to model
-    model = keras.Model(inputs=[inp0, inp1], outputs=out)
+    model = keras.Model(inputs=inp, outputs=out)
 
     ## compile model
     tf.print('compile model')
@@ -185,7 +178,7 @@ def build_and_compile_model():
 print('MODEL TRAINING')
 # define callbacks
 callbacks = [RestoreBestModel(),
-             CosineAnnealing(no_cycles=no_cycles, no_epochs=epochs, max_lr=0.01),
+             CosineAnnealing(no_cycles=no_cycles, no_epochs=epochs, max_lr=0.001),
              hvd.callbacks.BroadcastGlobalVariablesCallback(0),
              tf.keras.callbacks.ModelCheckpoint(
                  filepath='/scratch2/hroetsc/Hotspots/results/model/model_rank{}.h5'.format(hvd.rank()),
@@ -212,7 +205,7 @@ if hvd.rank() == 0:
     print('train for {}, validate for {} steps per epoch'.format(steps, val_steps))
     print('using sequence generator')
 
-fit = model.fit(x=[emb, prots],
+fit = model.fit(x=emb,
                 y=counts,
                 batch_size=batchSize,
                 validation_data=(emb_test, counts_test),
@@ -233,7 +226,7 @@ save_training_res(model, fit)
 ########## part 2: make prediction ##########
 print('MAKE PREDICTION')
 # make prediction
-pred = model.predict(x=[emb_test, prots_test],
+pred = model.predict(x=emb_test,
                      batch_size=4,
                      verbose=1 if hvd.rank() == 0 else 0,
                      max_queue_size=256)

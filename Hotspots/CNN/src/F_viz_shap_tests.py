@@ -19,7 +19,7 @@ import shap
 
 pseudocounts = 1
 tokPerWindow = 8
-embeddingDim = 128
+embeddingDim = 100
 batchSize = 16
 
 no_models = 8

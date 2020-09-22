@@ -19,4 +19,4 @@ include: snakefiles + "model.py"
 
 rule all:
     input:
-        metrics = '/scratch2/hroetsc/Seq2Vec/results/hp_v50k_model_metrics_w5_d128.txt'
+        metrics = '/scratch2/hroetsc/Seq2Vec/results/hp-subs_v5k_model_metrics_w5_d128.txt'

@@ -7,12 +7,12 @@ import tensorflow as tf
 from tensorflow import keras
 import horovod.tensorflow.keras as hvd
 
+
 ########################################################################################################################
 # INITIALIZATION
 ########################################################################################################################
 
 def print_initialization():
-
     print("-------------------------------------------------------------------------")
     print("ENVIRONMENT VARIABLES")
 
@@ -44,16 +44,26 @@ def print_initialization():
 ########################################################################################################################
 # HYPERPARAMETERS
 ########################################################################################################################
-
+print('HYPERPARAMETERS')
 embeddingDim = 128
 tokPerWindow = 8
 
-epochs = 400
-batchSize = 32
+epochs = 100
+batchSize = 16
 pseudocounts = 1
+no_features = int(tokPerWindow * 10)
+augment = False
 
-epochs = int(np.ceil(epochs / hvd.size()))
+# epochs = int(np.ceil(epochs / hvd.size()))
 batchSize = batchSize * hvd.size()
+no_cycles = int(epochs / 10)
+
+max_lr = 0.001
+starting_filter = 8
+kernel_size = 3
+block_size = 5
+num_blocks = 4
+dense_nodes = 1024
 
 
 ########################################################################################################################
@@ -77,7 +87,6 @@ def format_input(tokensAndCounts):
     return tokens, labels, counts
 
 
-
 def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, no_features, proteins,
                              augment=False, ret_pca=False):
     print('open and format embedding matrices, get all features')
@@ -95,7 +104,7 @@ def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, no_feat
 
     def scaling(x, a, b):
         sc_x = (x - np.min(x)) / (np.max(x) - np.min(x))
-        return (b-a)*sc_x + a
+        return (b - a) * sc_x + a
 
     # open weights and accessions binary file
     with open(emb_path, 'rb') as emin, open(acc_path, 'rb') as ain:
@@ -149,10 +158,13 @@ def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, no_feat
     prots = np.array(prots.iloc[:, 1:])
 
     # get the proper shape and merge with embedding matrix
-    # prots = np.array([np.tile(prots[i, :], tokPerWindow).reshape((tokPerWindow, embeddingDim)) for i in range(prots.shape[0])])
-    # prots = np.expand_dims(prots, axis=1)
+    prots = np.array([np.tile(prots[i, :], tokPerWindow).reshape((tokPerWindow, embeddingDim)) for i in range(prots.shape[0])])
+    prots = np.expand_dims(prots, axis=1)
 
     # embMatrix = np.concatenate((embMatrix, prots), axis=1)
+
+    # # multiply with embedding matrix
+    # embMatrix = np.array([embMatrix[i, :, :, :]*prots[i, :] for i in range(embMatrix.shape[0])])
 
     # randomly augment training data
     if augment:
@@ -166,7 +178,8 @@ def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, no_feat
         embMatrix_bright = embMatrix[rnd_bright, :, :, :] + np.random.uniform(-1, 1)
 
         embMatrix = np.concatenate((embMatrix, embMatrix_vflip, embMatrix_hflip, embMatrix_bright))
-        PCAs = np.concatenate((PCAs, PCAs[rnd_vflip], PCAs[rnd_hflip], PCAs[rnd_bright]))
+        PCAs = np.concatenate((PCAs, PCAs[rnd_vflip], PCAs[rnd_hflip],
+                               PCAs[rnd_bright]))  # should actually be augmented too! -- keep in mind if applying
         labels = np.concatenate((labels, labels[rnd_vflip], labels[rnd_hflip], labels[rnd_bright]))
         counts = np.concatenate((counts, counts[rnd_vflip], counts[rnd_hflip], counts[rnd_bright]))
         tokens = np.concatenate((tokens, tokens[rnd_vflip], tokens[rnd_hflip], tokens[rnd_bright]))
@@ -175,7 +188,6 @@ def open_and_format_matrices(tokens, labels, counts, emb_path, acc_path, no_feat
     embMatrix_flat = np.array([embMatrix[i, :, :, :].flatten() for i in range(embMatrix.shape[0])])
     selector = SelectKBest(f_regression, k=no_features)
     BestFeatures = selector.fit_transform(X=embMatrix_flat, y=counts)
-
 
     # output: reformatted tokens and counts, embedding matrix
     if ret_pca:
@@ -208,16 +220,7 @@ class RestoreBestModel(keras.callbacks.Callback):
         print('RESTORING WEIGHTS FROM VALIDATION LOSS {}'.format(self.best))
 
 
-
 # plan for learning rates
-# class LearningRateScheduler(keras.callbacks.Callback):
-#     def __init__(self):
-#         super(LearningRateScheduler, self).__init__()
-#
-#     def on_epoch_end(self, epoch, logs=None):
-#         cnt_lr = float(tf.keras.backend.get_value(self.model.optimizer.learning_rate))
-#         print("epoch {}: learning rate is {}".format(epoch, cnt_lr))
-
 class CosineAnnealing(keras.callbacks.Callback):
     def __init__(self, no_cycles, no_epochs, max_lr):
         super(CosineAnnealing, self).__init__()
@@ -225,6 +228,7 @@ class CosineAnnealing(keras.callbacks.Callback):
         self.no_epochs = no_epochs
         self.max_lr = max_lr
         self.lrates = list()
+        self.ensemble = 0
 
     def cos_annealing(self, epoch, no_cycles, no_epochs, max_lr):
         epochs_per_cycle = np.floor(no_epochs / no_cycles)
@@ -234,10 +238,18 @@ class CosineAnnealing(keras.callbacks.Callback):
     def on_epoch_begin(self, epoch, logs=None):
         lr = self.cos_annealing(epoch, self.no_cycles, self.no_epochs, self.max_lr)
         tf.keras.backend.set_value(self.model.optimizer.lr, lr)
-
-        print("epoch {}: learning rate is {}".format(epoch, lr))
         self.lrates.append(lr)
 
+    def on_epoch_end(self, epoch, logs=None):
+        lr = float(tf.keras.backend.get_value(self.model.optimizer.learning_rate))
+
+        if (epoch+1) % self.no_cycles == 0:
+            self.model.save(
+                '/scratch2/hroetsc/Hotspots/results/model/ensemble_rank{}_epoch{}.h5'.format(hvd.rank(), self.ensemble))
+            self.ensemble += 1
+            print('saving model for ensemble prediction')
+
+        print("epoch {}: learning rate is {}".format(epoch, lr))
 
 
 ########################################################################################################################
@@ -273,10 +285,37 @@ def combine_predictions():
                                 'window': cnt_pred['window'],
                                 'label': cnt_pred['label'],
                                 'count': cnt_pred['count'],
-                                'pred_count': cnt_pred['pred_count']*(1/hvd.size())})
+                                'pred_count': cnt_pred['pred_count'] * (1 / hvd.size())})
         else:
-            res['pred_count'] += cnt_pred['pred_count']*(1/hvd.size())
+            res['pred_count'] += cnt_pred['pred_count'] * (1 / hvd.size())
 
     pd.DataFrame.to_csv(res,
                         '/scratch2/hroetsc/Hotspots/results/model_predictions.csv',
                         index=False)
+
+
+def ensemble_predictions(emb_test, prots_test, batchSize):
+    print('using learning rate schedule minima for ensemble prediction')
+
+    ranks = hvd.size()
+    models_per_rank = int(epochs / no_cycles)
+
+    all_predictions = []
+
+    for i in range(ranks):
+        for j in range(models_per_rank):
+
+            cnt_model = keras.models.load_model(
+                '/scratch2/hroetsc/Hotspots/results/model/ensemble_rank{}_epoch{}.h5'.format(i, j))
+            cnt_prediction = cnt_model.predict(x=[emb_test, prots_test],
+                                               batch_size=batchSize,
+                                               verbose=1 if hvd.rank() == 0 else 0,
+                                               max_queue_size=64)
+
+            all_predictions.append(cnt_prediction.flatten())
+
+    # average of all predictions
+    all_predictions = np.array(all_predictions)
+    average_prediction = np.mean(all_predictions, axis=0)
+
+    return average_prediction

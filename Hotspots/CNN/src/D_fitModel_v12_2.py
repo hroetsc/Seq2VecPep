@@ -183,50 +183,23 @@ class CapsNet(keras.Model):
             s_norm = tf.norm(s, axis=-1, keepdims=True)
             return (tf.square(s_norm) / (1 + tf.square(s_norm))) * (s / s_norm + self.epsilon)  # epsilon is facultative
 
-    # loss
-    # make sure that norm does not become 0
-    def safe_norm(self, v, axis=-1):
-        v_ = tf.reduce_sum(tf.square(v), axis=axis, keepdims=True)
-        return tf.sqrt(v_ + self.epsilon)
-
-    # loss function combines margin loss and reconstruction loss
-    def loss_function(self, v, dec, y, x):
-        prediction = self.safe_norm(v)
-        prediction = tf.reshape(prediction, shape=(-1, self.n_secondary_caps))
-
-        # margin loss
-        left_margin = tf.square(tf.maximum(0.0, self.m_plus - prediction))
-        right_margin = tf.square(tf.maximum(0.0, prediction - self.m_minus))
-
-        l = tf.add(y * left_margin, self.lamb * (1.0 - y) * right_margin)
-        margin_loss = tf.reduce_mean(tf.reduce_sum(l, axis=-1))
-
-        # reconstruction (decoding) loss
-        y_matrix_flat = tf.reshape(x, shape=(-1, (int(self.tok_per_window * self.embedding_dim))))
-        reconstruction_loss = tf.reduce_mean(tf.square(y_matrix_flat - dec))
-
-        loss = tf.add(margin_loss, self.alpha * reconstruction_loss)
-        return loss
-
     @tf.function
     def call(self, inputs):
 
-        # input x: (None, 2, 8, 128)
-        # input y: (None, 2)
-        x = inputs
-        input_x = keras.Input(self.inp_channels, self.tok_per_window, self.embedding_dim)(x)
+        x, y = inputs
+
         # primary convolution
-        conv_x = self.convolution(input_x)  # (None, n_conv_kernels, 8, 128)
+        x = self.convolution(x)  # (None, n_conv_kernels, 8, 128)
         # lower-level capsule, returns vector
-        conv_x = self.primary_capsule(conv_x)  # (None, n_primary_caps*primary_caps_vector=1024, 4, 64)
+        x = self.primary_capsule(x)  # (None, n_primary_caps*primary_caps_vector=1024, 4, 64)
 
         # secondary capsule detects high-level features
         with tf.name_scope('form_capsule') as scope:
             # reshape vector output of lower-level capsule
-            u = tf.reshape(conv_x, shape=(-1,
-                                          self.n_primary_caps * conv_x.shape[2] * conv_x.shape[3],
-                                          # channels first! should be equal to vector_dim
-                                          self.primary_caps_vector))  # (None, 16384, 16) e.g.
+            u = tf.reshape(x, shape=(-1,
+                                     self.n_primary_caps * x.shape[2] * x.shape[3],
+                                     # channels first! should be equal to vector_dim
+                                     self.primary_caps_vector))  # (None, 16384, 16) e.g.
             u = tf.expand_dims(u, axis=-2)
             u = tf.expand_dims(u, axis=-1)  # (None, 16384, 1, 16, 1)
             # multiply with weight matrix to get estimator of u
@@ -269,28 +242,57 @@ class CapsNet(keras.Model):
             dec = self.dense_2(dec)
             dec = self.dense_3(dec)  # (None, 1024)
 
-
         # 2 outputs: secondary capsule output (squashed) and decoded sequence
         return v, dec
 
     @tf.function
-    def train_step(self, data):
-        x, y = data
+    def predict_capsule_output(self, inputs):
+        x = self.convolution(inputs)
+        x = self.primary_capsule(x)
 
-        with tf.GradientTape() as tape:
-            v, dec = self(x, training=True)
-            # v == y_pred
-            # compute loss
-            loss = self.loss_function(v, dec, y, x)
+        with tf.name_scope('form_capsule') as scope:
+            # reshape vector output of lower-level capsule
+            u = tf.reshape(x, shape=(-1,
+                                     self.n_primary_caps * x.shape[2] * x.shape[3],
+                                     # channels first! should be equal to vector_dim
+                                     self.primary_caps_vector))  # (None, 16384, 16) e.g.
+            u = tf.expand_dims(u, axis=-2)
+            u = tf.expand_dims(u, axis=-1)  # (None, 16384, 1, 16, 1)
+            # multiply with weight matrix to get estimator of u
+            u_hat = tf.matmul(self.w, u)
+            u_hat = tf.squeeze(u_hat, [4])  # (None, 16384, 2, 32)
 
-        # compute gradients
-        trainable_vars = self.trainable_variables
-        gradients = tape.gradient(loss, trainable_vars)
-        # update weights
-        self.optimizer.apply_gradients(zip(gradients, trainable_vars))
-        # get metrics
-        self.compiled_metrics.update_state(y, v)
-        return {m.name: m.result() for m in self.metrics}
+        with tf.name_scope('dynamic_routing') as scope:
+            # initialize parameter b
+            b = tf.zeros(shape=(x.shape[0],
+                                self.vector_dim,
+                                self.n_secondary_caps,
+                                1))  # (None, 16384, 2, 1)
+            # iterate to refine b
+            for i in range(self.r):
+                # softmax ensures probability characteristics (non-negative, sum up to 1)
+                c = tf.nn.softmax(b, axis=-2)  # (None, 16834, 2, 1)
+                # scale down all input vectors and add them up
+                s = tf.reduce_sum(tf.multiply(c, u_hat), axis=1, keepdims=True)  # (None, 1, 2, 32)
+                v = self.squash(s)
+                # update b
+                agreement = tf.squeeze(tf.matmul(tf.expand_dims(u_hat, axis=-1),
+                                                 tf.expand_dims(v, axis=-1),
+                                                 transpose_a=True),
+                                       [4])  # (None, 16384, 2, 1)
+                b += agreement
+
+        return v
+
+    @tf.function
+    def regenerate_image(self, inputs):
+        with tf.name_scope('decoding') as scope:
+            v_ = tf.reshape(inputs, shape=(-1, self.n_secondary_caps * self.secondary_caps_vector))  # (None, 64)
+            dec = self.dense_1(v_)
+            dec = self.dense_2(dec)
+            dec = self.dense_3(dec)  # (None, 1024)
+
+        return dec
 
 
 ## compile model
@@ -315,6 +317,54 @@ params = {'n_conv_kernels': 512,
 
 model = CapsNet(**params)
 
+
+# loss
+# make sure that norm does not become 0
+def safe_norm(self, v, axis=-1):
+    v_ = tf.reduce_sum(tf.square(v), axis=axis, keepdims=True)
+    return tf.sqrt(v_ + self.epsilon)
+
+
+# loss function combines margin loss and reconstruction loss
+def loss_function(self, v, dec, y, x):
+    prediction = self.safe_norm(v)
+    prediction = tf.reshape(prediction, shape=(-1, self.n_secondary_caps))
+
+    # margin loss
+    left_margin = tf.square(tf.maximum(0.0, self.m_plus - prediction))
+    right_margin = tf.square(tf.maximum(0.0, prediction - self.m_minus))
+
+    l = tf.add(y * left_margin, self.lamb * (1.0 - y) * right_margin)
+    margin_loss = tf.reduce_mean(tf.reduce_sum(l, axis=-1))
+
+    # reconstruction (decoding) loss
+    y_matrix_flat = tf.reshape(x, shape=(-1, (int(self.tok_per_window * self.embedding_dim))))
+    reconstruction_loss = tf.reduce_mean(tf.square(y_matrix_flat - dec))
+
+    loss = tf.add(margin_loss, self.alpha * reconstruction_loss)
+    return loss
+
+
+def train_step(emb, counts, optimizer):
+    counts = tf.one_hot(counts, depth=2)
+
+    with tf.GradientTape() as tape:
+        v, dec = model([emb, counts])
+        # v == y_pred
+        # compute loss
+        loss = loss_function(v, dec, counts, emb)
+
+    # compute gradients
+    grad = tape.gradient(loss, model.trainable_variables)
+    optimizer.apply_gradients(zip(grad, model.trainable_variables))
+    return loss
+
+def predict(model, x):
+    pred = safe_norm(model.predict_capsule_output(x))
+    pred = tf.squeeze(pred, [1])
+    return np.argmax(pred, axis=1)[:, 0]
+
+
 lr = 0.001 * hvd.size()
 tf.print('learning rate, adjusted by number of GPUS: ', lr)
 opt = tf.keras.optimizers.Adam(learning_rate=lr)
@@ -324,6 +374,8 @@ model.compile(loss=keras.losses.MeanSquaredError(),
               optimizer=opt,
               metrics=['mean_absolute_error', 'mean_absolute_percentage_error', 'accuracy'],
               experimental_run_tf_function=False)
+
+model.summary()
 
 tf.print('......................................................')
 tf.print('CAPSULE NEURAL NETWORK')

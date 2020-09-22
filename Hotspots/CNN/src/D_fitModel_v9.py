@@ -5,9 +5,7 @@
 # output: model, metrics, predictions for test data set
 # author: HR
 
-# using simple conv / dense structure
 
-import os
 import numpy as np
 import pandas as pd
 

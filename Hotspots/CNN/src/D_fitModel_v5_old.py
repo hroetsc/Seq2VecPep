@@ -5,7 +5,6 @@
 # output: model, metrics, predictions for test data set
 # author: HR
 
-# using custom structure with splitted input
 
 import os
 import numpy as np

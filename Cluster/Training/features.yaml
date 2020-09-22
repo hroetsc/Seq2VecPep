@@ -7,8 +7,8 @@ words: /scratch2/hroetsc/Seq2Vec/data/words_hp_v50k.csv
 
 params:
   w5:
-    - hp_v50k_w5_d128
-    - hp_v50k_w5_d150
-    - hp_v50k_w5_d200
+    - hp-subs_v5k_w5_d128
+    - hp-subs_v5k_w5_d150
+    - hp-subs_v5k_w5_d200
 
 ...

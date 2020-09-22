@@ -19,6 +19,8 @@ DB = read.csv("../../Database/15_post-processing/OUTPUT/ProteasomeDB.csv",
               stringsAsFactors = F)
 
 bpeModel = bpe_load_model("../Seq2Vec/results/encoded_sequence/BPE_model_hp.bpe")
+print(bpeModel$vocab_size)
+
 
 ### MAIN PART ###
 ########## tokenize substrates ##########
@@ -39,10 +41,10 @@ subs.encoded = cbind(DB$substrateID %>% unique(),
 names(subs.encoded) = c("substrateID", "substrateSeq", "substrateEnc")
 subs.encoded$substrateEnc = str_split_fixed(subs.encoded$substrateEnc, coll("▁ "), Inf)[, 2]
 
-
-# tmp
-# subEnc = subs.encoded$substrateEnc[1]
-# subSeq = subs.encoded$substrateSeq[1] %>% as.character()
+i = 1
+print(paste0("SUBSTRATE: ", subs.encoded$substrateID[i]))
+subEnc = subs.encoded$substrateEnc[i]
+subSeq = subs.encoded$substrateSeq[i] %>% as.character()
 
 {
 ########## all token combinations ##########

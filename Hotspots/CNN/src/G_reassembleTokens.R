@@ -13,6 +13,9 @@ library(zoo)
 
 ### INPUT ###
 prediction = read.csv("results/model_predictions.csv", stringsAsFactors = F)
+# prediction = read.csv("results/hyperopt/ResNet/opt_v4_prediction_027106988430023193.csv", stringsAsFactors = F)
+# prediction = read.csv("results/hyperopt/CapsNet/opt_prediction_029904523491859436.csv", stringsAsFactors = F)
+
 # tmp
 # prediction$pred_count = prediction$pred_label*prediction$pred_count
 
